@@ -183,16 +183,36 @@ class RatioResult(models.Model):
 
     working_fund = models.DecimalField(max_digits=15, decimal_places=2)
 
+    # Trading Ratios
+    stock_turnover = models.DecimalField(max_digits=6, decimal_places=2)
+    gross_profit_ratio = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    net_profit_ratio = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+
+    # Fund Structure Ratios
+    own_fund_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    deposits_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    borrowings_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    loans_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    investments_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+
+    # Yield & Cost Ratios
     cost_of_deposits = models.DecimalField(max_digits=6, decimal_places=2)
     yield_on_loans = models.DecimalField(max_digits=6, decimal_places=2)
+    yield_on_investments = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     credit_deposit_ratio = models.DecimalField(max_digits=6, decimal_places=2)
-    stock_turnover = models.DecimalField(max_digits=6, decimal_places=2)
+    avg_cost_of_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    avg_yield_on_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
 
+    # Margin Ratios
     gross_fin_margin = models.DecimalField(max_digits=6, decimal_places=2)
+    operating_cost_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     net_fin_margin = models.DecimalField(max_digits=6, decimal_places=2)
+    risk_cost_to_wf = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     net_margin = models.DecimalField(max_digits=6, decimal_places=2)
 
-    traffic_light_status = models.JSONField()
+    # Store all ratios in JSON for flexibility
+    all_ratios = models.JSONField(default=dict, blank=True)
+    traffic_light_status = models.JSONField(default=dict, blank=True)
 
     calculated_at = models.DateTimeField(auto_now_add=True)
 

@@ -15,6 +15,8 @@ import {
   MessageCircle,
   FolderKanban,
   ChevronDownIcon,
+  Calculator,
+  BarChart3,
 } from "lucide-react"; // 👈 Example icons
 
 import { HorizontaLDots } from "../../icons";
@@ -38,6 +40,31 @@ const navItems: NavItem[] = [
     icon: <LayoutDashboard className="w-5 h-5" />,
     name: "Company",
     path: "/companies",
+  },
+  {
+    icon: <FileText className="w-5 h-5" />,
+    name: "Financial Statements",
+    subItems: [
+      { name: "Upload Data", path: "/upload-data" },
+      { name: "Companies", path: "/companies" },
+    ],
+  },
+  {
+    icon: <BarChart3 className="w-5 h-5" />,
+    name: "Ratio Analysis",
+    subItems: [
+      { name: "Upload Data", path: "/upload-data" },
+      { name: "Companies", path: "/companies" },
+    ],
+  },
+  {
+    icon: <BarChart3 className="w-5 h-5" />,
+    name: "Ratio Analysis",
+    subItems: [
+      { name: "Ratio Dashboard", path: "/ratio-analysis" },
+      { name: "Productivity Analysis", path: "/productivity-analysis" },
+      { name: "Interpretation", path: "/interpretation" },
+    ],
   },
   // {
   //   icon: <FileText className="w-5 h-5" />,

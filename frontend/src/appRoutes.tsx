@@ -26,6 +26,11 @@ import UserManagementPage from "./pages/UserManagement/index";
 
 
 import CompanyPage from "./pages/Companies/Company";
+const FinancialPeriodPage = lazy(() => import("./pages/FinancialStatements/FinancialPeriodPage"));
+const UploadDataPage = lazy(() => import("./pages/FinancialStatements/UploadDataPage"));
+const RatioDashboard = lazy(() => import("./pages/RatioAnalysis/RatioDashboard"));
+const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/ProductivityAnalysis"));
+const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
 
 
 const LoadingSpinner = () => (
@@ -53,6 +58,14 @@ export function appRoutes() {
 
             <Route path="companies" element={<CompanyPage />} />
 
+            {/* Financial Statements */}
+            <Route path="upload-data" element={<UploadDataPage />} />
+            <Route path="financial-statements/:periodId" element={<FinancialPeriodPage />} />
+
+            {/* Ratio Analysis */}
+            <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
+            <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
+            <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

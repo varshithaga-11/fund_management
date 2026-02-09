@@ -167,4 +167,166 @@ class CompanySerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+class TradingAccountSerializer(serializers.ModelSerializer):
+    gross_profit = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = TradingAccount
+        fields = [
+            'id',
+            'period',
+            'opening_stock',
+            'purchases',
+            'trade_charges',
+            'sales',
+            'closing_stock',
+            'gross_profit'
+        ]
+        read_only_fields = ['id']
+
+
+class ProfitAndLossSerializer(serializers.ModelSerializer):
+    total_interest_income = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    total_interest_expense = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = ProfitAndLoss
+        fields = [
+            'id',
+            'period',
+            'interest_on_loans',
+            'interest_on_bank_ac',
+            'return_on_investment',
+            'miscellaneous_income',
+            'interest_on_deposits',
+            'interest_on_borrowings',
+            'establishment_contingencies',
+            'provisions',
+            'net_profit',
+            'total_interest_income',
+            'total_interest_expense'
+        ]
+        read_only_fields = ['id']
+
+
+class BalanceSheetSerializer(serializers.ModelSerializer):
+    working_fund = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    own_funds = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = BalanceSheet
+        fields = [
+            'id',
+            'period',
+            'share_capital',
+            'deposits',
+            'borrowings',
+            'reserves_statutory_free',
+            'undistributed_profit',
+            'provisions',
+            'other_liabilities',
+            'cash_in_hand',
+            'cash_at_bank',
+            'investments',
+            'loans_advances',
+            'fixed_assets',
+            'other_assets',
+            'stock_in_trade',
+            'working_fund',
+            'own_funds'
+        ]
+        read_only_fields = ['id']
+
+
+class OperationalMetricsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OperationalMetrics
+        fields = [
+            'id',
+            'period',
+            'staff_count'
+        ]
+        read_only_fields = ['id']
+
+
+class FinancialPeriodSerializer(serializers.ModelSerializer):
+    trading_account = TradingAccountSerializer(read_only=True)
+    profit_loss = ProfitAndLossSerializer(read_only=True)
+    balance_sheet = BalanceSheetSerializer(read_only=True)
+    operational_metrics = OperationalMetricsSerializer(read_only=True)
+    ratios = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = FinancialPeriod
+        fields = [
+            'id',
+            'company',
+            'period_type',
+            'start_date',
+            'end_date',
+            'label',
+            'is_finalized',
+            'created_at',
+            'trading_account',
+            'profit_loss',
+            'balance_sheet',
+            'operational_metrics',
+            'ratios'
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_ratios(self, obj):
+        if hasattr(obj, 'ratios'):
+            return RatioResultSerializer(obj.ratios).data
+        return None
+
+
+class RatioResultSerializer(serializers.ModelSerializer):
+    interpretation = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = RatioResult
+        fields = [
+            'id',
+            'period',
+            'working_fund',
+            'stock_turnover',
+            'gross_profit_ratio',
+            'net_profit_ratio',
+            'own_fund_to_wf',
+            'deposits_to_wf',
+            'borrowings_to_wf',
+            'loans_to_wf',
+            'investments_to_wf',
+            'cost_of_deposits',
+            'yield_on_loans',
+            'yield_on_investments',
+            'credit_deposit_ratio',
+            'avg_cost_of_wf',
+            'avg_yield_on_wf',
+            'gross_fin_margin',
+            'operating_cost_to_wf',
+            'net_fin_margin',
+            'risk_cost_to_wf',
+            'net_margin',
+            'all_ratios',
+            'traffic_light_status',
+            'calculated_at',
+            'interpretation'
+        ]
+        read_only_fields = ['id', 'calculated_at']
+    
+    def get_interpretation(self, obj):
+        from app.services.ratio_calculator import RatioCalculator
+        try:
+            calculator = RatioCalculator(obj.period)
+            return calculator.generate_interpretation()
+        except:
+            return ""
+
+
+class RatioCalculationRequestSerializer(serializers.Serializer):
+    period_id = serializers.IntegerField()
+
+
         
