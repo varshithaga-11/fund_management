@@ -1,0 +1,60 @@
+# ===============================
+# OS files
+# ===============================
+.DS_Store
+Thumbs.db
+
+# ===============================
+# Python / Django
+# ===============================
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Virtual environment (backend)
+backend/env/
+env/
+
+# Django static & media
+backend/staticfiles/
+backend/media/
+
+# Django migrations (ignore generated ones)
+**/migrations/
+!**/migrations/__init__.py
+
+# Django secrets
+.env
+
+# ===============================
+# Django REST Framework
+# ===============================
+*.swagger
+*.openapi
+
+# ===============================
+# React / Next.js frontend
+# ===============================
+frontend/node_modules/
+frontend/.next/
+frontend/build/
+frontend/dist/
+
+# React env files
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# ===============================
+# Editor / IDE
+# ===============================
+.vscode/
+.idea/
+
+# ===============================
+# Testing / coverage
+# ===============================
+.coverage
+htmlcov/
+pytest_cache/

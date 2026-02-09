@@ -1,0 +1,23 @@
+@import "tailwindcss";
+/* Make Swiper arrows white */
+.hero-swiper .swiper-button-next,
+.hero-swiper .swiper-button-prev {
+  color: #ffffff !important;   /* Arrow color */
+  fill: #ffffff !important;    /* In case it's SVG */
+}
+
+.hero-swiper .swiper-button-next:hover,
+.hero-swiper .swiper-button-prev:hover {
+  color: #e5e7eb !important;   /* lighter gray/white on hover */
+}
+
+.clip-triangle {
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.bg-hexagon {
+  background-color: #f9fafb; /* base gray background */
+  background-image: 
+    radial-gradient(circle at 10px 5px, #e5e7eb 1px, transparent 0),
+    radial-gradient(circle at 30px 25px, #e5e7eb 1px, transparent 0);
+  background-size: 40px 30px;
+}
