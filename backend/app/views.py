@@ -107,6 +107,3 @@ class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all().order_by("-created_at")
     serializer_class = CompanySerializer
     permission_classes = [IsAuthenticated]
-
-    # Optional: search & filter support
-    search_fields = ["name", "registration_no"]

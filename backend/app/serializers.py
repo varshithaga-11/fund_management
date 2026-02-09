@@ -154,3 +154,17 @@ class ProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
+
+class CompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = [
+            "id",
+            "name",
+            "registration_no",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+        

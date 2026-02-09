@@ -43,7 +43,7 @@ class FinancialPeriod(models.Model):
         on_delete=models.CASCADE,
         related_name="periods"
     )
-    period_type = models.CharField(max_length=10, choices=PERIOD_TYPE_CHOICES)
+    period_type = models.CharField(max_length=20, choices=PERIOD_TYPE_CHOICES)
     start_date = models.DateField()
     end_date = models.DateField()
     label = models.CharField(max_length=50)  # e.g. FY-2023-24, Mar-2024

@@ -24,11 +24,8 @@ const Blank = lazy(() => import("./pages/Blank"));
 import UserManagementPage from "./pages/UserManagement/index";
 
 
-import ClientPage from "./pages/registration/client";
-import SupplierPage from "./pages/registration/supplier";
 
-
-
+import CompanyPage from "./pages/Companies/Company";
 
 
 const LoadingSpinner = () => (
@@ -53,8 +50,8 @@ export function appRoutes() {
           <Route element={<MasterLayout />}>
 
             <Route path="master/master-dashboard" element={<MasterDashboard />} />
-            <Route path="master/client" element={<ClientPage />} />
-            <Route path="master/supplier" element={<SupplierPage />} />
+
+            <Route path="companies" element={<CompanyPage />} />
 
 
             {/* Others Page */}
