@@ -331,4 +331,19 @@ class RatioCalculationRequestSerializer(serializers.Serializer):
     period_id = serializers.IntegerField()
 
 
-        
+class StatementColumnConfigSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source="company.name", read_only=True)
+
+    class Meta:
+        model = StatementColumnConfig
+        fields = [
+            "id",
+            "company",
+            "company_name",
+            "statement_type",
+            "canonical_field",
+            "display_name",
+            "order_index",
+            "is_required",
+        ]
+        read_only_fields = ["id", "canonical_field"]

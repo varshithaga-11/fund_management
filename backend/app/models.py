@@ -258,6 +258,9 @@ class StatementColumnConfig(models.Model):
         help_text="Shown in UI / PDF (e.g. Deposit Interest)"
     )
 
+    # Alternative names/synonyms for matching in uploads or UI search
+    aliases = models.JSONField(default=list, blank=True)
+
     order_index = models.PositiveIntegerField(default=0)
     is_required = models.BooleanField(default=True)
 

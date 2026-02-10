@@ -28,6 +28,9 @@ import UserManagementPage from "./pages/UserManagement/index";
 import CompanyPage from "./pages/Companies/Company";
 const FinancialPeriodPage = lazy(() => import("./pages/FinancialStatements/FinancialPeriodPage"));
 const UploadDataPage = lazy(() => import("./pages/FinancialStatements/UploadDataPage"));
+const StatementColumnsConfigPage = lazy(
+  () => import("./pages/FinancialStatements/StatementColumnsConfigPage")
+);
 const RatioDashboard = lazy(() => import("./pages/RatioAnalysis/RatioDashboard"));
 const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/ProductivityAnalysis"));
 const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
@@ -63,6 +66,7 @@ export function appRoutes() {
             {/* Financial Statements */}
             <Route path="upload-data" element={<UploadDataPage />} />
             <Route path="financial-statements/:periodId" element={<FinancialPeriodPage />} />
+            <Route path="statement-columns" element={<StatementColumnsConfigPage />} />
 
             {/* Ratio Analysis */}
             <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />

@@ -47,6 +47,7 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Upload Data", path: "/upload-data" },
       { name: "Companies", path: "/companies" },
+      { name: "Column Mapping", path: "/statement-columns" },
     ],
   },
   {

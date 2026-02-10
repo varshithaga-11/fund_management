@@ -182,6 +182,29 @@ class RatioResultViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
+class StatementColumnConfigViewSet(viewsets.ModelViewSet):
+    """
+    Manage display names / order for financial statement columns.
+    Supports global configs (company null) and company-specific overrides.
+    """
+    queryset = StatementColumnConfig.objects.all()
+    serializer_class = StatementColumnConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = StatementColumnConfig.objects.all()
+        company_id = self.request.query_params.get("company")
+        statement_type = self.request.query_params.get("statement_type")
+        if company_id == "global":
+            qs = qs.filter(company__isnull=True)
+        elif company_id:
+            qs = qs.filter(company_id=company_id)
+        # if no company param: return all (caller can filter client-side)
+        if statement_type:
+            qs = qs.filter(statement_type=statement_type)
+        return qs.order_by("order_index", "canonical_field")
+
+
 class CalculateRatiosView(APIView):
     permission_classes = [IsAuthenticated]
     
