@@ -1138,39 +1138,41 @@ class UploadExcelView(APIView):
         return sheet_mapping
     
     def _extract_period_from_filename(self, filename):
-        """Extract period information from filename like 'April_2025.xlsx' or 'April-2025.xlsx'"""
+        """
+        Extract period information from filename.
+        India FY (Apr-Mar) formats: Apr_2024, Q1_FY_2024_25, H1_FY_2024_25, FY_2024_25
+        Legacy: April_2025, April-2025, etc.
+        """
         import re
         from datetime import datetime
-        
+        from app.services.period_labels import parse_period_label
+
         period_info = {}
-        
-        # Remove file extension
         name_without_ext = filename.rsplit('.', 1)[0] if '.' in filename else filename
-        
-        # Try to match patterns like "April_2025", "April-2025", "april 2025", etc.
-        # Match month name and year
-        month_patterns = [
-            r'([A-Za-z]+)[_\-\s]+(\d{4})',  # April_2025, April-2025, April 2025
-            r'(\d{1,2})[_\-\s]+([A-Za-z]+)[_\-\s]+(\d{4})',  # 01_April_2025
-            r'([A-Za-z]+)[_\-\s]+(\d{4})[_\-\s]+([A-Za-z]+)',  # April_2025_March
-        ]
-        
+
+        # 1. Try India FY format first (Apr_2024, Q1_FY_2024_25, H1_FY_2024_25, FY_2024_25)
+        info = parse_period_label(name_without_ext)
+        if info:
+            return info
+
+        # 2. Fallback: full month names (April_2025, April-2025, etc.)
         month_names = {
             'january': 1, 'february': 2, 'march': 3, 'april': 4,
             'may': 5, 'june': 6, 'july': 7, 'august': 8,
             'september': 9, 'october': 10, 'november': 11, 'december': 12
         }
-        
+        month_patterns = [
+            r'([A-Za-z]+)[_\-\s]+(\d{4})',  # April_2025, April-2025
+            r'(\d{1,2})[_\-\s]+([A-Za-z]+)[_\-\s]+(\d{4})',  # 01_April_2025
+            r'([A-Za-z]+)[_\-\s]+(\d{4})[_\-\s]+([A-Za-z]+)',  # April_2025_March
+        ]
         for pattern in month_patterns:
             match = re.search(pattern, name_without_ext, re.IGNORECASE)
             if match:
                 groups = match.groups()
-                
-                # Find month name in groups
                 month_name = None
                 month_num = None
                 year = None
-                
                 for group in groups:
                     group_lower = str(group).lower()
                     if group_lower in month_names:
@@ -1178,31 +1180,20 @@ class UploadExcelView(APIView):
                         month_num = month_names[month_name]
                     elif str(group).isdigit() and len(str(group)) == 4:
                         year = int(group)
-                
                 if month_name and year and month_num:
-                    # Create period label
                     period_info['label'] = f"{month_name.capitalize()}_{year}"
-                    
-                    # Calculate start and end dates for monthly period
-                    if month_num == 12:
-                        start_date = datetime(year, month_num, 1)
-                        end_date = datetime(year + 1, 1, 31)
+                    start_date = datetime(year, month_num, 1)
+                    if month_num == 2:
+                        end_day = 29 if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0) else 28
+                    elif month_num in [4, 6, 9, 11]:
+                        end_day = 30
                     else:
-                        start_date = datetime(year, month_num, 1)
-                        # Get last day of month
-                        if month_num == 2:
-                            end_day = 29 if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0) else 28
-                        elif month_num in [4, 6, 9, 11]:
-                            end_day = 30
-                        else:
-                            end_day = 31
-                        end_date = datetime(year, month_num, end_day)
-                    
+                        end_day = 31
+                    end_date = datetime(year, month_num, end_day)
                     period_info['start_date'] = start_date.strftime('%Y-%m-%d')
                     period_info['end_date'] = end_date.strftime('%Y-%m-%d')
                     period_info['period_type'] = 'MONTHLY'
                     break
-        
         return period_info
 
 
