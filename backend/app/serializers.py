@@ -343,7 +343,7 @@ class StatementColumnConfigSerializer(serializers.ModelSerializer):
             "statement_type",
             "canonical_field",
             "display_name",
-            "order_index",
+            "aliases",
             "is_required",
         ]
-        read_only_fields = ["id", "canonical_field"]
+        read_only_fields = ["id"]

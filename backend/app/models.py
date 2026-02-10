@@ -261,12 +261,11 @@ class StatementColumnConfig(models.Model):
     # Alternative names/synonyms for matching in uploads or UI search
     aliases = models.JSONField(default=list, blank=True)
 
-    order_index = models.PositiveIntegerField(default=0)
     is_required = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("company", "statement_type", "canonical_field")
-        ordering = ["order_index"]
+        ordering = ["canonical_field"]
 
 
 
