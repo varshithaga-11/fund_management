@@ -3,7 +3,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
-from .views import *
+from .views import *  # noqa: F401 F403
 
 router = DefaultRouter()
 
@@ -27,6 +27,7 @@ urlpatterns = [
     path('token/refresh/', RefreshTokenView.as_view(), name='token_refresh'),
     path('periods/<int:period_id>/calculate-ratios/', CalculateRatiosView.as_view(), name='calculate-ratios'),
     path('upload-excel/', UploadExcelView.as_view(), name='upload-excel'),
+    path('ratio-benchmarks/', RatioBenchmarksView.as_view(), name='ratio-benchmarks'),
     # path('sendotp/', SendOtpView.as_view(),name='sendotp'),
     # path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
     # path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),

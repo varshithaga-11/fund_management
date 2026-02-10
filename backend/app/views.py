@@ -1127,3 +1127,57 @@ class UploadExcelView(APIView):
                     break
         
         return period_info
+
+
+class RatioBenchmarksView(APIView):
+    """GET: return current ratio benchmarks (DB merged with defaults). PUT: update stored benchmarks."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from app.services.benchmark_config import get_ratio_benchmarks
+        from app.config.ratio_benchmarks import DEFAULT_RATIO_BENCHMARKS
+        data = get_ratio_benchmarks()
+        # Include labels for frontend (same keys as defaults)
+        labels = {
+            "stock_turnover": "Stock Turnover (times/year)",
+            "gross_profit_ratio_min": "Gross Profit Ratio Min (%)",
+            "gross_profit_ratio_max": "Gross Profit Ratio Max (%)",
+            "own_fund_to_wf": "Own Fund to Working Fund (%)",
+            "loans_to_wf_min": "Loans to WF Min (%)",
+            "loans_to_wf_max": "Loans to WF Max (%)",
+            "investments_to_wf_min": "Investments to WF Min (%)",
+            "investments_to_wf_max": "Investments to WF Max (%)",
+            "avg_cost_of_wf": "Avg Cost of WF (%)",
+            "avg_yield_on_wf": "Avg Yield on WF (%)",
+            "gross_financial_margin": "Gross Financial Margin (%)",
+            "operating_cost_to_wf_min": "Operating Cost to WF Min (%)",
+            "operating_cost_to_wf_max": "Operating Cost to WF Max (%)",
+            "net_financial_margin": "Net Financial Margin (%)",
+            "risk_cost_to_wf_max": "Risk Cost to WF Max (%)",
+            "net_margin": "Net Margin (%)",
+            "credit_deposit_ratio_min": "Credit Deposit Ratio Min (%)",
+        }
+        return Response({
+            "benchmarks": data,
+            "labels": labels,
+            "keys_order": list(DEFAULT_RATIO_BENCHMARKS.keys()),
+        })
+
+    def put(self, request):
+        from app.services.benchmark_config import set_ratio_benchmarks
+        try:
+            data = request.data.get("benchmarks") if isinstance(request.data, dict) else request.data
+            if not isinstance(data, dict):
+                return Response({
+                    "status": "failed",
+                    "message": "benchmarks must be an object",
+                }, status=status.HTTP_400_BAD_REQUEST)
+            set_ratio_benchmarks(data)
+            return Response({"status": "success", "message": "Benchmarks updated."})
+        except ValueError as e:
+            return Response({"status": "failed", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "status": "failed",
+                "message": str(e),
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

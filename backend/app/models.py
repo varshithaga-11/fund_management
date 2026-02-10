@@ -217,6 +217,13 @@ class RatioResult(models.Model):
     calculated_at = models.DateTimeField(auto_now_add=True)
 
 
+class AppConfig(models.Model):
+    """Store app-wide config (e.g. ratio benchmarks). key='ratio_benchmarks' -> JSON dict."""
+    key = models.CharField(max_length=100, unique=True)
+    value = models.JSONField(default=dict)
+
+    def __str__(self):
+        return self.key
 
 
 class StatementColumnConfig(models.Model):

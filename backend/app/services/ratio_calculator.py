@@ -5,7 +5,7 @@ Calculates all financial ratios for a given FinancialPeriod
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from app.models import FinancialPeriod, TradingAccount, ProfitAndLoss, BalanceSheet, OperationalMetrics
-from app.config.ratio_benchmarks import *
+from app.services.benchmark_config import get_ratio_benchmarks
 
 
 class RatioCalculator:
@@ -19,6 +19,7 @@ class RatioCalculator:
             period: FinancialPeriod instance with all related data
         """
         self.period = period
+        self._benchmarks = get_ratio_benchmarks()
         self._validate_period_data()
         
     def _validate_period_data(self):
@@ -209,83 +210,110 @@ class RatioCalculator:
         if ideal_value is None:
             return 'yellow'  # No benchmark available
         
-        # Ratio-specific logic
+        b = self._benchmarks
+        # Ratio-specific logic (values from config/DB)
         if ratio_name == 'net_margin':
-            if calculated_value >= IDEAL_NET_MARGIN:
+            ideal = b.get('net_margin')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
                 return 'green'
-            elif calculated_value >= IDEAL_NET_MARGIN * 0.5:
+            elif calculated_value >= ideal * 0.5:
                 return 'yellow'
             else:
                 return 'red'
         
         elif ratio_name == 'risk_cost_to_wf':
-            if calculated_value <= IDEAL_RISK_COST_TO_WF_MAX:
+            ideal = b.get('risk_cost_to_wf_max')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value <= ideal:
                 return 'green'
-            elif calculated_value <= IDEAL_RISK_COST_TO_WF_MAX * 2:
+            elif calculated_value <= ideal * 2:
                 return 'yellow'
             else:
                 return 'red'
         
         elif ratio_name == 'stock_turnover':
-            if calculated_value >= IDEAL_STOCK_TURNOVER:
+            ideal = b.get('stock_turnover')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
                 return 'green'
-            elif calculated_value >= IDEAL_STOCK_TURNOVER * 0.7:
+            elif calculated_value >= ideal * 0.7:
                 return 'yellow'
             else:
                 return 'red'
         
         elif ratio_name == 'gross_profit_ratio':
-            if IDEAL_GROSS_PROFIT_RATIO_MIN <= calculated_value <= IDEAL_GROSS_PROFIT_RATIO_MAX:
-                return 'green'
-            elif calculated_value >= IDEAL_GROSS_PROFIT_RATIO_MIN * 0.7:
+            mn, mx = b.get('gross_profit_ratio_min'), b.get('gross_profit_ratio_max')
+            if mn is None and mx is None:
                 return 'yellow'
-            else:
-                return 'red'
+            if mn is not None and mx is not None and mn <= calculated_value <= mx:
+                return 'green'
+            if mn is not None and calculated_value >= mn * 0.7:
+                return 'yellow'
+            return 'red'
         
         elif ratio_name == 'loans_to_wf':
-            if IDEAL_LOANS_TO_WF_MIN <= calculated_value <= IDEAL_LOANS_TO_WF_MAX:
-                return 'green'
-            elif calculated_value >= IDEAL_LOANS_TO_WF_MIN * 0.8:
+            mn, mx = b.get('loans_to_wf_min'), b.get('loans_to_wf_max')
+            if mn is None and mx is None:
                 return 'yellow'
-            else:
-                return 'red'
+            if mn is not None and mx is not None and mn <= calculated_value <= mx:
+                return 'green'
+            if mn is not None and calculated_value >= mn * 0.8:
+                return 'yellow'
+            return 'red'
         
         elif ratio_name == 'investments_to_wf':
-            if IDEAL_INVESTMENTS_TO_WF_MIN <= calculated_value <= IDEAL_INVESTMENTS_TO_WF_MAX:
-                return 'green'
-            elif calculated_value >= IDEAL_INVESTMENTS_TO_WF_MIN * 0.7:
+            mn, mx = b.get('investments_to_wf_min'), b.get('investments_to_wf_max')
+            if mn is None and mx is None:
                 return 'yellow'
-            else:
-                return 'red'
+            if mn is not None and mx is not None and mn <= calculated_value <= mx:
+                return 'green'
+            if mn is not None and calculated_value >= mn * 0.7:
+                return 'yellow'
+            return 'red'
         
         elif ratio_name == 'credit_deposit_ratio':
-            if calculated_value >= IDEAL_CREDIT_DEPOSIT_RATIO_MIN:
+            ideal = b.get('credit_deposit_ratio_min')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
                 return 'green'
-            elif calculated_value >= IDEAL_CREDIT_DEPOSIT_RATIO_MIN * 0.8:
+            elif calculated_value >= ideal * 0.8:
                 return 'yellow'
             else:
                 return 'red'
         
         elif ratio_name == 'gross_fin_margin':
-            if calculated_value >= IDEAL_GROSS_FINANCIAL_MARGIN:
+            ideal = b.get('gross_financial_margin')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
                 return 'green'
-            elif calculated_value >= IDEAL_GROSS_FINANCIAL_MARGIN * 0.7:
+            elif calculated_value >= ideal * 0.7:
                 return 'yellow'
             else:
                 return 'red'
         
         elif ratio_name == 'operating_cost_to_wf':
-            if IDEAL_OPERATING_COST_TO_WF_MIN <= calculated_value <= IDEAL_OPERATING_COST_TO_WF_MAX:
-                return 'green'
-            elif calculated_value <= IDEAL_OPERATING_COST_TO_WF_MAX * 1.2:
+            mn, mx = b.get('operating_cost_to_wf_min'), b.get('operating_cost_to_wf_max')
+            if mn is None and mx is None:
                 return 'yellow'
-            else:
-                return 'red'
+            if mn is not None and mx is not None and mn <= calculated_value <= mx:
+                return 'green'
+            if mx is not None and calculated_value <= mx * 1.2:
+                return 'yellow'
+            return 'red'
         
         elif ratio_name == 'own_fund_to_wf':
-            if calculated_value >= IDEAL_OWN_FUND_TO_WF:
+            ideal = b.get('own_fund_to_wf')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
                 return 'green'
-            elif calculated_value >= IDEAL_OWN_FUND_TO_WF * 0.7:
+            elif calculated_value >= ideal * 0.7:
                 return 'yellow'
             else:
                 return 'red'
@@ -299,19 +327,20 @@ class RatioCalculator:
             return 'red'
     
     def _get_ideal_value(self, ratio_name: str):
-        """Get ideal value for a ratio from config"""
+        """Get ideal value for a ratio from config (single value for display)"""
+        b = self._benchmarks
         ideal_map = {
-            'stock_turnover': IDEAL_STOCK_TURNOVER,
-            'gross_profit_ratio': IDEAL_GROSS_PROFIT_RATIO_MIN,
-            'own_fund_to_wf': IDEAL_OWN_FUND_TO_WF,
-            'loans_to_wf': IDEAL_LOANS_TO_WF_MIN,
-            'investments_to_wf': IDEAL_INVESTMENTS_TO_WF_MIN,
-            'gross_fin_margin': IDEAL_GROSS_FINANCIAL_MARGIN,
-            'net_fin_margin': IDEAL_NET_FINANCIAL_MARGIN,
-            'net_margin': IDEAL_NET_MARGIN,
-            'operating_cost_to_wf': IDEAL_OPERATING_COST_TO_WF_MAX,
-            'risk_cost_to_wf': IDEAL_RISK_COST_TO_WF_MAX,
-            'credit_deposit_ratio': IDEAL_CREDIT_DEPOSIT_RATIO_MIN,
+            'stock_turnover': b.get('stock_turnover'),
+            'gross_profit_ratio': b.get('gross_profit_ratio_min'),
+            'own_fund_to_wf': b.get('own_fund_to_wf'),
+            'loans_to_wf': b.get('loans_to_wf_min'),
+            'investments_to_wf': b.get('investments_to_wf_min'),
+            'gross_fin_margin': b.get('gross_financial_margin'),
+            'net_fin_margin': b.get('net_financial_margin'),
+            'net_margin': b.get('net_margin'),
+            'operating_cost_to_wf': b.get('operating_cost_to_wf_max'),
+            'risk_cost_to_wf': b.get('risk_cost_to_wf_max'),
+            'credit_deposit_ratio': b.get('credit_deposit_ratio_min'),
         }
         return ideal_map.get(ratio_name)
     

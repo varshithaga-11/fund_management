@@ -53,6 +53,7 @@ const navItems: NavItem[] = [
     icon: <BarChart3 className="w-5 h-5" />,
     name: "Ratio Analysis",
     subItems: [
+      { name: "Ratio Benchmarks", path: "/ratio-benchmarks" },
       { name: "Ratio Dashboard", path: "/ratio-analysis" },
       { name: "Productivity Analysis", path: "/productivity-analysis" },
       { name: "Interpretation", path: "/interpretation" },

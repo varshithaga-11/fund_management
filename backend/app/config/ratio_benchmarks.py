@@ -1,6 +1,7 @@
 """
 Ideal benchmark values for financial ratios in Co-operative Societies.
 These values are based on regulatory standards and best practices.
+Used as defaults when no custom benchmarks are stored in the database.
 """
 
 # Trading Ratios
@@ -38,3 +39,31 @@ IDEAL_CREDIT_DEPOSIT_RATIO_MIN = 70.0  # percentage (efficiency threshold)
 
 # Productivity Metrics (contextual, no fixed ideal)
 # Per Employee Business, Contribution, Operating Cost are contextual
+
+
+# Default benchmark dict for API and DB merge. None means "no fixed benchmark".
+# Frontend can display and edit these; backend uses DB values when present.
+DEFAULT_RATIO_BENCHMARKS = {
+    # Trading
+    "stock_turnover": 15.0,
+    "gross_profit_ratio_min": 10.0,
+    "gross_profit_ratio_max": 15.0,
+    # Fund Structure
+    "own_fund_to_wf": 8.0,
+    "loans_to_wf_min": 70.0,
+    "loans_to_wf_max": 75.0,
+    "investments_to_wf_min": 25.0,
+    "investments_to_wf_max": 30.0,
+    # Yield & Cost
+    "avg_cost_of_wf": 3.5,
+    "avg_yield_on_wf": 3.5,
+    # Margins
+    "gross_financial_margin": 3.5,
+    "operating_cost_to_wf_min": 2.0,
+    "operating_cost_to_wf_max": 2.5,
+    "net_financial_margin": 1.50,
+    "risk_cost_to_wf_max": 0.25,
+    "net_margin": 1.0,
+    # Credit Deposit
+    "credit_deposit_ratio_min": 70.0,
+}

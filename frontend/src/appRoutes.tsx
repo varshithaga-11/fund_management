@@ -31,6 +31,7 @@ const UploadDataPage = lazy(() => import("./pages/FinancialStatements/UploadData
 const RatioDashboard = lazy(() => import("./pages/RatioAnalysis/RatioDashboard"));
 const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/ProductivityAnalysis"));
 const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
+const RatioBenchmarksPage = lazy(() => import("./pages/RatioAnalysis/RatioBenchmarksPage"));
 
 
 const LoadingSpinner = () => (
@@ -63,6 +64,7 @@ export function appRoutes() {
             <Route path="financial-statements/:periodId" element={<FinancialPeriodPage />} />
 
             {/* Ratio Analysis */}
+            <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />
             <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
             <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
             <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
