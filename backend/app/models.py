@@ -37,7 +37,6 @@ class FinancialPeriod(models.Model):
         ("YEARLY", "Yearly"),
     ]
 
-
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
@@ -48,6 +47,9 @@ class FinancialPeriod(models.Model):
     end_date = models.DateField()
     label = models.CharField(max_length=50)  # e.g. FY-2023-24, Mar-2024
     is_finalized = models.BooleanField(default=False)
+    
+    # Store the uploaded Excel file
+    excel_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

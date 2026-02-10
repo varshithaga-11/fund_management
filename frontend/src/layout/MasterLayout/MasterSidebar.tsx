@@ -51,6 +51,11 @@ const navItems: NavItem[] = [
   },
   {
     icon: <BarChart3 className="w-5 h-5" />,
+    name: "Company Ratio Analysis",
+    path: "/company-ratio-analysis",
+  },
+  {
+    icon: <BarChart3 className="w-5 h-5" />,
     name: "Ratio Analysis",
     subItems: [
       { name: "Ratio Benchmarks", path: "/ratio-benchmarks" },

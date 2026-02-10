@@ -32,6 +32,7 @@ const RatioDashboard = lazy(() => import("./pages/RatioAnalysis/RatioDashboard")
 const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/ProductivityAnalysis"));
 const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
 const RatioBenchmarksPage = lazy(() => import("./pages/RatioAnalysis/RatioBenchmarksPage"));
+const CompanyRatioAnalysis = lazy(() => import("./pages/CompanyRatioAnalysis"));
 
 
 const LoadingSpinner = () => (
@@ -68,6 +69,7 @@ export function appRoutes() {
             <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
             <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
             <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
+            <Route path="company-ratio-analysis" element={<CompanyRatioAnalysis />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

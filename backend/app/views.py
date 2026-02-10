@@ -1,36 +1,28 @@
-from django.shortcuts import render
-from django.shortcuts import render
-from rest_framework import viewsets
-
-from .models import *
-
-from .serializers import *
 import os
-from django.conf import settings
-from django.http import FileResponse, HttpResponse
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated,AllowAny
 import random
+import logging
+from datetime import datetime
+from decimal import Decimal
+
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.db import transaction
+from django.http import FileResponse, HttpResponse
+from django.shortcuts import render
+from django.utils import timezone
+
+from rest_framework import viewsets, status
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from openpyxl import load_workbook
+
 from .models import *
 from .serializers import *
-from rest_framework.generics import RetrieveUpdateDestroyAPIView
-from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated, AllowAny
-import os
-from rest_framework import viewsets, status
 
-from rest_framework.permissions import AllowAny
-
-from django.utils import timezone
-from django.contrib.auth.hashers import make_password
-from decimal import Decimal
-from openpyxl import load_workbook
-from datetime import datetime
-# from_email = settings.EMAIL_HOST_USER
-
-# from django.core.mail import send_mail
+logger = logging.getLogger(__name__)
 
 
 
@@ -330,8 +322,10 @@ class UploadExcelView(APIView):
         Upload Excel file and parse all 4 sheets
         POST /api/upload-excel/
         """
+        logger.info("=== UploadExcelView POST request received ===")
         try:
             if 'file' not in request.FILES:
+                logger.warning("DEBUG: No file provided")
                 return Response({
                     "status": "failed",
                     "response_code": status.HTTP_400_BAD_REQUEST,
@@ -340,6 +334,7 @@ class UploadExcelView(APIView):
             
             company_id = request.data.get('company_id')
             if not company_id:
+                logger.warning("DEBUG: company_id is required")
                 return Response({
                     "status": "failed",
                     "response_code": status.HTTP_400_BAD_REQUEST,
@@ -348,7 +343,9 @@ class UploadExcelView(APIView):
             
             try:
                 company = Company.objects.get(id=company_id)
+                logger.info(f"DEBUG: Found company - {company.name}")
             except Company.DoesNotExist:
+                logger.warning(f"DEBUG: Company not found - ID: {company_id}")
                 return Response({
                     "status": "failed",
                     "response_code": status.HTTP_404_NOT_FOUND,
@@ -356,16 +353,20 @@ class UploadExcelView(APIView):
                 })
             
             excel_file = request.FILES['file']
+            logger.info(f"DEBUG: Excel file received - {excel_file.name}")
             
             # Extract period information from filename if available
             filename = excel_file.name
             period_info = self._extract_period_from_filename(filename)
             
             # Load workbook
+            logger.info("DEBUG: Loading workbook...")
             workbook = load_workbook(excel_file, data_only=True)
+            logger.info(f"DEBUG: Workbook loaded, sheets: {workbook.sheetnames}")
             
             # Find required sheets – support both formats
             sheet_mapping = self._find_sheets(workbook)
+            logger.info(f"DEBUG: Found sheets in mapping: {list(sheet_mapping.keys())}")
             available = workbook.sheetnames
 
             # Format A: Financial_Statement, Balance_Sheet_Liabilities, Balance_Sheet_Assets, Profit_Loss, Trading_Account
@@ -373,8 +374,11 @@ class UploadExcelView(APIView):
 
             # Format B: Balance Sheet, Profit and Loss, Trading Account, Operational Metrics
             format_b = all(k in sheet_mapping for k in ['Balance Sheet', 'Profit and Loss', 'Trading Account', 'Operational Metrics'])
+            
+            logger.info(f"DEBUG: Format A detected: {format_a}, Format B detected: {format_b}")
 
             if format_a:
+                logger.info("DEBUG: Parsing Format A sheets...")
                 financial_statement_data = self._parse_financial_statement_sheet(workbook[sheet_mapping['Financial_Statement']])
                 liabilities_data = self._parse_balance_sheet_liabilities(workbook[sheet_mapping['Balance_Sheet_Liabilities']])
                 assets_data = self._parse_balance_sheet_assets(workbook[sheet_mapping['Balance_Sheet_Assets']])
@@ -391,11 +395,38 @@ class UploadExcelView(APIView):
                     period_info['label'] = fiscal_end
                     period_info['end_date'] = fiscal_end
             elif format_b:
+                logger.info("DEBUG: Parsing Format B sheets...")
                 balance_sheet_data = self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']])
                 profit_loss_data = self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']])
                 trading_account_data = self._parse_trading_account(workbook[sheet_mapping['Trading Account']])
                 operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']])
+                logger.info("DEBUG: Format B sheets parsed successfully")
+            elif len(available) == 1 and available[0] == 'Sheet':
+                # Format C: Single generic "Sheet" - try to auto-detect and parse as balance sheet
+                logger.info("DEBUG: Detecting single generic 'Sheet'... attempting to auto-parse as balance sheet")
+                single_sheet = workbook[available[0]]
+                
+                # Try to detect if it's balance sheet data by checking headers
+                first_row = [str(cell.value).strip().lower() if cell.value else '' for cell in next(single_sheet.iter_rows(values_only=False))]
+                has_liabilities = any('liabilit' in h for h in first_row)
+                has_assets = any('asset' in h for h in first_row)
+                
+                if has_liabilities and has_assets:
+                    logger.info("DEBUG: Detected balance sheet format - parsing as Format B (single sheet)")
+                    balance_sheet_data = self._parse_balance_sheet(single_sheet)
+                    # Set default/empty data for other required sheets
+                    profit_loss_data = self._default_profit_loss({})
+                    trading_account_data = self._default_trading_account({})
+                    operational_metrics_data = {'staff_count': 1}
+                else:
+                    logger.error(f"DEBUG: Could not auto-detect sheet type. First row: {first_row}")
+                    return Response({
+                        "status": "failed",
+                        "response_code": status.HTTP_400_BAD_REQUEST,
+                        "message": f"Could not parse single sheet format. Please use properly named sheets or ensure balance sheet has 'Liabilities' and 'Assets' headers."
+                    })
             else:
+                logger.error(f"DEBUG: Unsupported sheet set. Available sheets: {', '.join(available)}")
                 return Response({
                     "status": "failed",
                     "response_code": status.HTTP_400_BAD_REQUEST,
@@ -408,76 +439,97 @@ class UploadExcelView(APIView):
             end_date = request.data.get('end_date') or period_info.get('end_date') or f"{datetime.now().year + 1}-03-31"
             period_type = request.data.get('period_type') or period_info.get('period_type') or ('MONTHLY' if period_info else 'YEARLY')
             
-            period, created = FinancialPeriod.objects.get_or_create(
-                company=company,
-                label=period_label,
-                defaults={
-                    'period_type': period_type,
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'is_finalized': False,
-                }
-            )
+            logger.info(f"DEBUG: Creating/updating period - Company: {company.name}, Label: {period_label}")
             
-            # Create/Update Trading Account
-            TradingAccount.objects.update_or_create(
-                period=period,
-                defaults=trading_account_data
-            )
+            # Use transaction to ensure all data is saved together
+            with transaction.atomic():
+                period, created = FinancialPeriod.objects.get_or_create(
+                    company=company,
+                    label=period_label,
+                    defaults={
+                        'period_type': period_type,
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'is_finalized': False,
+                        'excel_file': excel_file,
+                    }
+                )
+                
+                logger.info(f"DEBUG: Period {'created' if created else 'updated'} - ID: {period.id}")
+                
+                # If updating existing period, save the new excel file
+                if not created:
+                    period.excel_file = excel_file
+                    period.save()
+                    logger.info(f"DEBUG: Updated excel_file for period {period.id}")
+                
+                logger.info(f"DEBUG: Saving trading account data")
+                TradingAccount.objects.update_or_create(
+                    period=period,
+                    defaults=trading_account_data
+                )
+                
+                logger.info(f"DEBUG: Saving profit & loss data")
+                # Create/Update Profit & Loss
+                ProfitAndLoss.objects.update_or_create(
+                    period=period,
+                    defaults=profit_loss_data
+                )
+                
+                logger.info(f"DEBUG: Saving balance sheet data")
+                # Create/Update Balance Sheet
+                BalanceSheet.objects.update_or_create(
+                    period=period,
+                    defaults=balance_sheet_data
+                )
+                
+                logger.info(f"DEBUG: Saving operational metrics data")
+                # Create/Update Operational Metrics
+                OperationalMetrics.objects.update_or_create(
+                    period=period,
+                    defaults=operational_metrics_data
+                )
+                
+                logger.info(f"DEBUG: Calculating ratios")
+                # Automatically calculate ratios
+                from app.services.ratio_calculator import RatioCalculator
+                calculator = RatioCalculator(period)
+                all_ratios = calculator.calculate_all_ratios()
+                traffic_light_statuses = calculator.get_traffic_light_statuses()
+                
+                logger.info(f"DEBUG: Saving ratio results")
+                # Create or update RatioResult
+                RatioResult.objects.update_or_create(
+                    period=period,
+                    defaults={
+                        'working_fund': Decimal(str(all_ratios['working_fund'])),
+                        'stock_turnover': Decimal(str(all_ratios.get('stock_turnover', 0))),
+                        'gross_profit_ratio': Decimal(str(all_ratios.get('gross_profit_ratio', 0))),
+                        'net_profit_ratio': Decimal(str(all_ratios.get('net_profit_ratio', 0))),
+                        'own_fund_to_wf': Decimal(str(all_ratios.get('own_fund_to_wf', 0))),
+                        'deposits_to_wf': Decimal(str(all_ratios.get('deposits_to_wf', 0))),
+                        'borrowings_to_wf': Decimal(str(all_ratios.get('borrowings_to_wf', 0))),
+                        'loans_to_wf': Decimal(str(all_ratios.get('loans_to_wf', 0))),
+                        'investments_to_wf': Decimal(str(all_ratios.get('investments_to_wf', 0))),
+                        'cost_of_deposits': Decimal(str(all_ratios.get('cost_of_deposits', 0))),
+                        'yield_on_loans': Decimal(str(all_ratios.get('yield_on_loans', 0))),
+                        'yield_on_investments': Decimal(str(all_ratios.get('yield_on_investments', 0))),
+                        'credit_deposit_ratio': Decimal(str(all_ratios.get('credit_deposit_ratio', 0))),
+                        'avg_cost_of_wf': Decimal(str(all_ratios.get('avg_cost_of_wf', 0))),
+                        'avg_yield_on_wf': Decimal(str(all_ratios.get('avg_yield_on_wf', 0))),
+                        'gross_fin_margin': Decimal(str(all_ratios.get('gross_fin_margin', 0))),
+                        'operating_cost_to_wf': Decimal(str(all_ratios.get('operating_cost_to_wf', 0))),
+                        'net_fin_margin': Decimal(str(all_ratios.get('net_fin_margin', 0))),
+                        'risk_cost_to_wf': Decimal(str(all_ratios.get('risk_cost_to_wf', 0))),
+                        'net_margin': Decimal(str(all_ratios.get('net_margin', 0))),
+                        'all_ratios': all_ratios,
+                        'traffic_light_status': traffic_light_statuses
+                    }
+                )
+                
+                logger.info(f"DEBUG: All data saved successfully for period {period.id}")
             
-            # Create/Update Profit & Loss
-            ProfitAndLoss.objects.update_or_create(
-                period=period,
-                defaults=profit_loss_data
-            )
-            
-            # Create/Update Balance Sheet
-            BalanceSheet.objects.update_or_create(
-                period=period,
-                defaults=balance_sheet_data
-            )
-            
-            # Create/Update Operational Metrics
-            OperationalMetrics.objects.update_or_create(
-                period=period,
-                defaults=operational_metrics_data
-            )
-            
-            # Automatically calculate ratios
-            from app.services.ratio_calculator import RatioCalculator
-            calculator = RatioCalculator(period)
-            all_ratios = calculator.calculate_all_ratios()
-            traffic_light_statuses = calculator.get_traffic_light_statuses()
-            
-            # Create or update RatioResult
-            RatioResult.objects.update_or_create(
-                period=period,
-                defaults={
-                    'working_fund': Decimal(str(all_ratios['working_fund'])),
-                    'stock_turnover': Decimal(str(all_ratios.get('stock_turnover', 0))),
-                    'gross_profit_ratio': Decimal(str(all_ratios.get('gross_profit_ratio', 0))),
-                    'net_profit_ratio': Decimal(str(all_ratios.get('net_profit_ratio', 0))),
-                    'own_fund_to_wf': Decimal(str(all_ratios.get('own_fund_to_wf', 0))),
-                    'deposits_to_wf': Decimal(str(all_ratios.get('deposits_to_wf', 0))),
-                    'borrowings_to_wf': Decimal(str(all_ratios.get('borrowings_to_wf', 0))),
-                    'loans_to_wf': Decimal(str(all_ratios.get('loans_to_wf', 0))),
-                    'investments_to_wf': Decimal(str(all_ratios.get('investments_to_wf', 0))),
-                    'cost_of_deposits': Decimal(str(all_ratios.get('cost_of_deposits', 0))),
-                    'yield_on_loans': Decimal(str(all_ratios.get('yield_on_loans', 0))),
-                    'yield_on_investments': Decimal(str(all_ratios.get('yield_on_investments', 0))),
-                    'credit_deposit_ratio': Decimal(str(all_ratios.get('credit_deposit_ratio', 0))),
-                    'avg_cost_of_wf': Decimal(str(all_ratios.get('avg_cost_of_wf', 0))),
-                    'avg_yield_on_wf': Decimal(str(all_ratios.get('avg_yield_on_wf', 0))),
-                    'gross_fin_margin': Decimal(str(all_ratios.get('gross_fin_margin', 0))),
-                    'operating_cost_to_wf': Decimal(str(all_ratios.get('operating_cost_to_wf', 0))),
-                    'net_fin_margin': Decimal(str(all_ratios.get('net_fin_margin', 0))),
-                    'risk_cost_to_wf': Decimal(str(all_ratios.get('risk_cost_to_wf', 0))),
-                    'net_margin': Decimal(str(all_ratios.get('net_margin', 0))),
-                    'all_ratios': all_ratios,
-                    'traffic_light_status': traffic_light_statuses
-                }
-            )
-            
+            logger.info(f"DEBUG: Returning success response")
             return Response({
                 "status": "success",
                 "response_code": status.HTTP_200_OK,
@@ -486,7 +538,9 @@ class UploadExcelView(APIView):
                 "period_label": period.label
             })
             
+            
         except Exception as e:
+            logger.exception(f"=== EXCEPTION in UploadExcelView: {str(e)} ===")
             import traceback
             traceback.print_exc()
             return Response({
