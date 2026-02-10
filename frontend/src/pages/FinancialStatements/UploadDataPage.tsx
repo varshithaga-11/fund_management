@@ -154,16 +154,15 @@ const UploadDataPage: React.FC = () => {
         {/* Excel Format Instructions */}
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            Excel File Format Requirements:
+            Excel File Format (recommended – 5 sheets):
           </h3>
           <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1 list-disc list-inside">
-            <li>The Excel file must contain 4 sheets with exact names:</li>
-            <li className="ml-4">1. <strong>Balance Sheet</strong> - Liabilities and Assets</li>
-            <li className="ml-4">2. <strong>Profit and Loss</strong> - Income and Expenses</li>
-            <li className="ml-4">3. <strong>Trading Account</strong> - Trading data</li>
-            <li className="ml-4">4. <strong>Operational Metrics</strong> - Staff count</li>
-            <li>Column headers should match the field names exactly</li>
-            <li>Data should start from row 2 (row 1 should be headers)</li>
+            <li><strong>Financial_Statement</strong> – Entity Name, Fiscal Year End, Currency, Staff Count</li>
+            <li><strong>Balance_Sheet_Liabilities</strong> – Liability Type, Amount (e.g. Share Capital, Deposits, Borrowings, Reserves, Provisions, Other Liabilities, Undistributed Profit)</li>
+            <li><strong>Balance_Sheet_Assets</strong> – Asset Type, Amount (e.g. Cash in Hand, Cash at Bank, Investments, Loans &amp; Advances, Fixed Assets, Other Assets, Stock in Trade)</li>
+            <li><strong>Profit_Loss</strong> – Category, Item, Amount (Income / Expense / Net Profit rows)</li>
+            <li><strong>Trading_Account</strong> – Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)</li>
+            <li>Name the file with month and year (e.g. <strong>April_2025.xlsx</strong>) to set the period automatically.</li>
           </ul>
         </div>
 
@@ -181,20 +180,23 @@ const UploadDataPage: React.FC = () => {
       {/* Sample Format Info */}
       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-          Expected Sheet Structures:
+          Expected Sheet Structures (5-sheet format):
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
           <div>
-            <strong>Balance Sheet:</strong> Share Capital, Deposits, Borrowings, Reserves, UDP, Provisions, Other Liabilities, Cash in Hand, Cash at Bank, Investments, Loans & Advances, Fixed Assets, Other Assets, Stock in Trade
+            <strong>Financial_Statement:</strong> Entity Name, Fiscal Year End, Currency, Staff Count
           </div>
           <div>
-            <strong>Profit and Loss:</strong> Interest on Loans, Interest on Bank A/c, Return on Investment, Miscellaneous Income, Interest on Deposits, Interest on Borrowings, Establishment & Contingencies, Provisions, Net Profit
+            <strong>Balance_Sheet_Liabilities:</strong> Liability Type, Amount (one row per liability)
           </div>
           <div>
-            <strong>Trading Account:</strong> Opening Stock, Purchases, Trade Charges, Sales, Closing Stock
+            <strong>Balance_Sheet_Assets:</strong> Asset Type, Amount (one row per asset)
           </div>
           <div>
-            <strong>Operational Metrics:</strong> Staff Count
+            <strong>Profit_Loss:</strong> Category, Item, Amount (Income / Expense / Net Profit)
+          </div>
+          <div>
+            <strong>Trading_Account:</strong> Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)
           </div>
         </div>
       </div>

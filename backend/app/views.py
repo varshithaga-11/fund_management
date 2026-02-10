@@ -364,33 +364,49 @@ class UploadExcelView(APIView):
             # Load workbook
             workbook = load_workbook(excel_file, data_only=True)
             
-            # Find required sheets with flexible matching
+            # Find required sheets – support both formats
             sheet_mapping = self._find_sheets(workbook)
-            
-            missing_sheets = []
-            required_sheet_names = ['Balance Sheet', 'Profit and Loss', 'Trading Account', 'Operational Metrics']
-            for sheet_name in required_sheet_names:
-                if sheet_name not in sheet_mapping:
-                    missing_sheets.append(sheet_name)
-            
-            if missing_sheets:
+            available = workbook.sheetnames
+
+            # Format A: Financial_Statement, Balance_Sheet_Liabilities, Balance_Sheet_Assets, Profit_Loss, Trading_Account
+            format_a = all(k in sheet_mapping for k in ['Financial_Statement', 'Balance_Sheet_Liabilities', 'Balance_Sheet_Assets', 'Profit_Loss', 'Trading_Account'])
+
+            # Format B: Balance Sheet, Profit and Loss, Trading Account, Operational Metrics
+            format_b = all(k in sheet_mapping for k in ['Balance Sheet', 'Profit and Loss', 'Trading Account', 'Operational Metrics'])
+
+            if format_a:
+                financial_statement_data = self._parse_financial_statement_sheet(workbook[sheet_mapping['Financial_Statement']])
+                liabilities_data = self._parse_balance_sheet_liabilities(workbook[sheet_mapping['Balance_Sheet_Liabilities']])
+                assets_data = self._parse_balance_sheet_assets(workbook[sheet_mapping['Balance_Sheet_Assets']])
+                balance_sheet_data = self._default_balance_sheet({**liabilities_data, **assets_data})
+                profit_loss_data = self._default_profit_loss(self._parse_profit_loss_rows(workbook[sheet_mapping['Profit_Loss']]))
+                trading_account_data = self._default_trading_account(self._parse_trading_account_rows(workbook[sheet_mapping['Trading_Account']]))
+                staff_count = financial_statement_data.get('staff_count')
+                if staff_count is not None:
+                    operational_metrics_data = {'staff_count': int(float(staff_count))}
+                else:
+                    operational_metrics_data = {'staff_count': 1}
+                fiscal_end = financial_statement_data.get('fiscal_year_end')
+                if fiscal_end and not period_info.get('label'):
+                    period_info['label'] = fiscal_end
+                    period_info['end_date'] = fiscal_end
+            elif format_b:
+                balance_sheet_data = self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']])
+                profit_loss_data = self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']])
+                trading_account_data = self._parse_trading_account(workbook[sheet_mapping['Trading Account']])
+                operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']])
+            else:
                 return Response({
                     "status": "failed",
                     "response_code": status.HTTP_400_BAD_REQUEST,
-                    "message": f"Missing required sheets: {', '.join(missing_sheets)}. Available sheets: {', '.join(workbook.sheetnames)}"
+                    "message": f"Unsupported sheet set. Use either: (1) Financial_Statement, Balance_Sheet_Liabilities, Balance_Sheet_Assets, Profit_Loss, Trading_Account OR (2) Balance Sheet, Profit and Loss, Trading Account, Operational Metrics. Available: {', '.join(available)}"
                 })
-            
-            # Parse each sheet using mapped names
-            balance_sheet_data = self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']])
-            profit_loss_data = self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']])
-            trading_account_data = self._parse_trading_account(workbook[sheet_mapping['Trading Account']])
-            operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']])
-            
-            # Create Financial Period (use filename info or provided data or defaults)
+
+            # Create Financial Period (filename e.g. April_2025, or fiscal year from Financial_Statement)
             period_label = request.data.get('period_label') or period_info.get('label') or f"FY-{datetime.now().year}-{datetime.now().year + 1}"
             start_date = request.data.get('start_date') or period_info.get('start_date') or f"{datetime.now().year}-04-01"
             end_date = request.data.get('end_date') or period_info.get('end_date') or f"{datetime.now().year + 1}-03-31"
-            period_type = request.data.get('period_type') or period_info.get('period_type') or 'MONTHLY' if period_info else 'YEARLY'
+            period_type = request.data.get('period_type') or period_info.get('period_type') or ('MONTHLY' if period_info else 'YEARLY')
             
             period, created = FinancialPeriod.objects.get_or_create(
                 company=company,
@@ -780,6 +796,186 @@ class UploadExcelView(APIView):
         
         return data
     
+    def _parse_financial_statement_sheet(self, sheet):
+        """Parse Financial_Statement sheet: Entity Name, Fiscal Year End, Currency, Staff Count"""
+        data = {}
+        col_map = {}  # header -> col index
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            if row_idx == 1:
+                for col_idx, cell_value in enumerate(row):
+                    if cell_value:
+                        header = str(cell_value).strip().lower().replace(' ', '_')
+                        col_map[header] = col_idx
+            else:
+                if not col_map:
+                    break
+                for header, col_idx in col_map.items():
+                    if col_idx >= len(row):
+                        continue
+                    val = row[col_idx]
+                    if val is None:
+                        continue
+                    if 'entity' in header and 'name' in header:
+                        data['entity_name'] = str(val).strip()
+                    elif 'fiscal' in header and 'year' in header:
+                        data['fiscal_year_end'] = str(val).strip()
+                    elif 'currency' in header:
+                        data['currency'] = str(val).strip()
+                    elif 'staff' in header and 'count' in header:
+                        try:
+                            data['staff_count'] = int(float(val))
+                        except (TypeError, ValueError):
+                            pass
+                break
+        return data
+    
+    def _parse_balance_sheet_liabilities(self, sheet):
+        """Parse Balance_Sheet_Liabilities: Liability Type, Amount (one row per liability)"""
+        data = {}
+        type_col = amount_col = None
+        # Order matters: more specific phrases first
+        liability_to_field = [
+            ('reserves (statutory + free)', 'reserves_statutory_free'),
+            ('reserves (statutory', 'reserves_statutory_free'),
+            ('share capital', 'share_capital'),
+            ('deposits', 'deposits'),
+            ('borrowings', 'borrowings'),
+            ('reserves', 'reserves_statutory_free'),
+            ('statutory', 'reserves_statutory_free'),
+            ('provisions', 'provisions'),
+            ('other liabilities', 'other_liabilities'),
+            ('undistributed profit', 'undistributed_profit'),
+            ('udp', 'undistributed_profit'),
+        ]
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            if row_idx == 1:
+                for col_idx, cell_value in enumerate(row):
+                    if cell_value:
+                        h = str(cell_value).strip().lower()
+                        if 'liability' in h or 'type' in h:
+                            type_col = col_idx
+                        elif 'amount' in h:
+                            amount_col = col_idx
+            elif row_idx > 1 and type_col is not None and amount_col is not None:
+                typ = row[type_col] if type_col < len(row) else None
+                amt = row[amount_col] if amount_col < len(row) else None
+                if typ is not None and amt is not None:
+                    t = str(typ).strip().lower()
+                    for key, field in liability_to_field:
+                        if key in t or t in key:
+                            data[field] = self._parse_decimal(amt)
+                            break
+        return data
+    
+    def _parse_balance_sheet_assets(self, sheet):
+        """Parse Balance_Sheet_Assets: Asset Type, Amount (one row per asset)"""
+        data = {}
+        type_col = amount_col = None
+        asset_to_field = {
+            'cash in hand': 'cash_in_hand',
+            'cash at bank': 'cash_at_bank',
+            'investments': 'investments',
+            'loans & advances': 'loans_advances',
+            'loans and advances': 'loans_advances',
+            'fixed assets': 'fixed_assets',
+            'other assets': 'other_assets',
+            'stock in trade': 'stock_in_trade',
+        }
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            if row_idx == 1:
+                for col_idx, cell_value in enumerate(row):
+                    if cell_value:
+                        h = str(cell_value).strip().lower()
+                        if 'asset' in h or 'type' in h:
+                            type_col = col_idx
+                        elif 'amount' in h:
+                            amount_col = col_idx
+            elif row_idx > 1 and type_col is not None and amount_col is not None:
+                typ = row[type_col] if type_col < len(row) else None
+                amt = row[amount_col] if amount_col < len(row) else None
+                if typ is not None and amt is not None:
+                    t = str(typ).strip().lower()
+                    for key, field in asset_to_field.items():
+                        if key in t or t in key:
+                            data[field] = self._parse_decimal(amt)
+                            break
+        return data
+    
+    def _parse_profit_loss_rows(self, sheet):
+        """Parse Profit_Loss sheet: Category, Item, Amount (Income/Expense/Net Profit rows)"""
+        data = {}
+        cat_col = item_col = amount_col = None
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            if row_idx == 1:
+                for col_idx, cell_value in enumerate(row):
+                    if cell_value:
+                        h = str(cell_value).strip().lower()
+                        if 'category' in h:
+                            cat_col = col_idx
+                        elif 'item' in h:
+                            item_col = col_idx
+                        elif 'amount' in h:
+                            amount_col = col_idx
+            elif row_idx > 1 and item_col is not None and amount_col is not None:
+                cat = str(row[cat_col] or '').strip().lower() if cat_col is not None and cat_col < len(row) else ''
+                item = str(row[item_col] or '').strip().lower() if item_col < len(row) else ''
+                amt = row[amount_col] if amount_col < len(row) else None
+                if not item or amt is None:
+                    continue
+                amt_val = self._parse_decimal(amt)
+                if 'income' in cat:
+                    if 'interest' in item and 'loan' in item:
+                        data['interest_on_loans'] = amt_val
+                    elif 'interest' in item and 'bank' in item:
+                        data['interest_on_bank_ac'] = amt_val
+                    elif 'return' in item and 'investment' in item:
+                        data['return_on_investment'] = amt_val
+                    elif 'miscellaneous' in item:
+                        data['miscellaneous_income'] = amt_val
+                elif 'expense' in cat:
+                    if 'interest' in item and 'deposit' in item:
+                        data['interest_on_deposits'] = amt_val
+                    elif 'interest' in item and 'borrowing' in item:
+                        data['interest_on_borrowings'] = amt_val
+                    elif 'establishment' in item or 'contingenc' in item:
+                        data['establishment_contingencies'] = amt_val
+                    elif 'provision' in item:
+                        data['provisions'] = amt_val
+                elif 'net profit' in cat or (cat == '' and 'net profit' in item):
+                    data['net_profit'] = amt_val
+        return data
+    
+    def _parse_trading_account_rows(self, sheet):
+        """Parse Trading_Account sheet: Item, Amount (one row per item)"""
+        data = {}
+        item_col = amount_col = None
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            if row_idx == 1:
+                for col_idx, cell_value in enumerate(row):
+                    if cell_value:
+                        h = str(cell_value).strip().lower()
+                        if 'item' in h:
+                            item_col = col_idx
+                        elif 'amount' in h:
+                            amount_col = col_idx
+            elif row_idx > 1 and item_col is not None and amount_col is not None:
+                item = str(row[item_col] or '').strip().lower() if item_col < len(row) else ''
+                amt = row[amount_col] if amount_col < len(row) else None
+                if not item or amt is None:
+                    continue
+                amt_val = self._parse_decimal(amt)
+                if 'opening' in item and 'stock' in item:
+                    data['opening_stock'] = amt_val
+                elif 'purchases' in item:
+                    data['purchases'] = amt_val
+                elif 'sales' in item:
+                    data['sales'] = amt_val
+                elif 'trade' in item and 'charges' in item:
+                    data['trade_charges'] = amt_val
+                elif 'closing' in item and 'stock' in item:
+                    data['closing_stock'] = amt_val
+        return data
+    
     def _parse_decimal(self, value):
         """Parse value to Decimal"""
         if value is None:
@@ -794,30 +990,73 @@ class UploadExcelView(APIView):
                 return Decimal('0')
         return Decimal('0')
     
+    def _default_balance_sheet(self, data):
+        """Ensure all BalanceSheet fields exist (default 0)."""
+        keys = [
+            'share_capital', 'deposits', 'borrowings', 'reserves_statutory_free', 'undistributed_profit',
+            'provisions', 'other_liabilities', 'cash_in_hand', 'cash_at_bank', 'investments',
+            'loans_advances', 'fixed_assets', 'other_assets', 'stock_in_trade'
+        ]
+        for k in keys:
+            if k not in data:
+                data[k] = Decimal('0')
+        return data
+    
+    def _default_profit_loss(self, data):
+        """Ensure all ProfitAndLoss fields exist (default 0)."""
+        keys = [
+            'interest_on_loans', 'interest_on_bank_ac', 'return_on_investment', 'miscellaneous_income',
+            'interest_on_deposits', 'interest_on_borrowings', 'establishment_contingencies', 'provisions',
+            'net_profit'
+        ]
+        for k in keys:
+            if k not in data:
+                data[k] = Decimal('0')
+        return data
+    
+    def _default_trading_account(self, data):
+        """Ensure all TradingAccount fields exist (default 0)."""
+        keys = ['opening_stock', 'purchases', 'trade_charges', 'sales', 'closing_stock']
+        for k in keys:
+            if k not in data:
+                data[k] = Decimal('0')
+        return data
+    
     def _find_sheets(self, workbook):
-        """Find required sheets with flexible name matching"""
+        """Find required sheets with flexible name matching. Supports two formats."""
         available_sheets = workbook.sheetnames
         sheet_mapping = {}
         
-        # Define variations for each required sheet
-        sheet_variations = {
+        # Format A: Financial_Statement, Balance_Sheet_Liabilities, Balance_Sheet_Assets, Profit_Loss, Trading_Account
+        sheet_variations_a = {
+            'Financial_Statement': ['financial_statement', 'financial statement'],
+            'Balance_Sheet_Liabilities': ['balance_sheet_liabilities', 'balance sheet liabilities', 'liabilities'],
+            'Balance_Sheet_Assets': ['balance_sheet_assets', 'balance sheet assets', 'assets'],
+            'Profit_Loss': ['profit_loss', 'profit loss', 'profit_loss', 'profit & loss'],
+            'Trading_Account': ['trading_account', 'trading account'],
+        }
+        # Format B: single Balance Sheet, P&L, Trading Account, Operational Metrics
+        sheet_variations_b = {
             'Balance Sheet': ['balance sheet', 'balance_sheet', 'balancesheet', 'balance'],
-            'Profit and Loss': ['profit and loss', 'profit & loss', 'profit_and_loss', 'profitandloss', 'profit & loss', 'p&l', 'pl'],
+            'Profit and Loss': ['profit and loss', 'profit & loss', 'profit_and_loss', 'profitandloss', 'p&l', 'pl'],
             'Trading Account': ['trading account', 'trading_account', 'tradingaccount', 'trading'],
             'Operational Metrics': ['operational metrics', 'operational_metrics', 'operationalmetrics', 'operational', 'metrics']
         }
         
-        for required_name, variations in sheet_variations.items():
-            found = False
+        for required_name, variations in {**sheet_variations_a, **sheet_variations_b}.items():
+            if required_name in sheet_mapping:
+                continue
             for sheet_name in available_sheets:
-                sheet_lower = sheet_name.lower().strip()
+                sheet_lower = sheet_name.lower().strip().replace(' ', '_')
+                sheet_lower_orig = sheet_name.lower().strip()
                 for variation in variations:
-                    if variation in sheet_lower or sheet_lower == variation:
+                    v_norm = variation.replace(' ', '_')
+                    if v_norm in sheet_lower or sheet_lower == v_norm or variation in sheet_lower_orig or sheet_lower_orig == variation:
                         sheet_mapping[required_name] = sheet_name
-                        found = True
                         break
-                if found:
-                    break
+                else:
+                    continue
+                break
         
         return sheet_mapping
     
