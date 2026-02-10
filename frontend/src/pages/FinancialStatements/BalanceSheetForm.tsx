@@ -14,11 +14,13 @@ import "react-toastify/dist/ReactToastify.css";
 interface BalanceSheetFormProps {
   periodId: number;
   onSave?: () => void;
+  canUpdate?: boolean;
 }
 
 const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
   periodId,
   onSave,
+  canUpdate = true,
 }) => {
   const [formData, setFormData] = useState({
     share_capital: "",
@@ -44,6 +46,8 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [existingId, setExistingId] = useState<number | null>(null);
+
+  const isReadOnly = !canUpdate && existingId !== null;
 
   useEffect(() => {
     loadData();
@@ -209,7 +213,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.share_capital}
                 onChange={(e) => handleChange("share_capital", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -222,7 +226,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.deposits}
                 onChange={(e) => handleChange("deposits", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -235,7 +239,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.borrowings}
                 onChange={(e) => handleChange("borrowings", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -252,7 +256,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                   handleChange("reserves_statutory_free", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -269,7 +273,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                   handleChange("undistributed_profit", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -282,7 +286,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.provisions}
                 onChange={(e) => handleChange("provisions", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -297,7 +301,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                   handleChange("other_liabilities", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
           </div>
@@ -318,7 +322,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.cash_in_hand}
                 onChange={(e) => handleChange("cash_in_hand", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -331,7 +335,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.cash_at_bank}
                 onChange={(e) => handleChange("cash_at_bank", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -344,7 +348,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.investments}
                 onChange={(e) => handleChange("investments", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -357,7 +361,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.loans_advances}
                 onChange={(e) => handleChange("loans_advances", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -370,7 +374,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.fixed_assets}
                 onChange={(e) => handleChange("fixed_assets", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -383,7 +387,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.other_assets}
                 onChange={(e) => handleChange("other_assets", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -396,7 +400,7 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
                 value={formData.stock_in_trade}
                 onChange={(e) => handleChange("stock_in_trade", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
           </div>
@@ -474,9 +478,11 @@ const BalanceSheetForm: React.FC<BalanceSheetFormProps> = ({
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading || !isBalanced}>
-            {loading ? "Saving..." : existingId ? "Update" : "Save"}
-          </Button>
+          {!isReadOnly && (
+            <Button type="submit" disabled={loading || !isBalanced}>
+              {loading ? "Saving..." : existingId ? "Update" : "Save"}
+            </Button>
+          )}
         </div>
       </form>
     </div>

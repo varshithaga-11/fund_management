@@ -14,11 +14,13 @@ import "react-toastify/dist/ReactToastify.css";
 interface TradingAccountFormProps {
   periodId: number;
   onSave?: () => void;
+  canUpdate?: boolean;
 }
 
 const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
   periodId,
   onSave,
+  canUpdate = true,
 }) => {
   const [formData, setFormData] = useState({
     opening_stock: "",
@@ -30,6 +32,8 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
   const [grossProfit, setGrossProfit] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [existingId, setExistingId] = useState<number | null>(null);
+
+  const isReadOnly = !canUpdate && existingId !== null;
 
   useEffect(() => {
     loadData();
@@ -127,7 +131,7 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
               value={formData.opening_stock}
               onChange={(e) => handleChange("opening_stock", e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || isReadOnly}
             />
           </div>
 
@@ -140,7 +144,7 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
               value={formData.purchases}
               onChange={(e) => handleChange("purchases", e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || isReadOnly}
             />
           </div>
 
@@ -153,7 +157,7 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
               value={formData.trade_charges}
               onChange={(e) => handleChange("trade_charges", e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || isReadOnly}
             />
           </div>
 
@@ -166,7 +170,7 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
               value={formData.sales}
               onChange={(e) => handleChange("sales", e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || isReadOnly}
             />
           </div>
 
@@ -179,7 +183,7 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
               value={formData.closing_stock}
               onChange={(e) => handleChange("closing_stock", e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || isReadOnly}
             />
           </div>
 
@@ -203,9 +207,11 @@ const TradingAccountForm: React.FC<TradingAccountFormProps> = ({
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : existingId ? "Update" : "Save"}
-          </Button>
+          {!isReadOnly && (
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : existingId ? "Update" : "Save"}
+            </Button>
+          )}
         </div>
       </form>
     </div>

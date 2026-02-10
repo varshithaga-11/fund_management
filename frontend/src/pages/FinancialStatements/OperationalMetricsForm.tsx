@@ -14,15 +14,19 @@ import "react-toastify/dist/ReactToastify.css";
 interface OperationalMetricsFormProps {
   periodId: number;
   onSave?: () => void;
+  canUpdate?: boolean;
 }
 
 const OperationalMetricsForm: React.FC<OperationalMetricsFormProps> = ({
   periodId,
   onSave,
+  canUpdate = true,
 }) => {
   const [staffCount, setStaffCount] = useState("");
   const [loading, setLoading] = useState(false);
   const [existingId, setExistingId] = useState<number | null>(null);
+
+  const isReadOnly = !canUpdate && existingId !== null;
 
   useEffect(() => {
     loadData();
@@ -94,15 +98,17 @@ const OperationalMetricsForm: React.FC<OperationalMetricsFormProps> = ({
             value={staffCount}
             onChange={(e) => setStaffCount(e.target.value)}
             required
-            disabled={loading}
+            disabled={loading || isReadOnly}
             placeholder="Enter number of staff members"
           />
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : existingId ? "Update" : "Save"}
-          </Button>
+          {!isReadOnly && (
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : existingId ? "Update" : "Save"}
+            </Button>
+          )}
         </div>
       </form>
     </div>

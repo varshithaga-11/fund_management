@@ -14,11 +14,13 @@ import "react-toastify/dist/ReactToastify.css";
 interface ProfitLossFormProps {
   periodId: number;
   onSave?: () => void;
+  canUpdate?: boolean;
 }
 
 const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
   periodId,
   onSave,
+  canUpdate = true,
 }) => {
   const [formData, setFormData] = useState({
     interest_on_loans: "",
@@ -37,6 +39,8 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [existingId, setExistingId] = useState<number | null>(null);
+
+  const isReadOnly = !canUpdate && existingId !== null;
 
   useEffect(() => {
     loadData();
@@ -156,7 +160,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("interest_on_loans", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -171,7 +175,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("interest_on_bank_ac", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -186,7 +190,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("return_on_investment", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -201,7 +205,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("miscellaneous_income", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
           </div>
@@ -236,7 +240,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("interest_on_deposits", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -251,7 +255,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("interest_on_borrowings", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -268,7 +272,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                   handleChange("establishment_contingencies", e.target.value)
                 }
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
 
@@ -281,7 +285,7 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
                 value={formData.provisions}
                 onChange={(e) => handleChange("provisions", e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isReadOnly}
               />
             </div>
           </div>
@@ -309,14 +313,16 @@ const ProfitLossForm: React.FC<ProfitLossFormProps> = ({
             value={formData.net_profit}
             onChange={(e) => handleChange("net_profit", e.target.value)}
             required
-            disabled={loading}
+            disabled={loading || isReadOnly}
           />
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : existingId ? "Update" : "Save"}
-          </Button>
+          {!isReadOnly && (
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : existingId ? "Update" : "Save"}
+            </Button>
+          )}
         </div>
       </form>
     </div>

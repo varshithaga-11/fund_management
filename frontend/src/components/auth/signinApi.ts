@@ -30,7 +30,8 @@ const loginUser = async (credentials: LoginCredentials): Promise<LoginResponse> 
     if (response.ok && data.tokens && data.tokens.access) {
       localStorage.setItem('access', data.tokens.access);
       localStorage.setItem('refresh', data.tokens.refresh);
-      const userRole = jwtDecode<{ role: string }>(data.tokens.access).role;
+      const userRole = data.tokens.userRole || jwtDecode<{ role: string }>(data.tokens.access).role;
+      localStorage.setItem('userRole', userRole);
 
       return {
         success: true,

@@ -26,6 +26,10 @@ const FinancialPeriodPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
 
+  // Only master can update existing data; admin can view and create new
+  const userRole = typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
+  const canUpdate = userRole === "master";
+
   useEffect(() => {
     if (periodId) {
       loadPeriod();
@@ -170,29 +174,38 @@ const FinancialPeriodPage: React.FC = () => {
       </div>
 
       {/* Tab Content */}
+      {!canUpdate && (
+        <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
+          View only. Only Master role can update existing financial statements.
+        </div>
+      )}
       <div className="mt-6">
         {activeTab === "trading" && (
           <TradingAccountForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
+            canUpdate={canUpdate}
           />
         )}
         {activeTab === "profit-loss" && (
           <ProfitLossForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
+            canUpdate={canUpdate}
           />
         )}
         {activeTab === "balance-sheet" && (
           <BalanceSheetForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
+            canUpdate={canUpdate}
           />
         )}
         {activeTab === "operational" && (
           <OperationalMetricsForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
+            canUpdate={canUpdate}
           />
         )}
       </div>
