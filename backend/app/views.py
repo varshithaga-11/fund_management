@@ -202,7 +202,7 @@ class StatementColumnConfigViewSet(viewsets.ModelViewSet):
         # if no company param: return all (caller can filter client-side)
         if statement_type:
             qs = qs.filter(statement_type=statement_type)
-        return qs.order_by("order_index", "canonical_field")
+        return qs.order_by("canonical_field")
 
 
 class CalculateRatiosView(APIView):
