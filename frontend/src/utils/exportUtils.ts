@@ -15,6 +15,55 @@ declare module 'jspdf' {
 // ==================== EXCEL EXPORT ====================
 
 /**
+ * Parse Excel file and extract company data for import
+ */
+export const parseCompaniesFromExcel = async (file: File): Promise<Array<{ name: string; registration_no: string }>> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        // Map the Excel data to company format
+        const companies = jsonData.map((row, index) => {
+          // Support different column name variations
+          const name = row['Company Name'] || row['name'] || row['Name'] || '';
+          const registration_no = row['Registration No'] || row['registration_no'] || row['Registration Number'] || '';
+
+          if (!name || !registration_no) {
+            throw new Error(`Row ${index + 2}: Missing required fields (Company Name or Registration No)`);
+          }
+
+          return {
+            name: String(name).trim(),
+            registration_no: String(registration_no).trim(),
+          };
+        });
+
+        if (companies.length === 0) {
+          throw new Error('No valid company data found in the Excel file');
+        }
+
+        resolve(companies);
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('Failed to parse Excel file'));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+
+    reader.readAsBinaryString(file);
+  });
+};
+
+/**
  * Export company list to Excel
  */
 export const exportCompaniesToExcel = (companies: CompanyData[], fileName: string = 'Companies') => {

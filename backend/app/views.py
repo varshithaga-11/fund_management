@@ -1249,3 +1249,68 @@ class RatioBenchmarksView(APIView):
                 "status": "failed",
                 "message": str(e),
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class BulkImportCompaniesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Bulk import companies
+        POST /api/companies/bulk_import/
+        """
+        try:
+            companies_data = request.data.get('companies', [])
+            if not companies_data:
+                return Response({
+                    "status": "failed",
+                    "response_code": status.HTTP_400_BAD_REQUEST,
+                    "message": "No companies provided"
+                })
+
+            success_count = 0
+            failed_count = 0
+            errors = []
+
+            for company_data in companies_data:
+                try:
+                    name = company_data.get('name')
+                    registration_no = company_data.get('registration_no')
+
+                    if not name or not registration_no:
+                        failed_count += 1
+                        errors.append(f"Missing name or registration number for data: {company_data}")
+                        continue
+
+                    # Check if company with registration number already exists
+                    if Company.objects.filter(registration_no=registration_no).exists():
+                        failed_count += 1
+                        errors.append(f"Company with registration no {registration_no} already exists")
+                        continue
+
+                    # Create company
+                    Company.objects.create(
+                        name=name,
+                        registration_no=registration_no
+                    )
+                    success_count += 1
+
+                except Exception as e:
+                    failed_count += 1
+                    errors.append(f"Error creating company {company_data.get('name', 'Unknown')}: {str(e)}")
+
+            return Response({
+                "status": "success",
+                "response_code": status.HTTP_200_OK,
+                "success": success_count,
+                "failed": failed_count,
+                "errors": errors,
+                "message": f"Successfully imported {success_count} companies. {failed_count} failed."
+            })
+
+        except Exception as e:
+            logger.exception(f"Error in BulkImportCompaniesView: {str(e)}")
+            return Response({
+                "status": "failed",
+                "response_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": str(e)
+            })

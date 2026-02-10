@@ -1,13 +1,17 @@
-import { useEffect, useState, useMemo } from "react";
-import { FiTrash2, FiEdit, FiSearch, FiPlus, FiChevronLeft, FiChevronRight, FiBriefcase, FiDownload } from "react-icons/fi";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { FiTrash2, FiEdit, FiSearch, FiPlus, FiChevronLeft, FiChevronRight, FiBriefcase, FiUpload, FiDownload } from "react-icons/fi";
+import { HiOutlineDocumentArrowUp, HiOutlineArrowDownTray, HiOutlineXMark } from "react-icons/hi2";
 import { BeatLoader } from "react-spinners";
 import { toast } from "react-toastify";
+import * as XLSX from 'xlsx';
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import {
   getCompanyList,
   deleteCompany,
   CompanyData,
+  bulkImportCompanies,
+  CompanyFormData,
 } from "./api";
 import {
   Table,
@@ -23,6 +27,11 @@ import EditCompany from "./EditCompany";
 import AddCompany from "./AddCompany";
 import { exportCompaniesToExcel, exportCompanyDetailsToPDF } from "../../utils/exportUtils";
 
+// Type for Excel row data
+type ExcelCompanyRow = CompanyFormData & {
+  errors: string[];
+};
+
 const CompanyPage: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +41,11 @@ const CompanyPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editCompanyId, setEditCompanyId] = useState<number | null>(null);
+
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [excelData, setExcelData] = useState<ExcelCompanyRow[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof CompanyData | null>(null);
@@ -100,6 +114,203 @@ const CompanyPage: React.FC = () => {
       setIsExporting(false);
     }
   };
+
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+
+  // Handle Excel file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setExcelFile(file);
+      setExcelData([]); // Clear previous data
+      setSelectedRows(new Set());
+    }
+  };
+
+  const handleSelectAll = () => {
+    const validIndices = excelData
+      .map((row, index) => (!row.errors || row.errors.length === 0) ? index : -1)
+      .filter(index => index !== -1);
+
+    if (selectedRows.size === validIndices.length && validIndices.length > 0) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(validIndices));
+    }
+  };
+
+  const handleSelectRow = (index: number) => {
+    if (excelData[index].errors && excelData[index].errors.length > 0) return;
+
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedRows(newSelected);
+  };
+
+  // Read Excel file and process data
+  const handleImportExcel = async () => {
+    if (!excelFile) {
+      toast.error('Please select an Excel file first');
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+          if (jsonData.length === 0) {
+            toast.error('No data found in the Excel file');
+            return;
+          }
+
+          // Create lookup maps for existing companies
+          const existingRegMap = new Set(companies.map(c => c.registration_no.toLowerCase().trim()));
+          const existingNameMap = new Set(companies.map(c => c.name.toLowerCase().trim()));
+
+          // Process each row
+          const processedData: ExcelCompanyRow[] = jsonData.map((row: any, index: number) => {
+            const errors: string[] = [];
+
+            // Helper to get value
+            const getValue = (keys: string[]) => {
+              for (const k of keys) {
+                if (row[k] !== undefined) return String(row[k]).trim();
+              }
+              return '';
+            };
+
+            const name = getValue(['Company Name', 'name', 'Name', 'company_name']);
+            const regNo = getValue(['Registration No', 'registration_no', 'Registration Number', 'Reg No']);
+
+            const companyRow: ExcelCompanyRow = {
+              name: name,
+              registration_no: regNo,
+              errors: [],
+            };
+
+            // Validation errors
+            if (!companyRow.name) {
+              errors.push(`Row ${index + 2}: Company Name is required`);
+            } else if (existingNameMap.has(companyRow.name.toLowerCase())) {
+              errors.push(`Row ${index + 2}: Company Name "${companyRow.name}" already exists`);
+            }
+
+            if (!companyRow.registration_no) {
+              errors.push(`Row ${index + 2}: Registration No is required`);
+            } else if (existingRegMap.has(companyRow.registration_no.toLowerCase())) {
+              errors.push(`Row ${index + 2}: Registration No "${companyRow.registration_no}" already exists`);
+            }
+
+            companyRow.errors = errors;
+            return companyRow;
+          });
+
+          setExcelData(processedData);
+
+          // Pre-select all valid rows
+          const validIndices = processedData
+            .map((row, index) => (!row.errors || row.errors.length === 0) ? index : -1)
+            .filter(index => index !== -1);
+          setSelectedRows(new Set(validIndices));
+
+          toast.success('Excel file processed successfully!');
+        } catch (error) {
+          toast.error('Error processing Excel data.');
+          console.error('Error:', error);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error('Error reading Excel file');
+      };
+
+      reader.readAsBinaryString(excelFile);
+    } catch (error) {
+      toast.error('Error initiating file read');
+      console.error('Error:', error);
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    try {
+      const templateData = [
+        {
+          'Company Name': 'Example Company Ltd',
+          'Registration No': 'ABC12345',
+        },
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      worksheet['!cols'] = [
+        { wch: 30 },
+        { wch: 20 },
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
+      XLSX.writeFile(workbook, 'Company_Import_Template.xlsx');
+      toast.success('Template downloaded successfully!');
+    } catch (error) {
+      toast.error('Failed to download template');
+      console.error('Error:', error);
+    }
+  };
+
+  const closeModal = () => {
+    setIsImportModalOpen(false);
+    setExcelData([]);
+    setExcelFile(null);
+    setSelectedRows(new Set());
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleBulkSubmit = async () => {
+    if (selectedRows.size === 0) {
+      toast.error('Please select at least one valid company to import.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Filter only selected rows for submission
+      const companiesToImport = excelData
+        .filter((_, index) => selectedRows.has(index))
+        .map(({ errors, ...rest }) => rest) as CompanyFormData[];
+
+      const result = await bulkImportCompanies(companiesToImport);
+
+      if (result.success > 0) {
+        toast.success(`Successfully imported ${result.success} companies!`);
+        await fetchCompanies();
+        closeModal();
+      }
+
+      if (result.failed > 0) {
+        toast.warning(`Failed to import ${result.failed} companies. Check console for details.`);
+        console.error('Import errors:', result.errors);
+      }
+    } catch (error) {
+      console.error('Bulk submit error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import companies');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
 
   const handleCompanyAdded = (newCompany: CompanyData) => {
     setCompanies((prev) => [newCompany, ...prev]);
@@ -208,10 +419,19 @@ const CompanyPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Import Button */}
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            >
+              <FiUpload className="w-4 h-4" />
+              Import
+            </button>
+
             {/* Export Buttons */}
             <div className="flex items-center gap-2">
               <div className="relative group">
-                <Button 
+                <Button
                   variant="outline"
                   startIcon={<FiDownload className="w-4 h-4" />}
                   disabled={isExporting || sortedCompanies.length === 0}
@@ -259,7 +479,7 @@ const CompanyPage: React.FC = () => {
             </div>
 
             {/* Add Company Button */}
-            <Button 
+            <Button
               onClick={() => setIsAddModalOpen(true)}
               startIcon={<FiPlus className="w-4 h-4" />}
             >
@@ -319,12 +539,12 @@ const CompanyPage: React.FC = () => {
                 {searchTerm ? "No companies found" : "No companies yet"}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 text-center max-w-md mb-6">
-                {searchTerm 
+                {searchTerm
                   ? "Try adjusting your search terms to find what you're looking for."
                   : "Get started by adding your first company to the system."}
               </p>
               {!searchTerm && (
-                <Button 
+                <Button
                   onClick={() => setIsAddModalOpen(true)}
                   startIcon={<FiPlus className="w-4 h-4" />}
                 >
@@ -377,7 +597,7 @@ const CompanyPage: React.FC = () => {
 
               <TableBody>
                 {paginatedCompanies.map((company, index) => (
-                  <TableRow 
+                  <TableRow
                     key={company.id}
                     className="border-b border-gray-100 dark:border-white/[0.05] hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
                   >
@@ -431,7 +651,7 @@ const CompanyPage: React.FC = () => {
             Page <span className="font-semibold text-gray-900 dark:text-white">{currentPage}</span> of{" "}
             <span className="font-semibold text-gray-900 dark:text-white">{totalPages}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -442,7 +662,7 @@ const CompanyPage: React.FC = () => {
             >
               Previous
             </Button>
-            
+
             {/* Page Numbers */}
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -456,23 +676,22 @@ const CompanyPage: React.FC = () => {
                 } else {
                   pageNum = currentPage - 2 + i;
                 }
-                
+
                 return (
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      currentPage === pageNum
-                        ? "bg-brand-500 text-white"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${currentPage === pageNum
+                      ? "bg-brand-500 text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
                   >
                     {pageNum}
                   </button>
                 );
               })}
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -501,6 +720,190 @@ const CompanyPage: React.FC = () => {
           onClose={() => setIsEditModalOpen(false)}
           onUpdated={fetchCompanies}
         />
+      )}
+
+      {/* Import Excel Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-6xl max-h-[90vh] rounded-xl bg-white shadow-xl dark:bg-gray-800 overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Import Excel - Companies</h2>
+              <button
+                onClick={closeModal}
+                className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+              >
+                <HiOutlineXMark className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6 overflow-y-auto flex-1">
+              {/* Upload Excel Section */}
+              <div className="mb-6 text-center">
+                <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-white">Upload Excel</h3>
+
+                {/* Download Template Button */}
+                <div className="mb-4">
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                  >
+                    <HiOutlineArrowDownTray className="h-5 w-5" />
+                    Download Template
+                  </button>
+                </div>
+
+                {/* File Input (Dashed Box) */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mb-6 cursor-pointer rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center transition-all hover:border-emerald-500 hover:bg-emerald-50/30 dark:border-gray-600 dark:bg-gray-800/50 dark:hover:bg-gray-800"
+                >
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <HiOutlineDocumentArrowUp className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    Select Excel File
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    {excelFile ? (
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{excelFile.name}</span>
+                    ) : (
+                      "Click to browse your device"
+                    )}
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Import Excel Button */}
+                <div className="mb-4">
+                  <button
+                    onClick={handleImportExcel}
+                    disabled={!excelFile}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <HiOutlineDocumentArrowUp className="h-5 w-5" />
+                    Import Excel
+                  </button>
+                </div>
+
+                {/* Excel Data Preview */}
+                {excelData.length > 0 && (
+                  <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                        Total Records: {excelData.length}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {excelData.some(row => row.errors && row.errors.length > 0) && (
+                          <div className="text-sm font-semibold text-red-600 dark:text-red-400">
+                            {excelData.filter(row => row.errors && row.errors.length > 0).length} record(s) have errors
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto overflow-x-auto bg-white dark:bg-gray-800">
+                      <Table className="w-full min-w-[600px] bg-white dark:bg-gray-800">
+                        <TableHeader>
+                          <TableRow className="bg-gray-100 dark:bg-gray-800">
+                            <TableCell isHeader className="py-2 px-3 w-10 sticky left-0 bg-gray-100 dark:bg-gray-800 z-10">
+                              <input
+                                type="checkbox"
+                                checked={selectedRows.size > 0 && selectedRows.size === excelData.filter(r => !r.errors || r.errors.length === 0).length}
+                                onChange={handleSelectAll}
+                                className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                disabled={!excelData.some(r => !r.errors || r.errors.length === 0)}
+                              />
+                            </TableCell>
+                            <TableCell isHeader className="py-2 px-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 w-16 sticky left-10 bg-gray-100 dark:bg-gray-800 z-10">Row</TableCell>
+                            <TableCell isHeader className="py-2 px-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300">Company Name</TableCell>
+                            <TableCell isHeader className="py-2 px-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300">Registration No</TableCell>
+                            <TableCell isHeader className="py-2 px-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300">Status</TableCell>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {excelData.map((row, rowIndex) => (
+                            <TableRow
+                              key={rowIndex}
+                              className={`border-b border-gray-100 dark:border-gray-700 ${row.errors && row.errors.length > 0 ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                              onClick={() => handleSelectRow(rowIndex)}
+                            >
+                              <TableCell className={`py-2 px-3 sticky left-0 z-10 ${row.errors && row.errors.length > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-white dark:bg-gray-800'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedRows.has(rowIndex)}
+                                  onChange={(e) => { e.stopPropagation(); handleSelectRow(rowIndex); }}
+                                  className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                  disabled={!!(row.errors && row.errors.length > 0)}
+                                />
+                              </TableCell>
+                              <TableCell className={`py-2 px-3 text-xs text-gray-900 dark:text-white sticky left-10 z-10 ${row.errors && row.errors.length > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-white dark:bg-gray-800'}`}>
+                                {rowIndex + 2}
+                              </TableCell>
+                              <TableCell className="py-2 px-3 text-xs text-gray-900 dark:text-white">
+                                {row.name || 'N/A'}
+                              </TableCell>
+                              <TableCell className="py-2 px-3 text-xs text-gray-900 dark:text-white font-mono">
+                                {row.registration_no || 'N/A'}
+                              </TableCell>
+                              <TableCell className="py-2 px-3">
+                                {row.errors && row.errors.length > 0 ? (
+                                  <div className="flex flex-col gap-1">
+                                    <span className="inline-flex w-fit rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-400 whitespace-nowrap">
+                                      {row.errors.length} error(s)
+                                    </span>
+                                    <ul className="list-disc pl-4 text-xs text-red-600 dark:text-red-400">
+                                      {row.errors.map((err, i) => (
+                                        <li key={i}>{err}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
+                                    Valid
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                {excelData.length > 0 && (
+                  <div className="mt-6">
+                    <button
+                      onClick={handleBulkSubmit}
+                      disabled={isUploading || selectedRows.size === 0}
+                      className="w-full rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isUploading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Uploading...
+                        </span>
+                      ) : (
+                        `Submit ${selectedRows.size} Selected Compan${selectedRows.size === 1 ? 'y' : 'ies'}`
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

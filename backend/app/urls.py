@@ -20,6 +20,7 @@ router.register(r"statement-columns", StatementColumnConfigViewSet, basename="st
 
 
 urlpatterns = [
+    path('companies/bulk_import/', BulkImportCompaniesView.as_view(), name='bulk-import-companies'),
     path('', include(router.urls)),
     path('register/', UserRegisterView.as_view(), name='register'),
     # path('userlist/', UserListView.as_view(), name='user_list'),

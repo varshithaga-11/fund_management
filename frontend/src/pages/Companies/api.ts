@@ -95,3 +95,20 @@ export const deleteCompany = async (id: number): Promise<void> => {
     throw error;
   }
 };
+
+// ✅ Bulk import companies
+export const bulkImportCompanies = async (
+  companies: CompanyFormData[]
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+  try {
+    const url = createApiUrl("api/companies/bulk_import/");
+    const response = await axios.post(url, { companies }, {
+      headers: await getAuthHeaders(),
+    });
+    console.log("Bulk import result:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error bulk importing companies:", error);
+    throw error;
+  }
+};
