@@ -7,7 +7,8 @@ import PageMeta from "../../components/common/PageMeta";
 import { getCompanies, getCompanyPeriods, CompanyData, FinancialPeriodData } from "./api";
 import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
+import { exportRatioAnalysisToExcel, exportRatioAnalysisToPDF } from "../../utils/exportUtils";
 
 const CompanyRatioAnalysis: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
@@ -19,6 +20,7 @@ const CompanyRatioAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingPeriods, setLoadingPeriods] = useState(false);
   const [loadingRatios, setLoadingRatios] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Load companies on component mount
   useEffect(() => {
@@ -48,7 +50,7 @@ const CompanyRatioAnalysis: React.FC = () => {
       console.log(`Fetching periods for company: ${company.id} (${company.name})`);
       const periodsData = await getCompanyPeriods(company.id);
       console.log("Periods fetched:", periodsData);
-      
+
       setPeriods(periodsData);
 
       if (periodsData.length === 0) {
@@ -90,10 +92,54 @@ const CompanyRatioAnalysis: React.FC = () => {
     setRatios(null);
   };
 
+  const handleExportToExcel = async () => {
+    if (!ratios || !selectedCompany || !selectedPeriod) {
+      toast.warning("No ratio data to export");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      exportRatioAnalysisToExcel(
+        ratios,
+        selectedCompany.name,
+        selectedPeriod.label,
+        "Ratio_Analysis"
+      );
+      toast.success("Ratio analysis exported to Excel successfully!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export to Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportToPDF = async () => {
+    if (!ratios || !selectedCompany || !selectedPeriod) {
+      toast.warning("No ratio data to export");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      exportRatioAnalysisToPDF(
+        ratios,
+        selectedCompany.name,
+        selectedPeriod.label,
+        "Ratio_Analysis"
+      );
+      toast.success("Ratio analysis exported to PDF successfully!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export to PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <>
-      <PageMeta 
-        title="Company Ratio Analysis" 
+      <PageMeta
+        title="Company Ratio Analysis"
         description="Analyze financial ratios for companies by period"
       />
       <PageBreadcrumb pageTitle="Company Ratio Analysis" />
@@ -185,13 +231,12 @@ const CompanyRatioAnalysis: React.FC = () => {
                         {period.label}
                       </h3>
                       <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          period.period_type === "YEARLY"
-                            ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
-                            : period.period_type === "QUARTERLY"
+                        className={`text-xs px-2 py-1 rounded ${period.period_type === "YEARLY"
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                          : period.period_type === "QUARTERLY"
                             ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
                             : "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
-                        }`}
+                          }`}
                       >
                         {period.period_type}
                       </span>
@@ -201,11 +246,10 @@ const CompanyRatioAnalysis: React.FC = () => {
                       {new Date(period.end_date).toLocaleDateString()}
                     </p>
                     <p
-                      className={`text-xs font-medium ${
-                        period.is_finalized
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-gray-500 dark:text-gray-500"
-                      }`}
+                      className={`text-xs font-medium ${period.is_finalized
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-500 dark:text-gray-500"
+                        }`}
                     >
                       {period.is_finalized ? "✓ Finalized" : "Draft"}
                     </p>
@@ -219,14 +263,55 @@ const CompanyRatioAnalysis: React.FC = () => {
         {/* Ratio Analysis Screen */}
         {selectedCompany && selectedPeriod && (
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <button
-                onClick={handleBackToPeriods}
-                className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                Back to Periods
-              </button>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleBackToPeriods}
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  Back to Periods
+                </button>
+              </div>
+
+              {/* Export Buttons */}
+              {ratios && (
+                <div className="relative group">
+                  <button
+                    disabled={isExporting}
+                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                    <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <button
+                      onClick={handleExportToExcel}
+                      disabled={isExporting}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 first:rounded-t-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                      </svg>
+                      Export to Excel
+                    </button>
+                    <button
+                      onClick={handleExportToPDF}
+                      disabled={isExporting}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 last:rounded-b-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
+                      </svg>
+                      Export to PDF
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mb-6">

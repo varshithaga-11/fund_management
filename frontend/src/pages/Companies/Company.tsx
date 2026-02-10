@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
-import { FiTrash2, FiEdit, FiSearch, FiPlus, FiChevronLeft, FiChevronRight, FiBriefcase } from "react-icons/fi";
+import { FiTrash2, FiEdit, FiSearch, FiPlus, FiChevronLeft, FiChevronRight, FiBriefcase, FiDownload } from "react-icons/fi";
 import { BeatLoader } from "react-spinners";
+import { toast } from "react-toastify";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import {
@@ -20,11 +21,13 @@ import Select from "../../components/form/Select";
 import Label from "../../components/form/Label";
 import EditCompany from "./EditCompany";
 import AddCompany from "./AddCompany";
+import { exportCompaniesToExcel, exportCompanyDetailsToPDF } from "../../utils/exportUtils";
 
 const CompanyPage: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,6 +63,41 @@ const CompanyPage: React.FC = () => {
       setCompanies((prev) => prev.filter((c) => c.id !== id));
     } catch {
       alert("Failed to delete company");
+    }
+  };
+
+  const handleExportToExcel = async () => {
+    if (sortedCompanies.length === 0) {
+      toast.warning("No companies to export");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      exportCompaniesToExcel(sortedCompanies, "Companies_List");
+      toast.success("Companies exported to Excel successfully!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export to Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+
+  const handleExportDetailsToPDF = async () => {
+    if (sortedCompanies.length === 0) {
+      toast.warning("No companies to export");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      exportCompanyDetailsToPDF(sortedCompanies, "Company_Details");
+      toast.success("Company details exported to PDF successfully!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export company details");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -170,6 +208,56 @@ const CompanyPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Export Buttons */}
+            <div className="flex items-center gap-2">
+              <div className="relative group">
+                <Button 
+                  variant="outline"
+                  startIcon={<FiDownload className="w-4 h-4" />}
+                  disabled={isExporting || sortedCompanies.length === 0}
+                  className="flex items-center gap-2"
+                >
+                  Export
+                  <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </Button>
+                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <button
+                    onClick={handleExportToExcel}
+                    disabled={isExporting || sortedCompanies.length === 0}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 first:rounded-t-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                    </svg>
+                    Export to Excel
+                  </button>
+                  {/* <button
+                    onClick={handleExportToPDF}
+                    disabled={isExporting || sortedCompanies.length === 0}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                      <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                    Export to PDF
+                  </button> */}
+                  <button
+                    onClick={handleExportDetailsToPDF}
+                    disabled={isExporting || sortedCompanies.length === 0}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 last:rounded-b-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V4a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Export to PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Add Company Button */}
             <Button 
               onClick={() => setIsAddModalOpen(true)}
