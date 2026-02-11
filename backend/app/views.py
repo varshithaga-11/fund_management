@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 
 from openpyxl import load_workbook
 from docx import Document
+import pdfplumber
 
 from .models import *
 from .serializers import *
@@ -452,8 +453,8 @@ class UploadExcelView(APIView):
                     period_info['end_date'] = fiscal_end
             elif format_b:
                 logger.info("DEBUG: Parsing Format B sheets...")
-                balance_sheet_data = self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']], company)
-                profit_loss_data = self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']], company)
+                balance_sheet_data = self._default_balance_sheet(self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']], company))
+                profit_loss_data = self._default_profit_loss(self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']], company))
                 trading_account_data = self._default_trading_account(self._parse_trading_account(workbook[sheet_mapping['Trading Account']], company))
                 operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']], company)
                 logger.info("DEBUG: Format B sheets parsed successfully")
@@ -507,7 +508,8 @@ class UploadExcelView(APIView):
                         'start_date': start_date,
                         'end_date': end_date,
                         'is_finalized': False,
-                        'excel_file': excel_file,
+                        'uploaded_file': excel_file,
+                        'file_type': 'excel',
                     }
                 )
                 
@@ -515,9 +517,10 @@ class UploadExcelView(APIView):
                 
                 # If updating existing period, save the new excel file
                 if not created:
-                    period.excel_file = excel_file
+                    period.uploaded_file = excel_file
+                    period.file_type = 'excel'
                     period.save()
-                    logger.info(f"DEBUG: Updated excel_file for period {period.id}")
+                    logger.info(f"DEBUG: Updated uploaded_file for period {period.id}")
                 
                 logger.info(f"DEBUG: Saving trading account data")
                 TradingAccount.objects.update_or_create(
@@ -526,6 +529,16 @@ class UploadExcelView(APIView):
                 )
                 
                 logger.info(f"DEBUG: Saving profit & loss data")
+                # Ensure defaults are applied before saving (safety check)
+                profit_loss_data = self._default_profit_loss(profit_loss_data)
+                logger.info(f"DEBUG: Profit & Loss data before save: {profit_loss_data}")
+                logger.info(f"DEBUG: miscellaneous_income value: {profit_loss_data.get('miscellaneous_income')}")
+                
+                # Final safety check - ensure miscellaneous_income is never null
+                if 'miscellaneous_income' not in profit_loss_data or profit_loss_data.get('miscellaneous_income') is None:
+                    profit_loss_data['miscellaneous_income'] = Decimal('0')
+                    logger.warning(f"DEBUG: ⚠️ miscellaneous_income was null, set to 0")
+                
                 # Create/Update Profit & Loss
                 ProfitAndLoss.objects.update_or_create(
                     period=period,
@@ -540,6 +553,13 @@ class UploadExcelView(APIView):
                 )
                 
                 logger.info(f"DEBUG: Saving operational metrics data")
+                # Ensure staff_count is always set before saving (safety check)
+                if 'staff_count' not in operational_metrics_data or operational_metrics_data.get('staff_count') is None:
+                    operational_metrics_data['staff_count'] = 1
+                    logger.warning(f"DEBUG: staff_count was missing or null, setting to default: 1")
+                
+                logger.info(f"DEBUG: Operational metrics data before save: {operational_metrics_data}")
+                
                 # Create/Update Operational Metrics
                 OperationalMetrics.objects.update_or_create(
                     period=period,
@@ -607,10 +627,23 @@ class UploadExcelView(APIView):
     
     def _parse_balance_sheet(self, sheet, company=None):
         """Parse Balance Sheet sheet - handles both column format (Liabilities/Amount, Assets/Amount) and row format"""
+        logger.info(f"=== PARSING BALANCE SHEET ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Balance Sheet: {len(all_rows)}")
+        
         data = {}
         
         # Try to detect format by checking first row
-        first_row = [str(cell).strip().lower() if cell else '' for cell in next(sheet.iter_rows(values_only=True))]
+        first_row = [str(cell).strip().lower() if cell else '' for cell in (all_rows[0] if len(all_rows) > 0 else [])]
+        logger.info(f"First row (headers): {first_row}")
         
         # Check if it's column format (Liabilities/Amount/Assets/Amount)
         if 'liabilities' in ' '.join(first_row) or 'amount' in ' '.join(first_row):
@@ -620,116 +653,160 @@ class UploadExcelView(APIView):
             assets_col = None
             assets_amount_col = None
             
-            for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            for row_idx, row in enumerate(all_rows, 1):
+                row_values = [cell if cell else None for cell in row]
+                logger.info(f"Processing Balance Sheet Row {row_idx}: {row_values}")
+                
                 if row_idx == 1:
                     # Find column indices
-                    for col_idx, cell_value in enumerate(row):
+                    for col_idx, cell_value in enumerate(row_values):
                         if cell_value:
                             header = str(cell_value).strip().lower()
                             if 'liabilities' in header:
                                 liabilities_col = col_idx
+                                logger.info(f"Found Liabilities column at index {col_idx}")
                             elif 'assets' in header and liabilities_col is not None:
                                 assets_col = col_idx
+                                logger.info(f"Found Assets column at index {col_idx}")
                             elif 'amount' in header:
                                 if liabilities_amount_col is None:
                                     liabilities_amount_col = col_idx
+                                    logger.info(f"Found Liabilities Amount column at index {col_idx}")
                                 else:
                                     assets_amount_col = col_idx
+                                    logger.info(f"Found Assets Amount column at index {col_idx}")
                 elif row_idx > 1:
                     # Parse data rows
                     if liabilities_col is not None and liabilities_amount_col is not None:
-                        item = row[liabilities_col] if liabilities_col < len(row) else None
-                        amount = row[liabilities_amount_col] if liabilities_amount_col < len(row) else None
+                        item = row_values[liabilities_col] if liabilities_col < len(row_values) else None
+                        amount = row_values[liabilities_amount_col] if liabilities_amount_col < len(row_values) else None
+                        logger.info(f"Row {row_idx} - Liability: item='{item}', amount='{amount}'")
                         if item and amount is not None:
                             field_name = self._map_balance_sheet_field(str(item), company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
+                                logger.info(f"✓ Row {row_idx}: Mapped liability '{item}' -> {field_name} = {amount}")
+                            else:
+                                logger.warning(f"✗ Row {row_idx}: Could not map liability field: '{item}'")
                     
                     if assets_col is not None and assets_amount_col is not None:
-                        item = row[assets_col] if assets_col < len(row) else None
-                        amount = row[assets_amount_col] if assets_amount_col < len(row) else None
+                        item = row_values[assets_col] if assets_col < len(row_values) else None
+                        amount = row_values[assets_amount_col] if assets_amount_col < len(row_values) else None
+                        logger.info(f"Row {row_idx} - Asset: item='{item}', amount='{amount}'")
                         if item and amount is not None:
                             field_name = self._map_balance_sheet_field(str(item), company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
+                                logger.info(f"✓ Row {row_idx}: Mapped asset '{item}' -> {field_name} = {amount}")
+                            else:
+                                logger.warning(f"✗ Row {row_idx}: Could not map asset field: '{item}'")
         else:
             # Row format: Headers in first row, data in second row
+            logger.info("DEBUG: Using row format (headers in row 1, data in row 2)")
             headers = {}
             data_row = None
             
-            for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            for row_idx, row in enumerate(all_rows, 1):
+                row_values = [cell if cell else None for cell in row]
+                logger.info(f"Balance Sheet Row format - Row {row_idx}: {row_values}")
+                
                 if row_idx == 1:
-                    for col_idx, cell_value in enumerate(row):
+                    for col_idx, cell_value in enumerate(row_values):
                         if cell_value:
                             header = str(cell_value).strip().lower()
                             headers[header] = col_idx
+                            logger.info(f"Found header '{header}' at column {col_idx}")
                 elif row_idx == 2:
-                    data_row = row
+                    data_row = row_values
+                    logger.info(f"Row 2 (Data row): {data_row}")
                     break
             
             if data_row and headers:
+                logger.info("Parsing balance sheet data row...")
                 for header, col_idx in headers.items():
-                    field_name = self._map_balance_sheet_field(header, company)
-                    if field_name and col_idx < len(data_row):
+                    if col_idx < len(data_row):
                         value = data_row[col_idx]
+                        logger.info(f"Balance Sheet - Header: '{header}', Column: {col_idx}, Value: '{value}'")
                         if value is not None:
-                            data[field_name] = self._parse_decimal(value)
+                            field_name = self._map_balance_sheet_field(header, company)
+                            if field_name:
+                                data[field_name] = self._parse_decimal(value)
+                                logger.info(f"✓ Mapped '{header}' -> {field_name} = {value}")
+                            else:
+                                logger.warning(f"✗ Could not map header: '{header}'")
         
+        logger.info(f"=== BALANCE SHEET PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _map_balance_sheet_field(self, item_str, company=None):
-        """Map balance sheet item string to model field name. Uses StatementColumnConfig (canonical_field, display_name, aliases) first, then fallback mapping."""
-        if company:
-            canonical = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", item_str)
-            if canonical:
-                return canonical
-        item_lower = item_str.lower().strip()
+        """Map balance sheet item string to model field name. Uses StatementColumnConfig (checks company-specific first, then global, including aliases)."""
+        # Check StatementColumnConfig (checks company-specific first, then global, including aliases)
+        normalized = StatementColumnConfig._normalize_for_match(item_str)
+        logger.debug(f"Mapping Balance Sheet field: '{item_str}' (normalized: '{normalized}') for company: {company.name if company else 'None'}")
         
-        field_mapping = {
-            'share capital': 'share_capital',
-            'share cap': 'share_capital',
-            'deposits': 'deposits',
-            'borrowings': 'borrowings',
-            'borrowing': 'borrowings',
-            'reserves': 'reserves_statutory_free',
-            'reserves (': 'reserves_statutory_free',
-            'reserves statutory free': 'reserves_statutory_free',
-            'statutory & free reserves': 'reserves_statutory_free',
-            'undistributed profit': 'undistributed_profit',
-            'undistribu': 'undistributed_profit',
-            'udp': 'undistributed_profit',
-            'provisions': 'provisions',
-            'other liabilities': 'other_liabilities',
-            'other liab': 'other_liabilities',
-            'cash in hand': 'cash_in_hand',
-            'cash in ha': 'cash_in_hand',
-            'cash at bank': 'cash_at_bank',
-            'cash at ba': 'cash_at_bank',
-            'investments': 'investments',
-            'investmer': 'investments',
-            'loans & advances': 'loans_advances',
-            'loans & a': 'loans_advances',
-            'loans advances': 'loans_advances',
-            'loans and advances': 'loans_advances',
-            'fixed assets': 'fixed_assets',
-            'fixed asse': 'fixed_assets',
-            'other assets': 'other_assets',
-            'other ass': 'other_assets',
-            'stock in trade': 'stock_in_trade',
-            'stock in tr': 'stock_in_trade',
-        }
+        canonical = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", item_str)
+        if canonical:
+            logger.debug(f"✓ Found mapping: '{item_str}' -> {canonical}")
+            return canonical
         
-        for key, field_name in field_mapping.items():
-            if key in item_lower:
-                return field_name
+        # Fallback: Try pattern matching against common model field names (if StatementColumnConfig doesn't have entry)
+        normalized_clean = normalized.replace('&', '').replace('_', '').replace('-', '').replace(' ', '')
+        
+        # Pattern matching for common variations
+        if 'share' in normalized and 'capital' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> share_capital")
+            return 'share_capital'
+        if ('member' in normalized or 'deposit' in normalized) and 'deposit' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> deposits")
+            return 'deposits'
+        if 'provision' in normalized and 'made' not in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> provisions")
+            return 'provisions'
+        if 'investment' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> investments")
+            return 'investments'
+        if 'other' in normalized and 'asset' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> other_assets")
+            return 'other_assets'
+        if ('stock' in normalized or 'trade' in normalized) and 'stock' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> stock_in_trade")
+            return 'stock_in_trade'
+        
+        # Direct match if normalized name matches exactly
+        common_balance_sheet_fields = [
+            'share_capital', 'deposits', 'borrowings', 'reserves_statutory_free', 
+            'undistributed_profit', 'provisions', 'other_liabilities', 
+            'cash_in_hand', 'cash_at_bank', 'investments', 'loans_advances', 
+            'fixed_assets', 'other_assets', 'stock_in_trade'
+        ]
+        
+        if normalized in common_balance_sheet_fields:
+            logger.info(f"✓ Fallback: Direct match '{item_str}' (normalized: '{normalized}') -> {normalized}")
+            return normalized
+        
+        logger.warning(f"✗ No mapping found in StatementColumnConfig for Balance Sheet field: '{item_str}' (normalized: '{normalized}')")
         return None
     
     def _parse_profit_loss(self, sheet, company=None):
         """Parse Profit and Loss sheet - handles Expenses/Amount and Income/Amount column format"""
+        logger.info(f"=== PARSING PROFIT & LOSS SHEET ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in sheet: {len(all_rows)}")
+        
         data = {}
         
         # Check format - column format (Expenses/Amount, Income/Amount) or row format
-        first_row = [str(cell).strip().lower() if cell else '' for cell in next(sheet.iter_rows(values_only=True))]
+        first_row = [str(cell).strip().lower() if cell else '' for cell in (all_rows[0] if len(all_rows) > 0 else [])]
+        logger.info(f"First row (headers): {first_row}")
         
         if 'expenses' in ' '.join(first_row) or 'income' in ' '.join(first_row):
             # Column format: Expenses | Amount | Income | Amount
@@ -738,121 +815,174 @@ class UploadExcelView(APIView):
             income_col = None
             income_amount_col = None
             
-            for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            for row_idx, row in enumerate(all_rows, 1):
+                row_values = [cell if cell else None for cell in row]
+                logger.info(f"Processing Row {row_idx}: {row_values}")
+                
                 if row_idx == 1:
-                    for col_idx, cell_value in enumerate(row):
+                    for col_idx, cell_value in enumerate(row_values):
                         if cell_value:
                             header = str(cell_value).strip().lower()
                             if 'expenses' in header:
                                 expenses_col = col_idx
+                                logger.info(f"Found Expenses column at index {col_idx}")
                             elif 'income' in header:
                                 income_col = col_idx
+                                logger.info(f"Found Income column at index {col_idx}")
                             elif 'amount' in header:
                                 if expenses_amount_col is None:
                                     expenses_amount_col = col_idx
+                                    logger.info(f"Found Expenses Amount column at index {col_idx}")
                                 else:
                                     income_amount_col = col_idx
+                                    logger.info(f"Found Income Amount column at index {col_idx}")
                 elif row_idx > 1:
                     # Parse expenses
                     if expenses_col is not None and expenses_amount_col is not None:
-                        item = row[expenses_col] if expenses_col < len(row) else None
-                        amount = row[expenses_amount_col] if expenses_amount_col < len(row) else None
+                        item = row_values[expenses_col] if expenses_col < len(row_values) else None
+                        amount = row_values[expenses_amount_col] if expenses_amount_col < len(row_values) else None
+                        logger.info(f"Row {row_idx} - Expense: item='{item}', amount='{amount}'")
                         if item and amount is not None:
-                            field_name = self._map_profit_loss_field(str(item), is_income=False, company=company)
+                            item_str = str(item).strip()
+                            field_name = self._map_profit_loss_field(item_str, is_income=False, company=company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
+                                logger.info(f"✓ Row {row_idx}: Mapped expense '{item_str}' -> {field_name} = {amount}")
+                            else:
+                                logger.warning(f"✗ Row {row_idx}: Could not map expense field: '{item_str}'")
                     
                     # Parse income
                     if income_col is not None and income_amount_col is not None:
-                        item = row[income_col] if income_col < len(row) else None
-                        amount = row[income_amount_col] if income_amount_col < len(row) else None
+                        item = row_values[income_col] if income_col < len(row_values) else None
+                        amount = row_values[income_amount_col] if income_amount_col < len(row_values) else None
+                        logger.info(f"Row {row_idx} - Income: item='{item}', amount='{amount}'")
                         if item and amount is not None:
-                            field_name = self._map_profit_loss_field(str(item), is_income=True, company=company)
+                            item_str = str(item).strip()
+                            field_name = self._map_profit_loss_field(item_str, is_income=True, company=company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
+                                logger.info(f"✓ Row {row_idx}: Mapped income '{item_str}' -> {field_name} = {amount}")
+                            else:
+                                logger.warning(f"✗ Row {row_idx}: Could not map income field: '{item_str}'")
         else:
             # Row format: Headers in first row, income in row 2, expenses in row 3
+            logger.info("DEBUG: Using row format (headers in row 1, income in row 2, expenses in row 3)")
             headers = {}
             income_row = None
             expense_row = None
             
-            for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            for row_idx, row in enumerate(all_rows, 1):
+                row_values = [cell if cell else None for cell in row]
+                logger.info(f"Row format - Row {row_idx}: {row_values}")
+                
                 if row_idx == 1:
-                    for col_idx, cell_value in enumerate(row):
+                    for col_idx, cell_value in enumerate(row_values):
                         if cell_value:
                             header = str(cell_value).strip().lower()
                             headers[header] = col_idx
+                            logger.info(f"Found header '{header}' at column {col_idx}")
                 elif row_idx == 2:
-                    income_row = row
+                    income_row = row_values
+                    logger.info(f"Row 2 (Income row): {income_row}")
                 elif row_idx == 3:
-                    expense_row = row
+                    expense_row = row_values
+                    logger.info(f"Row 3 (Expense row): {expense_row}")
                     break
             
             if headers:
                 # Parse income
                 if income_row:
+                    logger.info("Parsing income row...")
                     for header, col_idx in headers.items():
-                        field_name = self._map_profit_loss_field(header, is_income=True, company=company)
-                        if field_name and col_idx < len(income_row):
+                        if col_idx < len(income_row):
                             value = income_row[col_idx]
+                            logger.info(f"Income - Header: '{header}', Column: {col_idx}, Value: '{value}'")
                             if value is not None:
-                                data[field_name] = self._parse_decimal(value)
+                                field_name = self._map_profit_loss_field(header, is_income=True, company=company)
+                                if field_name:
+                                    data[field_name] = self._parse_decimal(value)
+                                    logger.info(f"✓ Mapped income '{header}' -> {field_name} = {value}")
+                                else:
+                                    logger.warning(f"✗ Could not map income header: '{header}'")
                 
                 # Parse expenses
                 if expense_row:
+                    logger.info("Parsing expense row...")
                     for header, col_idx in headers.items():
-                        field_name = self._map_profit_loss_field(header, is_income=False, company=company)
-                        if field_name and col_idx < len(expense_row):
+                        if col_idx < len(expense_row):
                             value = expense_row[col_idx]
+                            logger.info(f"Expense - Header: '{header}', Column: {col_idx}, Value: '{value}'")
                             if value is not None:
-                                data[field_name] = self._parse_decimal(value)
+                                field_name = self._map_profit_loss_field(header, is_income=False, company=company)
+                                if field_name:
+                                    data[field_name] = self._parse_decimal(value)
+                                    logger.info(f"✓ Mapped expense '{header}' -> {field_name} = {value}")
+                                else:
+                                    logger.warning(f"✗ Could not map expense header: '{header}'")
         
+        logger.info(f"=== PROFIT & LOSS PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _map_profit_loss_field(self, item_str, is_income=False, company=None):
-        """Map profit & loss item string to model field name. Uses StatementColumnConfig first, then fallback mapping."""
-        if company:
-            canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item_str)
-            if canonical:
-                return canonical
-        item_lower = item_str.lower().strip()
+        """Map profit & loss item string to model field name. Uses StatementColumnConfig (checks company-specific first, then global, including aliases)."""
+        # Check StatementColumnConfig (checks company-specific first, then global, including aliases)
+        normalized = StatementColumnConfig._normalize_for_match(item_str)
+        logger.debug(f"Mapping Profit & Loss field: '{item_str}' (normalized: '{normalized}', is_income={is_income}) for company: {company.name if company else 'None'}")
         
-        if is_income:
-            field_mapping = {
-                'interest on loans': 'interest_on_loans',
-                'interest rec. on loans': 'interest_on_loans',
-                'interest received on loans': 'interest_on_loans',
-                'interest rec': 'interest_on_loans',
-                'interest on bank a/c': 'interest_on_bank_ac',
-                'interest on bank ac': 'interest_on_bank_ac',
-                'interest on bank': 'interest_on_bank_ac',
-                'interest of': 'interest_on_bank_ac',
-                'return on investment': 'return_on_investment',
-                'return on': 'return_on_investment',
-                'miscellaneous income': 'miscellaneous_income',
-                'miscellaneous': 'miscellaneous_income',
-                'miscellane': 'miscellaneous_income',
-            }
-        else:
-            field_mapping = {
-                'interest on deposits': 'interest_on_deposits',
-                'interest οι': 'interest_on_deposits',
-                'interest on borrowings': 'interest_on_borrowings',
-                'establishment & contingencies': 'establishment_contingencies',
-                'establishment': 'establishment_contingencies',
-                'establishm': 'establishment_contingencies',
-                'provisions': 'provisions',
-                'provisions (risk cost)': 'provisions',
-                'net profit': 'net_profit',
-            }
+        canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item_str)
+        if canonical:
+            logger.debug(f"✓ Found mapping: '{item_str}' -> {canonical}")
+            return canonical
         
-        for key, field_name in field_mapping.items():
-            if key in item_lower:
-                return field_name
+        # Fallback: Try pattern matching against common model field names (if StatementColumnConfig doesn't have entry)
+        normalized_clean = normalized.replace('&', '').replace('_', '').replace('-', '').replace(' ', '')
+        
+        # Pattern matching for common variations
+        if 'interest' in normalized and 'deposit' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> interest_on_deposits")
+            return 'interest_on_deposits'
+        if ('establishment' in normalized or 'establishm' in normalized) and ('contingenc' in normalized or 'conting' in normalized):
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> establishment_contingencies")
+            return 'establishment_contingencies'
+        if 'provision' in normalized and 'made' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> provisions")
+            return 'provisions'
+        if 'net' in normalized and 'profit' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> net_profit")
+            return 'net_profit'
+        if 'miscellaneous' in normalized or 'miscellane' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> miscellaneous_income")
+            return 'miscellaneous_income'
+        
+        # Direct match if normalized name matches exactly
+        common_pl_fields = [
+            'interest_on_loans', 'interest_on_bank_ac', 'return_on_investment', 
+            'miscellaneous_income', 'interest_on_deposits', 'interest_on_borrowings', 
+            'establishment_contingencies', 'provisions', 'net_profit'
+        ]
+        
+        if normalized in common_pl_fields:
+            logger.info(f"✓ Fallback: Direct match '{item_str}' (normalized: '{normalized}') -> {normalized}")
+            return normalized
+        
+        logger.warning(f"✗ No mapping found in StatementColumnConfig for Profit & Loss field: '{item_str}' (normalized: '{normalized}')")
         return None
     
     def _parse_trading_account(self, sheet, company=None):
         """Parse Trading Account sheet. Uses StatementColumnConfig (display_name, aliases) for column name matching first."""
+        logger.info(f"=== PARSING TRADING ACCOUNT SHEET ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Trading Account: {len(all_rows)}")
+        
         data = {}
         
         # Look for Item and Amount columns
@@ -860,81 +990,152 @@ class UploadExcelView(APIView):
         item_col = None
         amount_col = None
         
-        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+        for row_idx, row in enumerate(all_rows, 1):
+            row_values = [cell if cell else None for cell in row]
+            logger.info(f"Processing Trading Account Row {row_idx}: {row_values}")
             if row_idx == 1:
-                for col_idx, cell_value in enumerate(row):
+                for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
                         header = str(cell_value).strip().lower()
                         if 'item' in header:
                             item_col = col_idx
+                            logger.info(f"Found Item column at index {col_idx}")
                         elif 'amount' in header:
                             amount_col = col_idx
+                            logger.info(f"Found Amount column at index {col_idx}")
             elif row_idx > 1 and item_col is not None and amount_col is not None:
-                item = row[item_col] if item_col < len(row) else None
-                amount = row[amount_col] if amount_col < len(row) else None
+                item = row_values[item_col] if item_col < len(row_values) else None
+                amount = row_values[amount_col] if amount_col < len(row_values) else None
                 
+                logger.info(f"Row {row_idx} - Trading Account: item='{item}', amount='{amount}'")
                 if item and amount is not None:
                     item_str = str(item).strip()
                     field_name = self._map_trading_account_field(item_str, company)
                     if field_name:
                         data[field_name] = self._parse_decimal(amount)
+                        logger.info(f"✓ Row {row_idx}: Mapped '{item_str}' -> {field_name} = {amount}")
+                    else:
+                        logger.warning(f"✗ Row {row_idx}: Could not map trading account field: '{item_str}'")
         
+        logger.info(f"=== TRADING ACCOUNT PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _map_trading_account_field(self, item_str, company=None):
-        """Map trading account item string to canonical field. Uses StatementColumnConfig first, then fallback."""
-        if company:
-            canonical = StatementColumnConfig.resolve_canonical_field(company, "TRADING", item_str)
-            if canonical:
-                return canonical
-        item_lower = item_str.lower().strip()
-        if 'opening' in item_lower and 'stock' in item_lower:
+        """Map trading account item string to canonical field. Uses StatementColumnConfig (checks company-specific first, then global, including aliases)."""
+        # Check StatementColumnConfig (checks company-specific first, then global, including aliases)
+        normalized = StatementColumnConfig._normalize_for_match(item_str)
+        logger.debug(f"Mapping Trading Account field: '{item_str}' (normalized: '{normalized}') for company: {company.name if company else 'None'}")
+        
+        canonical = StatementColumnConfig.resolve_canonical_field(company, "TRADING", item_str)
+        if canonical:
+            logger.debug(f"✓ Found mapping: '{item_str}' -> {canonical}")
+            return canonical
+        
+        # Fallback: Try direct match against common model field names (if StatementColumnConfig doesn't have entry)
+        common_trading_fields = [
+            'opening_stock', 'purchases', 'trade_charges', 'sales', 'closing_stock'
+        ]
+        
+        # Also check for common variations
+        if normalized in common_trading_fields:
+            logger.info(f"✓ Fallback: Direct match '{item_str}' (normalized: '{normalized}') -> {normalized}")
+            return normalized
+        
+        # Handle common variations
+        if 'opening' in normalized and ('stock' in normalized or 'inventory' in normalized):
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> opening_stock")
             return 'opening_stock'
-        if 'purchases' in item_lower:
-            return 'purchases'
-        if 'trade' in item_lower and 'charges' in item_lower:
-            return 'trade_charges'
-        if 'sales' in item_lower:
-            return 'sales'
-        if 'closing' in item_lower and 'stock' in item_lower:
+        if 'closing' in normalized and ('stock' in normalized or 'inventory' in normalized):
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> closing_stock")
             return 'closing_stock'
+        if 'purchase' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> purchases")
+            return 'purchases'
+        if 'sale' in normalized:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> sales")
+            return 'sales'
+        if ('trade' in normalized or 'direct' in normalized) and ('charge' in normalized or 'expense' in normalized):
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> trade_charges")
+            return 'trade_charges'
+        
+        logger.warning(f"✗ No mapping found in StatementColumnConfig for Trading Account field: '{item_str}' (normalized: '{normalized}')")
         return None
     
     def _parse_operational_metrics(self, sheet, company=None):
         """Parse Operational Metrics sheet. Uses StatementColumnConfig for metric name matching when available."""
+        logger.info(f"=== PARSING OPERATIONAL METRICS SHEET ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Operational Metrics: {len(all_rows)}")
+        
         data = {}
         
         # Look for Metric and Value columns
         metric_col = None
         value_col = None
         
-        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+        for row_idx, row in enumerate(all_rows, 1):
+            row_values = [cell if cell else None for cell in row]
+            logger.info(f"Processing Operational Metrics Row {row_idx}: {row_values}")
             if row_idx == 1:
-                for col_idx, cell_value in enumerate(row):
+                for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
                         header = str(cell_value).strip().lower()
                         if 'metric' in header:
                             metric_col = col_idx
+                            logger.info(f"Found Metric column at index {col_idx}")
                         elif 'value' in header:
                             value_col = col_idx
+                            logger.info(f"Found Value column at index {col_idx}")
             elif row_idx > 1 and metric_col is not None and value_col is not None:
-                metric = row[metric_col] if metric_col < len(row) else None
-                value = row[value_col] if value_col < len(row) else None
+                metric = row_values[metric_col] if metric_col < len(row_values) else None
+                value = row_values[value_col] if value_col < len(row_values) else None
+                logger.info(f"Row {row_idx} - Operational Metrics: metric='{metric}', value='{value}'")
                 
                 if metric and value is not None:
                     metric_str = str(metric).strip()
-                    if company:
+                    metric_lower = metric_str.lower()
+                    field_name = None
+                    
+                    # First: Check direct model field mappings
+                    if 'staff' in metric_lower and 'count' in metric_lower:
+                        field_name = 'staff_count'
+                    
+                    # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
+                    if not field_name and company:
                         canonical = StatementColumnConfig.resolve_canonical_field(company, "OPERATIONAL", metric_str)
                         if canonical:
-                            try:
-                                data[canonical] = int(float(value))
-                            except (TypeError, ValueError):
-                                data[canonical] = value
-                            continue
-                    metric_lower = metric_str.lower()
-                    if 'staff' in metric_lower and 'count' in metric_lower:
-                        data['staff_count'] = int(float(value))
+                            field_name = canonical
+                    
+                    if field_name:
+                        try:
+                            data[field_name] = int(float(value))
+                            logger.info(f"✓ Row {row_idx}: Mapped '{metric_str}' -> {field_name} = {data[field_name]}")
+                        except (TypeError, ValueError):
+                            if field_name == 'staff_count':
+                                data[field_name] = 1
+                                logger.warning(f"✗ Row {row_idx}: Could not parse value '{value}' for '{metric_str}', defaulting to 1")
+                            else:
+                                data[field_name] = value
+                                logger.warning(f"✗ Row {row_idx}: Could not parse value '{value}' for '{metric_str}', using raw value")
+                    else:
+                        logger.warning(f"✗ Row {row_idx}: Could not map operational metric: '{metric_str}'")
         
+        # Ensure staff_count is always set (default to 1 if not found)
+        if 'staff_count' not in data:
+            data['staff_count'] = 1
+            logger.info("Set default staff_count = 1 (not found in sheet)")
+        
+        logger.info(f"=== OPERATIONAL METRICS PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _parse_financial_statement_sheet(self, sheet):
@@ -972,6 +1173,18 @@ class UploadExcelView(APIView):
     
     def _parse_balance_sheet_liabilities(self, sheet, company=None):
         """Parse Balance_Sheet_Liabilities: Liability Type, Amount (one row per liability). Uses StatementColumnConfig first."""
+        logger.info(f"=== PARSING BALANCE SHEET LIABILITIES ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Balance Sheet Liabilities: {len(all_rows)}")
+        
         data = {}
         type_col = amount_col = None
         liability_to_field = [
@@ -987,35 +1200,60 @@ class UploadExcelView(APIView):
             ('undistributed profit', 'undistributed_profit'),
             ('udp', 'undistributed_profit'),
         ]
-        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+        for row_idx, row in enumerate(all_rows, 1):
+            row_values = [cell if cell else None for cell in row]
+            logger.info(f"Processing Liabilities Row {row_idx}: {row_values}")
+            
             if row_idx == 1:
-                for col_idx, cell_value in enumerate(row):
+                for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
                         h = str(cell_value).strip().lower()
                         if 'liability' in h or 'type' in h:
                             type_col = col_idx
+                            logger.info(f"Found Liability Type column at index {col_idx}")
                         elif 'amount' in h:
                             amount_col = col_idx
+                            logger.info(f"Found Amount column at index {col_idx}")
             elif row_idx > 1 and type_col is not None and amount_col is not None:
-                typ = row[type_col] if type_col < len(row) else None
-                amt = row[amount_col] if amount_col < len(row) else None
+                typ = row_values[type_col] if type_col < len(row_values) else None
+                amt = row_values[amount_col] if amount_col < len(row_values) else None
+                logger.info(f"Row {row_idx} - Liability: type='{typ}', amount='{amt}'")
                 if typ is not None and amt is not None:
                     t = str(typ).strip()
                     field_name = None
-                    if company:
+                    # First: Check direct model field mappings
+                    t_lower = t.lower()
+                    for key, field in liability_to_field:
+                        if key in t_lower or t_lower in key:
+                            field_name = field
+                            break
+                    # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
+                    if not field_name and company:
                         field_name = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", t)
-                    if not field_name:
-                        t_lower = t.lower()
-                        for key, field in liability_to_field:
-                            if key in t_lower or t_lower in key:
-                                field_name = field
-                                break
                     if field_name:
                         data[field_name] = self._parse_decimal(amt)
+                        logger.info(f"✓ Row {row_idx}: Mapped liability '{t}' -> {field_name} = {amt}")
+                    else:
+                        logger.warning(f"✗ Row {row_idx}: Could not map liability type: '{t}'")
+        
+        logger.info(f"=== BALANCE SHEET LIABILITIES PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _parse_balance_sheet_assets(self, sheet, company=None):
         """Parse Balance_Sheet_Assets: Asset Type, Amount (one row per asset). Uses StatementColumnConfig first."""
+        logger.info(f"=== PARSING BALANCE SHEET ASSETS ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Balance Sheet Assets: {len(all_rows)}")
+        
         data = {}
         type_col = amount_col = None
         asset_to_field = {
@@ -1028,106 +1266,179 @@ class UploadExcelView(APIView):
             'other assets': 'other_assets',
             'stock in trade': 'stock_in_trade',
         }
-        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+        for row_idx, row in enumerate(all_rows, 1):
+            row_values = [cell if cell else None for cell in row]
+            logger.info(f"Processing Assets Row {row_idx}: {row_values}")
+            
             if row_idx == 1:
-                for col_idx, cell_value in enumerate(row):
+                for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
                         h = str(cell_value).strip().lower()
                         if 'asset' in h or 'type' in h:
                             type_col = col_idx
+                            logger.info(f"Found Asset Type column at index {col_idx}")
                         elif 'amount' in h:
                             amount_col = col_idx
+                            logger.info(f"Found Amount column at index {col_idx}")
             elif row_idx > 1 and type_col is not None and amount_col is not None:
-                typ = row[type_col] if type_col < len(row) else None
-                amt = row[amount_col] if amount_col < len(row) else None
+                typ = row_values[type_col] if type_col < len(row_values) else None
+                amt = row_values[amount_col] if amount_col < len(row_values) else None
+                logger.info(f"Row {row_idx} - Asset: type='{typ}', amount='{amt}'")
                 if typ is not None and amt is not None:
                     t = str(typ).strip()
                     field_name = None
-                    if company:
+                    # First: Check direct model field mappings
+                    t_lower = t.lower()
+                    for key, field in asset_to_field.items():
+                        if key in t_lower or t_lower in key:
+                            field_name = field
+                            break
+                    # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
+                    if not field_name and company:
                         field_name = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", t)
-                    if not field_name:
-                        t_lower = t.lower()
-                        for key, field in asset_to_field.items():
-                            if key in t_lower or t_lower in key:
-                                field_name = field
-                                break
                     if field_name:
                         data[field_name] = self._parse_decimal(amt)
+                        logger.info(f"✓ Row {row_idx}: Mapped asset '{t}' -> {field_name} = {amt}")
+                    else:
+                        logger.warning(f"✗ Row {row_idx}: Could not map asset type: '{t}'")
+        
+        logger.info(f"=== BALANCE SHEET ASSETS PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _parse_profit_loss_rows(self, sheet, company=None):
         """Parse Profit_Loss sheet: Category, Item, Amount. Uses StatementColumnConfig for item name matching first."""
+        logger.info(f"=== PARSING PROFIT & LOSS ROWS (Format A) ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Profit & Loss: {len(all_rows)}")
+        
         data = {}
         cat_col = item_col = amount_col = None
-        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+        for row_idx, row in enumerate(all_rows, 1):
+            row_values = [cell if cell else None for cell in row]
+            logger.info(f"Processing Profit & Loss Row {row_idx}: {row_values}")
             if row_idx == 1:
-                for col_idx, cell_value in enumerate(row):
+                for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
                         h = str(cell_value).strip().lower()
                         if 'category' in h:
                             cat_col = col_idx
+                            logger.info(f"Found Category column at index {col_idx}")
                         elif 'item' in h:
                             item_col = col_idx
+                            logger.info(f"Found Item column at index {col_idx}")
                         elif 'amount' in h:
                             amount_col = col_idx
+                            logger.info(f"Found Amount column at index {col_idx}")
             elif row_idx > 1 and item_col is not None and amount_col is not None:
-                cat = str(row[cat_col] or '').strip().lower() if cat_col is not None and cat_col < len(row) else ''
-                item = str(row[item_col] or '').strip() if item_col < len(row) else ''
-                amt = row[amount_col] if amount_col < len(row) else None
+                cat = str(row_values[cat_col] or '').strip().lower() if cat_col is not None and cat_col < len(row_values) else ''
+                item = str(row_values[item_col] or '').strip() if item_col < len(row_values) else ''
+                amt = row_values[amount_col] if amount_col < len(row_values) else None
+                
+                logger.info(f"Row {row_idx} - Profit & Loss: category='{cat}', item='{item}', amount='{amt}'")
+                
                 if not item or amt is None:
+                    logger.debug(f"Row {row_idx}: Skipping (empty item or amount)")
                     continue
                 amt_val = self._parse_decimal(amt)
-                # Try StatementColumnConfig first (use item as column name; config may have display_name/aliases)
-                if company:
-                    canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item)
-                    if canonical:
-                        data[canonical] = amt_val
-                        continue
                 item_lower = item.lower()
+                field_name = None
+                
+                # First: Check direct model field mappings based on category and item
                 if 'income' in cat:
                     if 'interest' in item_lower and 'loan' in item_lower:
-                        data['interest_on_loans'] = amt_val
+                        field_name = 'interest_on_loans'
                     elif 'interest' in item_lower and 'bank' in item_lower:
-                        data['interest_on_bank_ac'] = amt_val
+                        field_name = 'interest_on_bank_ac'
                     elif 'return' in item_lower and 'investment' in item_lower:
-                        data['return_on_investment'] = amt_val
-                    elif 'miscellaneous' in item_lower:
-                        data['miscellaneous_income'] = amt_val
+                        field_name = 'return_on_investment'
+                    elif 'miscellaneous' in item_lower or 'miscellane' in item_lower:
+                        field_name = 'miscellaneous_income'
                 elif 'expense' in cat:
                     if 'interest' in item_lower and 'deposit' in item_lower:
-                        data['interest_on_deposits'] = amt_val
+                        field_name = 'interest_on_deposits'
                     elif 'interest' in item_lower and 'borrowing' in item_lower:
-                        data['interest_on_borrowings'] = amt_val
-                    elif 'establishment' in item_lower or 'contingenc' in item_lower:
-                        data['establishment_contingencies'] = amt_val
+                        field_name = 'interest_on_borrowings'
+                    elif 'establishment' in item_lower or 'contingenc' in item_lower or 'establishm' in item_lower:
+                        field_name = 'establishment_contingencies'
                     elif 'provision' in item_lower:
-                        data['provisions'] = amt_val
+                        field_name = 'provisions'
                 elif 'net profit' in cat or (cat == '' and 'net profit' in item_lower):
-                    data['net_profit'] = amt_val
+                    field_name = 'net_profit'
+                
+                # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
+                if not field_name and company:
+                    canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item)
+                    if canonical:
+                        field_name = canonical
+                
+                if field_name:
+                    data[field_name] = amt_val
+                    logger.info(f"✓ Row {row_idx}: Mapped '{item}' (category: {cat}) -> {field_name} = {amt_val}")
+                else:
+                    logger.warning(f"✗ Row {row_idx}: Could not map item '{item}' (category: {cat})")
+        
+        logger.info(f"=== PROFIT & LOSS ROWS PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _parse_trading_account_rows(self, sheet, company=None):
         """Parse Trading_Account sheet: Item, Amount. Uses StatementColumnConfig for item name matching first."""
+        logger.info(f"=== PARSING TRADING ACCOUNT ROWS (Format A) ===")
+        logger.info(f"Sheet name: {sheet.title}")
+        
+        # Print all rows from the sheet
+        all_rows = []
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            row_data = [str(cell) if cell is not None else '' for cell in row]
+            all_rows.append(row_data)
+            logger.info(f"Row {row_idx}: {row_data}")
+        
+        logger.info(f"Total rows in Trading Account: {len(all_rows)}")
+        
         data = {}
         item_col = amount_col = None
-        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
+        for row_idx, row in enumerate(all_rows, 1):
+            row_values = [cell if cell else None for cell in row]
+            logger.info(f"Processing Trading Account Row {row_idx}: {row_values}")
+            
             if row_idx == 1:
-                for col_idx, cell_value in enumerate(row):
+                for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
                         h = str(cell_value).strip().lower()
                         if 'item' in h:
                             item_col = col_idx
+                            logger.info(f"Found Item column at index {col_idx}")
                         elif 'amount' in h:
                             amount_col = col_idx
+                            logger.info(f"Found Amount column at index {col_idx}")
             elif row_idx > 1 and item_col is not None and amount_col is not None:
-                item = str(row[item_col] or '').strip() if item_col < len(row) else ''
-                amt = row[amount_col] if amount_col < len(row) else None
+                item = str(row_values[item_col] or '').strip() if item_col < len(row_values) else ''
+                amt = row_values[amount_col] if amount_col < len(row_values) else None
+                
+                logger.info(f"Row {row_idx} - Trading Account: item='{item}', amount='{amt}'")
+                
                 if not item or amt is None:
+                    logger.debug(f"Row {row_idx}: Skipping (empty item or amount)")
                     continue
                 amt_val = self._parse_decimal(amt)
                 field_name = self._map_trading_account_field(item, company)
                 if field_name:
                     data[field_name] = amt_val
+                    logger.info(f"✓ Row {row_idx}: Mapped '{item}' -> {field_name} = {amt_val}")
+                else:
+                    logger.warning(f"✗ Row {row_idx}: Could not map trading account item: '{item}'")
+        
+        logger.info(f"=== TRADING ACCOUNT ROWS PARSING COMPLETE ===")
+        logger.info(f"Extracted data: {data}")
         return data
     
     def _parse_decimal(self, value):
@@ -1164,7 +1475,7 @@ class UploadExcelView(APIView):
             'net_profit'
         ]
         for k in keys:
-            if k not in data:
+            if k not in data or data.get(k) is None:
                 data[k] = Decimal('0')
         return data
     
@@ -1313,7 +1624,317 @@ class UploadExcelView(APIView):
             
         except Exception as e:
             logger.exception(f"Error parsing .docx file: {str(e)}")
-            return {}, {}, {}, {}
+            # Return defaults instead of empty dicts to avoid null constraint violations
+            return self._default_balance_sheet({}), self._default_profit_loss({}), self._default_trading_account({}), {'staff_count': 1}
+
+    def _parse_pdf_table(self, uploaded_file, company):
+        """Parse PDF file with table format: Field | Value columns. Returns dicts for balance_sheet, profit_loss, trading_account, operational_metrics."""
+        try:
+            # Reset file pointer
+            uploaded_file.seek(0)
+            logger.info(f"=== STARTING PDF PARSING ===")
+            logger.info(f"DEBUG: File name: {uploaded_file.name if hasattr(uploaded_file, 'name') else 'Unknown'}")
+            
+            # Use pdfplumber to extract tables
+            field_value_map = {}
+            
+            with pdfplumber.open(uploaded_file) as pdf:
+                logger.info(f"DEBUG: PDF has {len(pdf.pages)} pages")
+                
+                # Try to find table on each page
+                for page_num, page in enumerate(pdf.pages):
+                    logger.info(f"DEBUG: Processing page {page_num + 1}")
+                    # Extract tables from the page
+                    tables = page.extract_tables()
+                    logger.info(f"DEBUG: Found {len(tables)} tables on page {page_num + 1}")
+                    
+                    if tables:
+                        # Use the first table found
+                        table = tables[0]
+                        logger.info(f"DEBUG: Using first table on page {page_num + 1} with {len(table)} rows")
+                        logger.info(f"DEBUG: First few rows of table: {table[:3] if len(table) >= 3 else table}")
+                        
+                        # Parse table: Field | Value format
+                        # Skip header row if it exists (check if first row contains "Field" or "Value")
+                        start_row = 0
+                        if len(table) > 0:
+                            first_row_text = ' '.join([str(cell) if cell else '' for cell in table[0]]).lower()
+                            logger.info(f"DEBUG: First row text: '{first_row_text}'")
+                            if 'field' in first_row_text or 'value' in first_row_text:
+                                start_row = 1
+                                logger.info(f"DEBUG: Detected header row, starting from row {start_row}")
+                        
+                        # Detect table format: Expenses/Income side-by-side (4 columns) or simple Field/Value (2 columns)
+                        num_cols = len(table[0]) if table else 0
+                        logger.info(f"DEBUG: Table has {num_cols} columns")
+                        
+                        # Check if it's Expenses | Amount | Income | Amount format (4 columns)
+                        is_expenses_income_format = False
+                        if num_cols >= 4:
+                            first_row_lower = ' '.join([str(cell).lower() if cell else '' for cell in table[0]])
+                            if 'expenses' in first_row_lower and 'income' in first_row_lower:
+                                is_expenses_income_format = True
+                                logger.info(f"DEBUG: Detected Expenses/Income side-by-side format")
+                        
+                        logger.info(f"DEBUG: Parsing rows {start_row} to {len(table)-1}")
+                        extracted_count = 0
+                        skipped_count = 0
+                        
+                        if is_expenses_income_format:
+                            # Format: Expenses | Amount | Income | Amount (4 columns)
+                            # Or: Expenses section, then Income section (stacked)
+                            logger.info(f"DEBUG: Parsing Expenses/Income format")
+                            for row_idx in range(start_row, len(table)):
+                                row = table[row_idx]
+                                logger.debug(f"DEBUG: Row {row_idx}: {row}")
+                                
+                                # Check if row has Expenses data (columns 0-1)
+                                if len(row) >= 2:
+                                    expense_name = str(row[0]).strip() if row[0] else ''
+                                    expense_value = str(row[1]).strip() if row[1] else ''
+                                    
+                                    if expense_name and expense_value:
+                                        expense_name = expense_name.replace('\n', ' ').strip().lower()
+                                        expense_value_clean = expense_value.replace(',', '').replace(' ', '').replace('-', '')
+                                        if expense_value_clean.replace('.', '', 1).isdigit() and expense_name not in ['expenses', 'amount', '']:
+                                            field_value_map[expense_name] = expense_value
+                                            extracted_count += 1
+                                            logger.info(f"DEBUG: ✓ Extracted Expense [{extracted_count}]: '{expense_name}' = '{expense_value}'")
+                                
+                                # Check if row has Income data (columns 2-3)
+                                if len(row) >= 4:
+                                    income_name = str(row[2]).strip() if row[2] else ''
+                                    income_value = str(row[3]).strip() if row[3] else ''
+                                    
+                                    if income_name and income_value:
+                                        income_name = income_name.replace('\n', ' ').strip().lower()
+                                        income_value_clean = income_value.replace(',', '').replace(' ', '').replace('-', '')
+                                        if income_value_clean.replace('.', '', 1).isdigit() and income_name not in ['income', 'amount', '']:
+                                            field_value_map[income_name] = income_value
+                                            extracted_count += 1
+                                            logger.info(f"DEBUG: ✓ Extracted Income [{extracted_count}]: '{income_name}' = '{income_value}'")
+                        else:
+                            # Format: Field | Value (2 columns) - original logic
+                            for row_idx in range(start_row, len(table)):
+                                row = table[row_idx]
+                                logger.debug(f"DEBUG: Row {row_idx}: {row}")
+                                
+                                if len(row) >= 2:
+                                    field_name = str(row[0]).strip() if row[0] else ''
+                                    value_str = str(row[1]).strip() if row[1] else ''
+                                    
+                                    # Clean up field name and value
+                                    field_name = field_name.replace('\n', ' ').strip()
+                                    value_str = value_str.replace('\n', ' ').strip()
+                                    
+                                    logger.debug(f"DEBUG: Row {row_idx} - Field: '{field_name}', Value: '{value_str}'")
+                                    
+                                    # Skip empty rows or header rows
+                                    if field_name and value_str and field_name.lower() not in ['field', 'value', 'expenses', 'income', 'amount', '']:
+                                        # Validate that value looks like a number (allow commas and decimals)
+                                        value_clean = value_str.replace(',', '').replace(' ', '').replace('-', '')
+                                        # Check if it's a valid number (integer or decimal)
+                                        if value_clean.replace('.', '', 1).isdigit():
+                                            field_value_map[field_name.lower()] = value_str
+                                            extracted_count += 1
+                                            logger.info(f"DEBUG: ✓ Extracted [{extracted_count}]: '{field_name}' = '{value_str}'")
+                                        else:
+                                            skipped_count += 1
+                                            logger.warning(f"DEBUG: ✗ Skipped (not a number): '{field_name}' = '{value_str}' (cleaned: '{value_clean}')")
+                                    else:
+                                        skipped_count += 1
+                                        logger.debug(f"DEBUG: ✗ Skipped (empty/header): Field='{field_name}', Value='{value_str}'")
+                                else:
+                                    skipped_count += 1
+                                    logger.warning(f"DEBUG: ✗ Skipped (insufficient columns): Row has {len(row)} columns, need at least 2")
+                        
+                        logger.info(f"DEBUG: Extraction summary - Extracted: {extracted_count}, Skipped: {skipped_count}")
+                        
+                        # If we found a table, break (use first table found)
+                        if field_value_map:
+                            break
+                
+                # If no tables found, try text extraction and parse manually
+                if not field_value_map:
+                    logger.warning("DEBUG: ⚠️ No tables found in PDF, trying text extraction fallback")
+                    for page_num, page in enumerate(pdf.pages):
+                        text = page.extract_text()
+                        logger.info(f"DEBUG: Page {page_num + 1} text length: {len(text) if text else 0} characters")
+                        if text:
+                            logger.info(f"DEBUG: First 500 chars of page {page_num + 1}: {text[:500]}")
+                            # Try to parse Field: Value format from text
+                            lines = text.split('\n')
+                            logger.info(f"DEBUG: Found {len(lines)} lines in page {page_num + 1}")
+                            extracted_from_text = 0
+                            for line_idx, line in enumerate(lines):
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                
+                                # Try different separators: colon, tab, or multiple spaces
+                                if ':' in line:
+                                    parts = line.split(':', 1)
+                                elif '\t' in line:
+                                    parts = line.split('\t', 1)
+                                elif '  ' in line:  # Multiple spaces (common in PDF tables)
+                                    parts = line.split('  ', 1)
+                                    # Clean up parts
+                                    parts = [p.strip() for p in parts if p.strip()]
+                                    if len(parts) < 2:
+                                        continue
+                                else:
+                                    continue
+                                
+                                if len(parts) >= 2:
+                                    field_name = parts[0].strip()
+                                    value_str = parts[1].strip()
+                                    # Remove any remaining spaces/formatting from value
+                                    value_str = ' '.join(value_str.split())
+                                    
+                                    if field_name and value_str and field_name.lower() not in ['field', 'value']:
+                                        # Check if value looks like a number
+                                        value_clean = value_str.replace(',', '').replace(' ', '')
+                                        if value_clean.replace('.', '').replace('-', '').isdigit():
+                                            field_value_map[field_name.lower()] = value_str
+                                            extracted_from_text += 1
+                                            logger.info(f"DEBUG: ✓ Extracted from text [line {line_idx}]: '{field_name}' = '{value_str}'")
+                            
+                            logger.info(f"DEBUG: Extracted {extracted_from_text} fields from page {page_num + 1} text")
+                            if extracted_from_text > 0:
+                                break  # Stop after first page with data
+            
+            if not field_value_map:
+                logger.warning("No data found in PDF file")
+                return {}, {}, {}, {}
+            
+            logger.info(f"=== PDF EXTRACTION COMPLETE ===")
+            logger.info(f"DEBUG: Total fields extracted: {len(field_value_map)}")
+            logger.info(f"DEBUG: All extracted fields: {field_value_map}")
+            
+            if not field_value_map:
+                logger.error("DEBUG: ⚠️ NO FIELDS EXTRACTED FROM PDF!")
+                return {}, {}, {}, {}
+            
+            # Separate into different statement types (same logic as docx)
+            balance_sheet_data = {}
+            profit_loss_data = {}
+            trading_account_data = {}
+            operational_metrics_data = {}
+            
+            logger.info(f"=== STARTING FIELD MAPPING ===")
+            # Map fields to appropriate categories (same logic as docx parsing)
+            for field_lower, value_str in field_value_map.items():
+                logger.info(f"DEBUG: Processing field '{field_lower}' = '{value_str}'")
+                # Handle "Provisions Made" first - this is P&L provisions, different from Balance Sheet provisions
+                if 'provisions made' in field_lower or ('provisions' in field_lower and 'made' in field_lower):
+                    profit_loss_data['provisions'] = self._parse_decimal(value_str)
+                    continue
+                
+                # Balance Sheet fields (check before P&L to avoid conflicts)
+                bs_field = self._map_balance_sheet_field(field_lower, company)
+                if bs_field:
+                    balance_sheet_data[bs_field] = self._parse_decimal(value_str)
+                    logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> BalanceSheet.{bs_field} = {value_str}")
+                    continue
+                
+                # Trading Account fields (check before P&L since Gross Profit is in Trading Account)
+                ta_field = self._map_trading_account_field(field_lower, company)
+                if ta_field:
+                    trading_account_data[ta_field] = self._parse_decimal(value_str)
+                    logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> TradingAccount.{ta_field} = {value_str}")
+                    continue
+                else:
+                    logger.debug(f"DEBUG: ✗ '{field_lower}' not mapped to TradingAccount")
+                
+                # Handle Gross Profit - it's calculated from Trading Account, skip if provided
+                if 'gross profit' in field_lower:
+                    # Gross profit is calculated, skip as it's a computed field
+                    continue
+                
+                # Profit & Loss fields
+                # Determine if income or expense based on field name patterns
+                income_keywords = ['interest on loans', 'loans inter', 'interest on bank', 'miscellaneous', 'miscellane', 'return on investment', 'return on']
+                expense_keywords = ['interest on deposits', 'interest on borrowings', 'borrowing', 'establishment', 'establishm', 'provisions']
+                
+                # Check for income patterns first
+                is_income = any(x in field_lower for x in income_keywords)
+                is_expense = any(x in field_lower for x in expense_keywords)
+                
+                # Special handling for "Miscellaneous" / "Miscellane" - always income
+                if 'miscellaneous' in field_lower or 'miscellane' in field_lower:
+                    is_income = True
+                    is_expense = False
+                    logger.info(f"DEBUG: Detected Miscellaneous/Miscellane as income")
+                
+                # Special handling for "Interest o" / "interest_o" - could be income or expense
+                if ('interest o' in field_lower or 'interest_o' in field_lower) and not is_expense:
+                    # If it's in the income section or matches income patterns, treat as income
+                    if 'loan' in field_lower or 'bank' in field_lower:
+                        is_income = True
+                        logger.info(f"DEBUG: Detected 'Interest o' as income (loans/bank context)")
+                    elif 'deposit' in field_lower or 'borrowing' in field_lower:
+                        is_expense = True
+                        logger.info(f"DEBUG: Detected 'Interest o' as expense (deposits/borrowings context)")
+                
+                # Handle Net Profit separately (it's in P&L but not income/expense)
+                if 'net profit' in field_lower:
+                    profit_loss_data['net_profit'] = self._parse_decimal(value_str)
+                    logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> ProfitLoss.net_profit = {value_str}")
+                    continue
+                
+                pl_field = self._map_profit_loss_field(field_lower, is_income=is_income, company=company)
+                if pl_field:
+                    profit_loss_data[pl_field] = self._parse_decimal(value_str)
+                    logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> ProfitLoss.{pl_field} = {value_str} (is_income={is_income})")
+                    continue
+                else:
+                    logger.warning(f"DEBUG: ✗ '{field_lower}' not mapped to ProfitLoss (is_income={is_income}, is_expense={is_expense})")
+                
+                # Operational Metrics
+                if 'staff' in field_lower and 'count' in field_lower:
+                    try:
+                        operational_metrics_data['staff_count'] = int(float(value_str.replace(',', '')))
+                        logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> OperationalMetrics.staff_count = {value_str}")
+                    except:
+                        operational_metrics_data['staff_count'] = 1
+                        logger.warning(f"DEBUG: ✗ Failed to parse staff_count, using default: 1")
+                    continue
+                
+                # If we get here, the field wasn't mapped to any category
+                logger.warning(f"DEBUG: ⚠️ UNMAPPED FIELD: '{field_lower}' = '{value_str}'")
+            
+            logger.info(f"=== FIELD MAPPING COMPLETE ===")
+            logger.info(f"DEBUG: Balance Sheet fields mapped: {len(balance_sheet_data)} - {list(balance_sheet_data.keys())}")
+            logger.info(f"DEBUG: Profit & Loss fields mapped: {len(profit_loss_data)} - {list(profit_loss_data.keys())}")
+            logger.info(f"DEBUG: Trading Account fields mapped: {len(trading_account_data)} - {list(trading_account_data.keys())}")
+            logger.info(f"DEBUG: Operational Metrics: {operational_metrics_data}")
+            
+            # Apply defaults BEFORE returning
+            balance_sheet_data = self._default_balance_sheet(balance_sheet_data)
+            profit_loss_data = self._default_profit_loss(profit_loss_data)
+            trading_account_data = self._default_trading_account(trading_account_data)
+            if 'staff_count' not in operational_metrics_data:
+                operational_metrics_data['staff_count'] = 1
+            
+            logger.info(f"=== FINAL RESULTS AFTER DEFAULTS ===")
+            logger.info(f"DEBUG: Balance Sheet: {len(balance_sheet_data)} fields")
+            logger.info(f"DEBUG: Profit & Loss: {len(profit_loss_data)} fields")
+            logger.info(f"DEBUG: Profit & Loss values: interest_on_loans={profit_loss_data.get('interest_on_loans')}, interest_on_bank_ac={profit_loss_data.get('interest_on_bank_ac')}, miscellaneous_income={profit_loss_data.get('miscellaneous_income')}, return_on_investment={profit_loss_data.get('return_on_investment')}")
+            logger.info(f"DEBUG: Trading Account: {len(trading_account_data)} fields")
+            logger.info(f"DEBUG: Trading Account values: opening_stock={trading_account_data.get('opening_stock')}, purchases={trading_account_data.get('purchases')}, sales={trading_account_data.get('sales')}, closing_stock={trading_account_data.get('closing_stock')}, trade_charges={trading_account_data.get('trade_charges')}")
+            logger.info(f"DEBUG: Operational Metrics: {operational_metrics_data}")
+            
+            # Final safety check - ensure miscellaneous_income is never null
+            if 'miscellaneous_income' not in profit_loss_data or profit_loss_data.get('miscellaneous_income') is None:
+                profit_loss_data['miscellaneous_income'] = Decimal('0')
+                logger.warning(f"DEBUG: ⚠️ miscellaneous_income was null, set to 0")
+            
+            return balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data
+            
+        except Exception as e:
+            logger.exception(f"Error parsing PDF file: {str(e)}")
+            # Return defaults instead of empty dicts to avoid null constraint violations
+            return self._default_balance_sheet({}), self._default_profit_loss({}), self._default_trading_account({}), {'staff_count': 1}
 
     def _create_period_from_document(self, request, company, uploaded_file, period_info, file_type):
         """Create a financial period for .docx or .pdf upload; store file and create/update records."""
@@ -1339,10 +1960,22 @@ class UploadExcelView(APIView):
                 # Parse the .docx table and extract data BEFORE saving (to avoid file pointer issues)
                 balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_docx_table(uploaded_file, company)
                 
+                # Ensure defaults are applied before saving (safety check)
+                trading_account_data = self._default_trading_account(trading_account_data)
+                balance_sheet_data = self._default_balance_sheet(balance_sheet_data)
+                profit_loss_data = self._default_profit_loss(profit_loss_data)
+                
+                logger.info(f"DEBUG: Before save (docx) - Trading Account data: {trading_account_data}")
+                
                 # Reset file pointer after parsing (Django needs it for saving)
                 uploaded_file.seek(0)
-                period.doc_file = uploaded_file
+                period.uploaded_file = uploaded_file
+                period.file_type = 'docx'
                 period.save()
+                
+                # Ensure staff_count is always set before saving (safety check)
+                if 'staff_count' not in operational_metrics_data or operational_metrics_data.get('staff_count') is None:
+                    operational_metrics_data['staff_count'] = 1
                 
                 # Create/update records with parsed data
                 TradingAccount.objects.update_or_create(period=period, defaults=trading_account_data)
@@ -1384,45 +2017,66 @@ class UploadExcelView(APIView):
                     }
                 )
             else:
-                # PDF: just store file, create empty records
-                period.pdf_file = uploaded_file
+                # PDF: parse file and extract data
+                # Parse the PDF table and extract data BEFORE saving (to avoid file pointer issues)
+                balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_pdf_table(uploaded_file, company)
+                
+                # Ensure defaults are applied before saving (safety check)
+                trading_account_data = self._default_trading_account(trading_account_data)
+                balance_sheet_data = self._default_balance_sheet(balance_sheet_data)
+                profit_loss_data = self._default_profit_loss(profit_loss_data)
+                
+                logger.info(f"DEBUG: Before save - Trading Account data: {trading_account_data}")
+                
+                # Reset file pointer after parsing (Django needs it for saving)
+                uploaded_file.seek(0)
+                period.uploaded_file = uploaded_file
+                period.file_type = 'pdf'
                 period.save()
                 
-                balance_sheet_data = self._default_balance_sheet({})
-                profit_loss_data = self._default_profit_loss({})
-                trading_account_data = self._default_trading_account({})
-                operational_metrics_data = {'staff_count': 1}
-
+                # Ensure staff_count is always set before saving (safety check)
+                if 'staff_count' not in operational_metrics_data or operational_metrics_data.get('staff_count') is None:
+                    operational_metrics_data['staff_count'] = 1
+                
+                # Create/update records with parsed data
                 TradingAccount.objects.update_or_create(period=period, defaults=trading_account_data)
                 ProfitAndLoss.objects.update_or_create(period=period, defaults=profit_loss_data)
                 BalanceSheet.objects.update_or_create(period=period, defaults=balance_sheet_data)
                 OperationalMetrics.objects.update_or_create(period=period, defaults=operational_metrics_data)
-
-                ratio_defaults = {
-                    'working_fund': Decimal('0'),
-                    'stock_turnover': Decimal('0'),
-                    'gross_profit_ratio': Decimal('0'),
-                    'net_profit_ratio': Decimal('0'),
-                    'own_fund_to_wf': Decimal('0'),
-                    'deposits_to_wf': Decimal('0'),
-                    'borrowings_to_wf': Decimal('0'),
-                    'loans_to_wf': Decimal('0'),
-                    'investments_to_wf': Decimal('0'),
-                    'cost_of_deposits': Decimal('0'),
-                    'yield_on_loans': Decimal('0'),
-                    'yield_on_investments': Decimal('0'),
-                    'credit_deposit_ratio': Decimal('0'),
-                    'avg_cost_of_wf': Decimal('0'),
-                    'avg_yield_on_wf': Decimal('0'),
-                    'gross_fin_margin': Decimal('0'),
-                    'operating_cost_to_wf': Decimal('0'),
-                    'net_fin_margin': Decimal('0'),
-                    'risk_cost_to_wf': Decimal('0'),
-                    'net_margin': Decimal('0'),
-                    'all_ratios': {},
-                    'traffic_light_status': {}
-                }
-                RatioResult.objects.update_or_create(period=period, defaults=ratio_defaults)
+                
+                # Calculate ratios
+                from app.services.ratio_calculator import RatioCalculator
+                calculator = RatioCalculator(period)
+                all_ratios = calculator.calculate_all_ratios()
+                traffic_light_statuses = calculator.get_traffic_light_statuses()
+                
+                RatioResult.objects.update_or_create(
+                    period=period,
+                    defaults={
+                        'working_fund': Decimal(str(all_ratios['working_fund'])),
+                        'stock_turnover': Decimal(str(all_ratios.get('stock_turnover', 0))),
+                        'gross_profit_ratio': Decimal(str(all_ratios.get('gross_profit_ratio', 0))),
+                        'net_profit_ratio': Decimal(str(all_ratios.get('net_profit_ratio', 0))),
+                        'own_fund_to_wf': Decimal(str(all_ratios.get('own_fund_to_wf', 0))),
+                        'deposits_to_wf': Decimal(str(all_ratios.get('deposits_to_wf', 0))),
+                        'borrowings_to_wf': Decimal(str(all_ratios.get('borrowings_to_wf', 0))),
+                        'loans_to_wf': Decimal(str(all_ratios.get('loans_to_wf', 0))),
+                        'investments_to_wf': Decimal(str(all_ratios.get('investments_to_wf', 0))),
+                        'cost_of_deposits': Decimal(str(all_ratios.get('cost_of_deposits', 0))),
+                        'yield_on_loans': Decimal(str(all_ratios.get('yield_on_loans', 0))),
+                        'yield_on_investments': Decimal(str(all_ratios.get('yield_on_investments', 0))),
+                        'credit_deposit_ratio': Decimal(str(all_ratios.get('credit_deposit_ratio', 0))),
+                        'avg_cost_of_wf': Decimal(str(all_ratios.get('avg_cost_of_wf', 0))),
+                        'avg_yield_on_wf': Decimal(str(all_ratios.get('avg_yield_on_wf', 0))),
+                        'gross_fin_margin': Decimal(str(all_ratios.get('gross_fin_margin', 0))),
+                        'operating_cost_to_wf': Decimal(str(all_ratios.get('operating_cost_to_wf', 0))),
+                        'net_fin_margin': Decimal(str(all_ratios.get('net_fin_margin', 0))),
+                        'risk_cost_to_wf': Decimal(str(all_ratios.get('risk_cost_to_wf', 0))),
+                        'net_margin': Decimal(str(all_ratios.get('net_margin', 0))),
+                        'all_ratios': all_ratios,
+                        'traffic_light_status': traffic_light_statuses
+                    }
+                )
         return period
 
     def _extract_period_from_filename(self, filename):

@@ -1,9 +1,44 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+import os
 
 
 # Create your models here.
+
+def financial_file_upload_path(instance, filename):
+    """
+    Generate upload path: company_financials/<company_name>/<period_type>/<period_label>/<filename>
+    Example: company_financials/ABC_Company/MONTHLY/Apr_2024/data.xlsx
+    
+    Organizes files by:
+    - Company name (sanitized)
+    - Period type (MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY)
+    - Period label (e.g., Apr_2024, Q1_FY_2024_25, FY_2024_25)
+    """
+    # Handle case where instance might not be fully initialized
+    if not instance.company or not instance.label:
+        # Fallback to date-based path if company/label not available
+        from django.utils import timezone
+        return f'company_financials/temp/{timezone.now().strftime("%Y/%m")}/{filename}'
+    
+    # Sanitize company name for filesystem (remove special chars)
+    company_name = "".join(c for c in instance.company.name if c.isalnum() or c in (' ', '-', '_')).strip()
+    company_name = company_name.replace(' ', '_')
+    if not company_name:
+        company_name = 'Unknown_Company'
+    
+    # Sanitize period label
+    period_label = "".join(c for c in instance.label if c.isalnum() or c in (' ', '-', '_')).strip()
+    period_label = period_label.replace(' ', '_')
+    if not period_label:
+        period_label = 'Unknown_Period'
+    
+    # Get period type (default to YEARLY if not set)
+    period_type = instance.period_type if instance.period_type else 'YEARLY'
+    
+    # Organize by company/period_type/period_label
+    return f'company_financials/{company_name}/{period_type}/{period_label}/{filename}'
 
 
 
@@ -48,11 +83,11 @@ class FinancialPeriod(models.Model):
     label = models.CharField(max_length=50)  # e.g. FY-2023-24, Mar-2024
     is_finalized = models.BooleanField(default=False)
     
-    # Store the uploaded Excel file
-    excel_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
-    # Store optional .docx and .pdf uploads (e.g. statements, reports)
-    doc_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
-    pdf_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
+    # Store uploaded file (Excel, Word, or PDF) - organized by company/period_type/period_label
+    uploaded_file = models.FileField(upload_to=financial_file_upload_path, null=True, blank=True)
+    # Track file type: 'excel', 'docx', or 'pdf'
+    file_type = models.CharField(max_length=10, null=True, blank=True, 
+                                 help_text="Type of uploaded file: excel, docx, or pdf")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
