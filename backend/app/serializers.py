@@ -268,6 +268,8 @@ class FinancialPeriodSerializer(serializers.ModelSerializer):
             'label',
             'is_finalized',
             'excel_file',
+            'doc_file',
+            'pdf_file',
             'created_at',
             'trading_account',
             'profit_loss',

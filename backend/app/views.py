@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from openpyxl import load_workbook
+from docx import Document
 
 from .models import *
 from .serializers import *
@@ -375,13 +376,45 @@ class UploadExcelView(APIView):
                     "message": "Company not found"
                 })
             
-            excel_file = request.FILES['file']
-            logger.info(f"DEBUG: Excel file received - {excel_file.name}")
-            
-            # Extract period information from filename if available
-            filename = excel_file.name
+            uploaded_file = request.FILES['file']
+            logger.info(f"DEBUG: File received - {uploaded_file.name}")
+            filename = uploaded_file.name
             period_info = self._extract_period_from_filename(filename)
-            
+
+            ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+            if ext not in ('xlsx', 'xls', 'docx', 'pdf'):
+                return Response({
+                    "status": "failed",
+                    "response_code": status.HTTP_400_BAD_REQUEST,
+                    "message": "Unsupported file type. Use .xlsx, .xls, .docx, or .pdf"
+                })
+
+            # Handle .docx or .pdf: store file and create period with default empty data
+            if ext == 'docx':
+                period = self._create_period_from_document(
+                    request, company, uploaded_file, period_info, file_type='docx'
+                )
+                return Response({
+                    "status": "success",
+                    "response_code": status.HTTP_200_OK,
+                    "message": "Document (.docx) uploaded successfully",
+                    "period_id": period.id,
+                    "period_label": period.label
+                })
+            if ext == 'pdf':
+                period = self._create_period_from_document(
+                    request, company, uploaded_file, period_info, file_type='pdf'
+                )
+                return Response({
+                    "status": "success",
+                    "response_code": status.HTTP_200_OK,
+                    "message": "Document (.pdf) uploaded successfully",
+                    "period_id": period.id,
+                    "period_label": period.label
+                })
+
+            # Excel path
+            excel_file = uploaded_file
             # Load workbook
             logger.info("DEBUG: Loading workbook...")
             workbook = load_workbook(excel_file, data_only=True)
@@ -660,6 +693,7 @@ class UploadExcelView(APIView):
             'borrowing': 'borrowings',
             'reserves': 'reserves_statutory_free',
             'reserves (': 'reserves_statutory_free',
+            'reserves statutory free': 'reserves_statutory_free',
             'statutory & free reserves': 'reserves_statutory_free',
             'undistributed profit': 'undistributed_profit',
             'undistribu': 'undistributed_profit',
@@ -675,6 +709,7 @@ class UploadExcelView(APIView):
             'investmer': 'investments',
             'loans & advances': 'loans_advances',
             'loans & a': 'loans_advances',
+            'loans advances': 'loans_advances',
             'loans and advances': 'loans_advances',
             'fixed assets': 'fixed_assets',
             'fixed asse': 'fixed_assets',
@@ -790,10 +825,12 @@ class UploadExcelView(APIView):
                 'interest rec': 'interest_on_loans',
                 'interest on bank a/c': 'interest_on_bank_ac',
                 'interest on bank ac': 'interest_on_bank_ac',
+                'interest on bank': 'interest_on_bank_ac',
                 'interest of': 'interest_on_bank_ac',
                 'return on investment': 'return_on_investment',
                 'return on': 'return_on_investment',
                 'miscellaneous income': 'miscellaneous_income',
+                'miscellaneous': 'miscellaneous_income',
                 'miscellane': 'miscellaneous_income',
             }
         else:
@@ -1177,6 +1214,217 @@ class UploadExcelView(APIView):
         
         return sheet_mapping
     
+    def _parse_docx_table(self, uploaded_file, company):
+        """Parse .docx file with table format: Field | Value columns. Returns dicts for balance_sheet, profit_loss, trading_account, operational_metrics."""
+        try:
+            # Reset file pointer
+            uploaded_file.seek(0)
+            doc = Document(uploaded_file)
+            
+            # Find the first table in the document
+            table = None
+            for t in doc.tables:
+                if len(t.rows) > 0:
+                    table = t
+                    break
+            
+            if not table:
+                logger.warning("No table found in .docx file")
+                return {}, {}, {}, {}
+            
+            # Parse table: Field | Value format
+            field_value_map = {}
+            for row in table.rows:
+                if len(row.cells) >= 2:
+                    field_name = row.cells[0].text.strip()
+                    value_str = row.cells[1].text.strip()
+                    if field_name and value_str:
+                        field_value_map[field_name.lower()] = value_str
+            
+            logger.info(f"DEBUG: Parsed {len(field_value_map)} fields from .docx table")
+            
+            # Separate into different statement types
+            balance_sheet_data = {}
+            profit_loss_data = {}
+            trading_account_data = {}
+            operational_metrics_data = {}
+            
+            # Map fields to appropriate categories
+            for field_lower, value_str in field_value_map.items():
+                # Handle "Provisions Made" first - this is P&L provisions, different from Balance Sheet provisions
+                if 'provisions made' in field_lower or ('provisions' in field_lower and 'made' in field_lower):
+                    profit_loss_data['provisions'] = self._parse_decimal(value_str)
+                    continue
+                
+                # Balance Sheet fields (check before P&L to avoid conflicts)
+                bs_field = self._map_balance_sheet_field(field_lower, company)
+                if bs_field:
+                    balance_sheet_data[bs_field] = self._parse_decimal(value_str)
+                    continue
+                
+                # Trading Account fields (check before P&L since Gross Profit is in Trading Account)
+                ta_field = self._map_trading_account_field(field_lower, company)
+                if ta_field:
+                    trading_account_data[ta_field] = self._parse_decimal(value_str)
+                    continue
+                
+                # Handle Gross Profit - it's calculated from Trading Account, skip if provided
+                if 'gross profit' in field_lower:
+                    # Gross profit is calculated, skip as it's a computed field
+                    continue
+                
+                # Profit & Loss fields
+                # Determine if income or expense
+                income_keywords = ['interest on loans', 'interest on bank', 'miscellaneous', 'return on investment']
+                is_income = any(x in field_lower for x in income_keywords)
+                
+                # Special handling for "Miscellaneous" vs "Miscellaneous Income"
+                if 'miscellaneous' in field_lower and 'income' not in field_lower:
+                    is_income = True
+                
+                # Handle Net Profit separately (it's in P&L but not income/expense)
+                if 'net profit' in field_lower:
+                    profit_loss_data['net_profit'] = self._parse_decimal(value_str)
+                    continue
+                
+                pl_field = self._map_profit_loss_field(field_lower, is_income=is_income, company=company)
+                if pl_field:
+                    profit_loss_data[pl_field] = self._parse_decimal(value_str)
+                    continue
+                
+                # Operational Metrics
+                if 'staff' in field_lower and 'count' in field_lower:
+                    try:
+                        operational_metrics_data['staff_count'] = int(float(value_str.replace(',', '')))
+                    except:
+                        operational_metrics_data['staff_count'] = 1
+                    continue
+            
+            # Apply defaults
+            balance_sheet_data = self._default_balance_sheet(balance_sheet_data)
+            profit_loss_data = self._default_profit_loss(profit_loss_data)
+            trading_account_data = self._default_trading_account(trading_account_data)
+            if 'staff_count' not in operational_metrics_data:
+                operational_metrics_data['staff_count'] = 1
+            
+            logger.info(f"DEBUG: Parsed .docx - BS: {len(balance_sheet_data)}, PL: {len(profit_loss_data)}, TA: {len(trading_account_data)}")
+            
+            return balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data
+            
+        except Exception as e:
+            logger.exception(f"Error parsing .docx file: {str(e)}")
+            return {}, {}, {}, {}
+
+    def _create_period_from_document(self, request, company, uploaded_file, period_info, file_type):
+        """Create a financial period for .docx or .pdf upload; store file and create/update records."""
+        period_label = request.data.get('period_label') or period_info.get('label') or f"FY-{datetime.now().year}-{datetime.now().year + 1}"
+        start_date = request.data.get('start_date') or period_info.get('start_date') or f"{datetime.now().year}-04-01"
+        end_date = request.data.get('end_date') or period_info.get('end_date') or f"{datetime.now().year + 1}-03-31"
+        period_type = request.data.get('period_type') or period_info.get('period_type') or 'YEARLY'
+
+        with transaction.atomic():
+            period, created = FinancialPeriod.objects.get_or_create(
+                company=company,
+                label=period_label,
+                defaults={
+                    'period_type': period_type,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'is_finalized': False,
+                }
+            )
+            
+            # Parse .docx file if it's a docx upload
+            if file_type == 'docx':
+                # Parse the .docx table and extract data BEFORE saving (to avoid file pointer issues)
+                balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_docx_table(uploaded_file, company)
+                
+                # Reset file pointer after parsing (Django needs it for saving)
+                uploaded_file.seek(0)
+                period.doc_file = uploaded_file
+                period.save()
+                
+                # Create/update records with parsed data
+                TradingAccount.objects.update_or_create(period=period, defaults=trading_account_data)
+                ProfitAndLoss.objects.update_or_create(period=period, defaults=profit_loss_data)
+                BalanceSheet.objects.update_or_create(period=period, defaults=balance_sheet_data)
+                OperationalMetrics.objects.update_or_create(period=period, defaults=operational_metrics_data)
+                
+                # Calculate ratios
+                from app.services.ratio_calculator import RatioCalculator
+                calculator = RatioCalculator(period)
+                all_ratios = calculator.calculate_all_ratios()
+                traffic_light_statuses = calculator.get_traffic_light_statuses()
+                
+                RatioResult.objects.update_or_create(
+                    period=period,
+                    defaults={
+                        'working_fund': Decimal(str(all_ratios['working_fund'])),
+                        'stock_turnover': Decimal(str(all_ratios.get('stock_turnover', 0))),
+                        'gross_profit_ratio': Decimal(str(all_ratios.get('gross_profit_ratio', 0))),
+                        'net_profit_ratio': Decimal(str(all_ratios.get('net_profit_ratio', 0))),
+                        'own_fund_to_wf': Decimal(str(all_ratios.get('own_fund_to_wf', 0))),
+                        'deposits_to_wf': Decimal(str(all_ratios.get('deposits_to_wf', 0))),
+                        'borrowings_to_wf': Decimal(str(all_ratios.get('borrowings_to_wf', 0))),
+                        'loans_to_wf': Decimal(str(all_ratios.get('loans_to_wf', 0))),
+                        'investments_to_wf': Decimal(str(all_ratios.get('investments_to_wf', 0))),
+                        'cost_of_deposits': Decimal(str(all_ratios.get('cost_of_deposits', 0))),
+                        'yield_on_loans': Decimal(str(all_ratios.get('yield_on_loans', 0))),
+                        'yield_on_investments': Decimal(str(all_ratios.get('yield_on_investments', 0))),
+                        'credit_deposit_ratio': Decimal(str(all_ratios.get('credit_deposit_ratio', 0))),
+                        'avg_cost_of_wf': Decimal(str(all_ratios.get('avg_cost_of_wf', 0))),
+                        'avg_yield_on_wf': Decimal(str(all_ratios.get('avg_yield_on_wf', 0))),
+                        'gross_fin_margin': Decimal(str(all_ratios.get('gross_fin_margin', 0))),
+                        'operating_cost_to_wf': Decimal(str(all_ratios.get('operating_cost_to_wf', 0))),
+                        'net_fin_margin': Decimal(str(all_ratios.get('net_fin_margin', 0))),
+                        'risk_cost_to_wf': Decimal(str(all_ratios.get('risk_cost_to_wf', 0))),
+                        'net_margin': Decimal(str(all_ratios.get('net_margin', 0))),
+                        'all_ratios': all_ratios,
+                        'traffic_light_status': traffic_light_statuses
+                    }
+                )
+            else:
+                # PDF: just store file, create empty records
+                period.pdf_file = uploaded_file
+                period.save()
+                
+                balance_sheet_data = self._default_balance_sheet({})
+                profit_loss_data = self._default_profit_loss({})
+                trading_account_data = self._default_trading_account({})
+                operational_metrics_data = {'staff_count': 1}
+
+                TradingAccount.objects.update_or_create(period=period, defaults=trading_account_data)
+                ProfitAndLoss.objects.update_or_create(period=period, defaults=profit_loss_data)
+                BalanceSheet.objects.update_or_create(period=period, defaults=balance_sheet_data)
+                OperationalMetrics.objects.update_or_create(period=period, defaults=operational_metrics_data)
+
+                ratio_defaults = {
+                    'working_fund': Decimal('0'),
+                    'stock_turnover': Decimal('0'),
+                    'gross_profit_ratio': Decimal('0'),
+                    'net_profit_ratio': Decimal('0'),
+                    'own_fund_to_wf': Decimal('0'),
+                    'deposits_to_wf': Decimal('0'),
+                    'borrowings_to_wf': Decimal('0'),
+                    'loans_to_wf': Decimal('0'),
+                    'investments_to_wf': Decimal('0'),
+                    'cost_of_deposits': Decimal('0'),
+                    'yield_on_loans': Decimal('0'),
+                    'yield_on_investments': Decimal('0'),
+                    'credit_deposit_ratio': Decimal('0'),
+                    'avg_cost_of_wf': Decimal('0'),
+                    'avg_yield_on_wf': Decimal('0'),
+                    'gross_fin_margin': Decimal('0'),
+                    'operating_cost_to_wf': Decimal('0'),
+                    'net_fin_margin': Decimal('0'),
+                    'risk_cost_to_wf': Decimal('0'),
+                    'net_margin': Decimal('0'),
+                    'all_ratios': {},
+                    'traffic_light_status': {}
+                }
+                RatioResult.objects.update_or_create(period=period, defaults=ratio_defaults)
+        return period
+
     def _extract_period_from_filename(self, filename):
         """
         Extract period information from filename.

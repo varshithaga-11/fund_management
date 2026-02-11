@@ -30,15 +30,15 @@ const UploadDataPage: React.FC = () => {
     }
   };
 
+  const ACCEPTED_EXTENSIONS = [".xlsx", ".xls", ".docx", ".pdf"];
+  const isAcceptedFile = (name: string) =>
+    ACCEPTED_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext));
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      // Validate file type
-      if (
-        !selectedFile.name.endsWith(".xlsx") &&
-        !selectedFile.name.endsWith(".xls")
-      ) {
-        toast.error("Please upload a valid Excel file (.xlsx or .xls)");
+      if (!isAcceptedFile(selectedFile.name)) {
+        toast.error("Please upload a valid file (.xlsx, .xls, .docx, or .pdf)");
         return;
       }
       setFile(selectedFile);
@@ -51,7 +51,7 @@ const UploadDataPage: React.FC = () => {
 
   const handleUpload = async () => {
     if (!file) {
-      toast.error("Please select an Excel file");
+      toast.error("Please select a file (Excel, Word, or PDF)");
       return;
     }
 
@@ -84,7 +84,7 @@ const UploadDataPage: React.FC = () => {
         error.message;
       const displayMessage = message
         ? String(message)
-        : "Failed to upload Excel file. Please check the file format.";
+        : "Failed to upload file. Please check the file format.";
       toast.error(displayMessage, { autoClose: 10000 });
     } finally {
       setUploading(false);
@@ -105,19 +105,19 @@ const UploadDataPage: React.FC = () => {
           Upload Financial Data
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          Upload an Excel file containing Balance Sheet, Profit & Loss, Trading Account, and Operational Metrics
+          Upload an Excel file (.xlsx, .xls), Word document (.docx), or PDF for financial data or statements
         </p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
         {/* File Upload Section */}
         <div>
-          <Label htmlFor="excel-file">Excel File *</Label>
+          <Label htmlFor="upload-file">File (Excel, Word, or PDF) *</Label>
           <div className="mt-2">
             <input
-              id="excel-file"
+              id="upload-file"
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.docx,.pdf"
               onChange={handleFileChange}
               className="block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
@@ -137,7 +137,7 @@ const UploadDataPage: React.FC = () => {
             )}
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Supported formats: .xlsx, .xls
+            Supported formats: .xlsx, .xls (Excel), .docx (Word), .pdf
           </p>
         </div>
 

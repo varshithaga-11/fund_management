@@ -50,6 +50,9 @@ class FinancialPeriod(models.Model):
     
     # Store the uploaded Excel file
     excel_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
+    # Store optional .docx and .pdf uploads (e.g. statements, reports)
+    doc_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
+    pdf_file = models.FileField(upload_to='company_financials/%Y/%m/', null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
