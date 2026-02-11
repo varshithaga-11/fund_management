@@ -16,6 +16,8 @@ export interface FinancialPeriodData {
   end_date: string;
   label: string;
   is_finalized: boolean;
+  uploaded_file?: string;
+  file_type?: "excel" | "docx" | "pdf";
   created_at: string;
 }
 
@@ -38,13 +40,13 @@ export const getCompanyPeriods = async (companyId: number): Promise<FinancialPer
   try {
     const url = createApiUrl(`api/financial-periods/?company=${companyId}`);
     console.log("Fetching from URL:", url);
-    
+
     const headers = await getAuthHeaders();
     console.log("Using auth headers");
-    
+
     const response = await axios.get(url, { headers });
     console.log(`API Response for company ${companyId}:`, response.data);
-    
+
     return response.data;
   } catch (error: any) {
     console.error(`Error fetching periods for company ${companyId}:`, error);
