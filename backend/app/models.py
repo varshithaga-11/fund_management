@@ -275,11 +275,24 @@ class StatementColumnConfig(models.Model):
         return value.strip().lower().replace(" ", "_")
 
     @classmethod
+    def _config_matches_column(cls, config, normalized):
+        """Return config.canonical_field if this config matches the normalized column name, else None."""
+        if config.canonical_field and cls._normalize_for_match(config.canonical_field) == normalized:
+            return config.canonical_field
+        if config.display_name and cls._normalize_for_match(config.display_name) == normalized:
+            return config.canonical_field
+        for a in (config.aliases or []):
+            if isinstance(a, str) and cls._normalize_for_match(a) == normalized:
+                return config.canonical_field
+        return None
+
+    @classmethod
     def resolve_canonical_field(cls, company, statement_type, column_name):
         """
         Resolve an uploaded column/item name to the canonical field name.
-        Checks canonical_field, display_name, and aliases (company-specific first, then global).
-        Matches after normalizing: strip, lower, spaces -> underscores (so 'Opening Inventory' matches alias 'opening_inventory').
+        For each column: check company-specific configs first; if no match, check global configs.
+        This allows some fields to come from company-specific and others from global.
+        Matches after normalizing: strip, lower, spaces -> underscores.
         Returns canonical_field if match found, else None.
         """
         if not column_name or not isinstance(column_name, str):
@@ -287,20 +300,17 @@ class StatementColumnConfig(models.Model):
         normalized = cls._normalize_for_match(column_name)
         if not normalized:
             return None
-        # 1) Company-specific configs
-        qs = cls.objects.filter(company=company, statement_type=statement_type)
+        # 1) Company-specific configs first (if company is set)
+        if company:
+            for config in cls.objects.filter(company=company, statement_type=statement_type):
+                canonical = cls._config_matches_column(config, normalized)
+                if canonical:
+                    return canonical
         # 2) Fallback: global configs (company is null)
-        if not qs.exists():
-            qs = cls.objects.filter(company__isnull=True, statement_type=statement_type)
-        for config in qs:
-            if config.canonical_field and cls._normalize_for_match(config.canonical_field) == normalized:
-                return config.canonical_field
-            if config.display_name and cls._normalize_for_match(config.display_name) == normalized:
-                return config.canonical_field
-            aliases = config.aliases or []
-            for a in aliases:
-                if isinstance(a, str) and cls._normalize_for_match(a) == normalized:
-                    return config.canonical_field
+        for config in cls.objects.filter(company__isnull=True, statement_type=statement_type):
+            canonical = cls._config_matches_column(config, normalized)
+            if canonical:
+                return canonical
         return None
 
 
