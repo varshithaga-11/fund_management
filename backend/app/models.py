@@ -267,7 +267,41 @@ class StatementColumnConfig(models.Model):
         unique_together = ("company", "statement_type", "canonical_field")
         ordering = ["canonical_field"]
 
+    @classmethod
+    def _normalize_for_match(cls, value):
+        """Normalize so 'opening inventory' and 'opening_inventory' match."""
+        if not value or not isinstance(value, str):
+            return ""
+        return value.strip().lower().replace(" ", "_")
 
+    @classmethod
+    def resolve_canonical_field(cls, company, statement_type, column_name):
+        """
+        Resolve an uploaded column/item name to the canonical field name.
+        Checks canonical_field, display_name, and aliases (company-specific first, then global).
+        Matches after normalizing: strip, lower, spaces -> underscores (so 'Opening Inventory' matches alias 'opening_inventory').
+        Returns canonical_field if match found, else None.
+        """
+        if not column_name or not isinstance(column_name, str):
+            return None
+        normalized = cls._normalize_for_match(column_name)
+        if not normalized:
+            return None
+        # 1) Company-specific configs
+        qs = cls.objects.filter(company=company, statement_type=statement_type)
+        # 2) Fallback: global configs (company is null)
+        if not qs.exists():
+            qs = cls.objects.filter(company__isnull=True, statement_type=statement_type)
+        for config in qs:
+            if config.canonical_field and cls._normalize_for_match(config.canonical_field) == normalized:
+                return config.canonical_field
+            if config.display_name and cls._normalize_for_match(config.display_name) == normalized:
+                return config.canonical_field
+            aliases = config.aliases or []
+            for a in aliases:
+                if isinstance(a, str) and cls._normalize_for_match(a) == normalized:
+                    return config.canonical_field
+        return None
 
 
 

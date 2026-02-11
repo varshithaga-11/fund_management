@@ -403,11 +403,11 @@ class UploadExcelView(APIView):
             if format_a:
                 logger.info("DEBUG: Parsing Format A sheets...")
                 financial_statement_data = self._parse_financial_statement_sheet(workbook[sheet_mapping['Financial_Statement']])
-                liabilities_data = self._parse_balance_sheet_liabilities(workbook[sheet_mapping['Balance_Sheet_Liabilities']])
-                assets_data = self._parse_balance_sheet_assets(workbook[sheet_mapping['Balance_Sheet_Assets']])
+                liabilities_data = self._parse_balance_sheet_liabilities(workbook[sheet_mapping['Balance_Sheet_Liabilities']], company)
+                assets_data = self._parse_balance_sheet_assets(workbook[sheet_mapping['Balance_Sheet_Assets']], company)
                 balance_sheet_data = self._default_balance_sheet({**liabilities_data, **assets_data})
-                profit_loss_data = self._default_profit_loss(self._parse_profit_loss_rows(workbook[sheet_mapping['Profit_Loss']]))
-                trading_account_data = self._default_trading_account(self._parse_trading_account_rows(workbook[sheet_mapping['Trading_Account']]))
+                profit_loss_data = self._default_profit_loss(self._parse_profit_loss_rows(workbook[sheet_mapping['Profit_Loss']], company))
+                trading_account_data = self._default_trading_account(self._parse_trading_account_rows(workbook[sheet_mapping['Trading_Account']], company))
                 staff_count = financial_statement_data.get('staff_count')
                 if staff_count is not None:
                     operational_metrics_data = {'staff_count': int(float(staff_count))}
@@ -419,10 +419,10 @@ class UploadExcelView(APIView):
                     period_info['end_date'] = fiscal_end
             elif format_b:
                 logger.info("DEBUG: Parsing Format B sheets...")
-                balance_sheet_data = self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']])
-                profit_loss_data = self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']])
-                trading_account_data = self._parse_trading_account(workbook[sheet_mapping['Trading Account']])
-                operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']])
+                balance_sheet_data = self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']], company)
+                profit_loss_data = self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']], company)
+                trading_account_data = self._default_trading_account(self._parse_trading_account(workbook[sheet_mapping['Trading Account']], company))
+                operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']], company)
                 logger.info("DEBUG: Format B sheets parsed successfully")
             elif len(available) == 1 and available[0] == 'Sheet':
                 # Format C: Single generic "Sheet" - try to auto-detect and parse as balance sheet
@@ -436,7 +436,7 @@ class UploadExcelView(APIView):
                 
                 if has_liabilities and has_assets:
                     logger.info("DEBUG: Detected balance sheet format - parsing as Format B (single sheet)")
-                    balance_sheet_data = self._parse_balance_sheet(single_sheet)
+                    balance_sheet_data = self._parse_balance_sheet(single_sheet, company)
                     # Set default/empty data for other required sheets
                     profit_loss_data = self._default_profit_loss({})
                     trading_account_data = self._default_trading_account({})
@@ -572,7 +572,7 @@ class UploadExcelView(APIView):
                 "message": f"Error processing Excel file: {str(e)}"
             })
     
-    def _parse_balance_sheet(self, sheet):
+    def _parse_balance_sheet(self, sheet, company=None):
         """Parse Balance Sheet sheet - handles both column format (Liabilities/Amount, Assets/Amount) and row format"""
         data = {}
         
@@ -608,7 +608,7 @@ class UploadExcelView(APIView):
                         item = row[liabilities_col] if liabilities_col < len(row) else None
                         amount = row[liabilities_amount_col] if liabilities_amount_col < len(row) else None
                         if item and amount is not None:
-                            field_name = self._map_balance_sheet_field(str(item))
+                            field_name = self._map_balance_sheet_field(str(item), company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
                     
@@ -616,7 +616,7 @@ class UploadExcelView(APIView):
                         item = row[assets_col] if assets_col < len(row) else None
                         amount = row[assets_amount_col] if assets_amount_col < len(row) else None
                         if item and amount is not None:
-                            field_name = self._map_balance_sheet_field(str(item))
+                            field_name = self._map_balance_sheet_field(str(item), company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
         else:
@@ -636,7 +636,7 @@ class UploadExcelView(APIView):
             
             if data_row and headers:
                 for header, col_idx in headers.items():
-                    field_name = self._map_balance_sheet_field(header)
+                    field_name = self._map_balance_sheet_field(header, company)
                     if field_name and col_idx < len(data_row):
                         value = data_row[col_idx]
                         if value is not None:
@@ -644,8 +644,12 @@ class UploadExcelView(APIView):
         
         return data
     
-    def _map_balance_sheet_field(self, item_str):
-        """Map balance sheet item string to model field name"""
+    def _map_balance_sheet_field(self, item_str, company=None):
+        """Map balance sheet item string to model field name. Uses StatementColumnConfig (canonical_field, display_name, aliases) first, then fallback mapping."""
+        if company:
+            canonical = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", item_str)
+            if canonical:
+                return canonical
         item_lower = item_str.lower().strip()
         
         field_mapping = {
@@ -685,7 +689,7 @@ class UploadExcelView(APIView):
                 return field_name
         return None
     
-    def _parse_profit_loss(self, sheet):
+    def _parse_profit_loss(self, sheet, company=None):
         """Parse Profit and Loss sheet - handles Expenses/Amount and Income/Amount column format"""
         data = {}
         
@@ -719,7 +723,7 @@ class UploadExcelView(APIView):
                         item = row[expenses_col] if expenses_col < len(row) else None
                         amount = row[expenses_amount_col] if expenses_amount_col < len(row) else None
                         if item and amount is not None:
-                            field_name = self._map_profit_loss_field(str(item), is_income=False)
+                            field_name = self._map_profit_loss_field(str(item), is_income=False, company=company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
                     
@@ -728,7 +732,7 @@ class UploadExcelView(APIView):
                         item = row[income_col] if income_col < len(row) else None
                         amount = row[income_amount_col] if income_amount_col < len(row) else None
                         if item and amount is not None:
-                            field_name = self._map_profit_loss_field(str(item), is_income=True)
+                            field_name = self._map_profit_loss_field(str(item), is_income=True, company=company)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
         else:
@@ -753,7 +757,7 @@ class UploadExcelView(APIView):
                 # Parse income
                 if income_row:
                     for header, col_idx in headers.items():
-                        field_name = self._map_profit_loss_field(header, is_income=True)
+                        field_name = self._map_profit_loss_field(header, is_income=True, company=company)
                         if field_name and col_idx < len(income_row):
                             value = income_row[col_idx]
                             if value is not None:
@@ -762,7 +766,7 @@ class UploadExcelView(APIView):
                 # Parse expenses
                 if expense_row:
                     for header, col_idx in headers.items():
-                        field_name = self._map_profit_loss_field(header, is_income=False)
+                        field_name = self._map_profit_loss_field(header, is_income=False, company=company)
                         if field_name and col_idx < len(expense_row):
                             value = expense_row[col_idx]
                             if value is not None:
@@ -770,8 +774,12 @@ class UploadExcelView(APIView):
         
         return data
     
-    def _map_profit_loss_field(self, item_str, is_income=False):
-        """Map profit & loss item string to model field name"""
+    def _map_profit_loss_field(self, item_str, is_income=False, company=None):
+        """Map profit & loss item string to model field name. Uses StatementColumnConfig first, then fallback mapping."""
+        if company:
+            canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item_str)
+            if canonical:
+                return canonical
         item_lower = item_str.lower().strip()
         
         if is_income:
@@ -806,8 +814,8 @@ class UploadExcelView(APIView):
                 return field_name
         return None
     
-    def _parse_trading_account(self, sheet):
-        """Parse Trading Account sheet"""
+    def _parse_trading_account(self, sheet, company=None):
+        """Parse Trading Account sheet. Uses StatementColumnConfig (display_name, aliases) for column name matching first."""
         data = {}
         
         # Look for Item and Amount columns
@@ -829,23 +837,34 @@ class UploadExcelView(APIView):
                 amount = row[amount_col] if amount_col < len(row) else None
                 
                 if item and amount is not None:
-                    item_str = str(item).strip().lower()
-                    
-                    if 'opening' in item_str and 'stock' in item_str:
-                        data['opening_stock'] = self._parse_decimal(amount)
-                    elif 'purchases' in item_str:
-                        data['purchases'] = self._parse_decimal(amount)
-                    elif 'trade' in item_str and 'charges' in item_str:
-                        data['trade_charges'] = self._parse_decimal(amount)
-                    elif 'sales' in item_str:
-                        data['sales'] = self._parse_decimal(amount)
-                    elif 'closing' in item_str and 'stock' in item_str:
-                        data['closing_stock'] = self._parse_decimal(amount)
+                    item_str = str(item).strip()
+                    field_name = self._map_trading_account_field(item_str, company)
+                    if field_name:
+                        data[field_name] = self._parse_decimal(amount)
         
         return data
     
-    def _parse_operational_metrics(self, sheet):
-        """Parse Operational Metrics sheet"""
+    def _map_trading_account_field(self, item_str, company=None):
+        """Map trading account item string to canonical field. Uses StatementColumnConfig first, then fallback."""
+        if company:
+            canonical = StatementColumnConfig.resolve_canonical_field(company, "TRADING", item_str)
+            if canonical:
+                return canonical
+        item_lower = item_str.lower().strip()
+        if 'opening' in item_lower and 'stock' in item_lower:
+            return 'opening_stock'
+        if 'purchases' in item_lower:
+            return 'purchases'
+        if 'trade' in item_lower and 'charges' in item_lower:
+            return 'trade_charges'
+        if 'sales' in item_lower:
+            return 'sales'
+        if 'closing' in item_lower and 'stock' in item_lower:
+            return 'closing_stock'
+        return None
+    
+    def _parse_operational_metrics(self, sheet, company=None):
+        """Parse Operational Metrics sheet. Uses StatementColumnConfig for metric name matching when available."""
         data = {}
         
         # Look for Metric and Value columns
@@ -866,9 +885,17 @@ class UploadExcelView(APIView):
                 value = row[value_col] if value_col < len(row) else None
                 
                 if metric and value is not None:
-                    metric_str = str(metric).strip().lower()
-                    
-                    if 'staff' in metric_str and 'count' in metric_str:
+                    metric_str = str(metric).strip()
+                    if company:
+                        canonical = StatementColumnConfig.resolve_canonical_field(company, "OPERATIONAL", metric_str)
+                        if canonical:
+                            try:
+                                data[canonical] = int(float(value))
+                            except (TypeError, ValueError):
+                                data[canonical] = value
+                            continue
+                    metric_lower = metric_str.lower()
+                    if 'staff' in metric_lower and 'count' in metric_lower:
                         data['staff_count'] = int(float(value))
         
         return data
@@ -906,11 +933,10 @@ class UploadExcelView(APIView):
                 break
         return data
     
-    def _parse_balance_sheet_liabilities(self, sheet):
-        """Parse Balance_Sheet_Liabilities: Liability Type, Amount (one row per liability)"""
+    def _parse_balance_sheet_liabilities(self, sheet, company=None):
+        """Parse Balance_Sheet_Liabilities: Liability Type, Amount (one row per liability). Uses StatementColumnConfig first."""
         data = {}
         type_col = amount_col = None
-        # Order matters: more specific phrases first
         liability_to_field = [
             ('reserves (statutory + free)', 'reserves_statutory_free'),
             ('reserves (statutory', 'reserves_statutory_free'),
@@ -937,15 +963,22 @@ class UploadExcelView(APIView):
                 typ = row[type_col] if type_col < len(row) else None
                 amt = row[amount_col] if amount_col < len(row) else None
                 if typ is not None and amt is not None:
-                    t = str(typ).strip().lower()
-                    for key, field in liability_to_field:
-                        if key in t or t in key:
-                            data[field] = self._parse_decimal(amt)
-                            break
+                    t = str(typ).strip()
+                    field_name = None
+                    if company:
+                        field_name = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", t)
+                    if not field_name:
+                        t_lower = t.lower()
+                        for key, field in liability_to_field:
+                            if key in t_lower or t_lower in key:
+                                field_name = field
+                                break
+                    if field_name:
+                        data[field_name] = self._parse_decimal(amt)
         return data
     
-    def _parse_balance_sheet_assets(self, sheet):
-        """Parse Balance_Sheet_Assets: Asset Type, Amount (one row per asset)"""
+    def _parse_balance_sheet_assets(self, sheet, company=None):
+        """Parse Balance_Sheet_Assets: Asset Type, Amount (one row per asset). Uses StatementColumnConfig first."""
         data = {}
         type_col = amount_col = None
         asset_to_field = {
@@ -971,15 +1004,22 @@ class UploadExcelView(APIView):
                 typ = row[type_col] if type_col < len(row) else None
                 amt = row[amount_col] if amount_col < len(row) else None
                 if typ is not None and amt is not None:
-                    t = str(typ).strip().lower()
-                    for key, field in asset_to_field.items():
-                        if key in t or t in key:
-                            data[field] = self._parse_decimal(amt)
-                            break
+                    t = str(typ).strip()
+                    field_name = None
+                    if company:
+                        field_name = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", t)
+                    if not field_name:
+                        t_lower = t.lower()
+                        for key, field in asset_to_field.items():
+                            if key in t_lower or t_lower in key:
+                                field_name = field
+                                break
+                    if field_name:
+                        data[field_name] = self._parse_decimal(amt)
         return data
     
-    def _parse_profit_loss_rows(self, sheet):
-        """Parse Profit_Loss sheet: Category, Item, Amount (Income/Expense/Net Profit rows)"""
+    def _parse_profit_loss_rows(self, sheet, company=None):
+        """Parse Profit_Loss sheet: Category, Item, Amount. Uses StatementColumnConfig for item name matching first."""
         data = {}
         cat_col = item_col = amount_col = None
         for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
@@ -995,35 +1035,42 @@ class UploadExcelView(APIView):
                             amount_col = col_idx
             elif row_idx > 1 and item_col is not None and amount_col is not None:
                 cat = str(row[cat_col] or '').strip().lower() if cat_col is not None and cat_col < len(row) else ''
-                item = str(row[item_col] or '').strip().lower() if item_col < len(row) else ''
+                item = str(row[item_col] or '').strip() if item_col < len(row) else ''
                 amt = row[amount_col] if amount_col < len(row) else None
                 if not item or amt is None:
                     continue
                 amt_val = self._parse_decimal(amt)
+                # Try StatementColumnConfig first (use item as column name; config may have display_name/aliases)
+                if company:
+                    canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item)
+                    if canonical:
+                        data[canonical] = amt_val
+                        continue
+                item_lower = item.lower()
                 if 'income' in cat:
-                    if 'interest' in item and 'loan' in item:
+                    if 'interest' in item_lower and 'loan' in item_lower:
                         data['interest_on_loans'] = amt_val
-                    elif 'interest' in item and 'bank' in item:
+                    elif 'interest' in item_lower and 'bank' in item_lower:
                         data['interest_on_bank_ac'] = amt_val
-                    elif 'return' in item and 'investment' in item:
+                    elif 'return' in item_lower and 'investment' in item_lower:
                         data['return_on_investment'] = amt_val
-                    elif 'miscellaneous' in item:
+                    elif 'miscellaneous' in item_lower:
                         data['miscellaneous_income'] = amt_val
                 elif 'expense' in cat:
-                    if 'interest' in item and 'deposit' in item:
+                    if 'interest' in item_lower and 'deposit' in item_lower:
                         data['interest_on_deposits'] = amt_val
-                    elif 'interest' in item and 'borrowing' in item:
+                    elif 'interest' in item_lower and 'borrowing' in item_lower:
                         data['interest_on_borrowings'] = amt_val
-                    elif 'establishment' in item or 'contingenc' in item:
+                    elif 'establishment' in item_lower or 'contingenc' in item_lower:
                         data['establishment_contingencies'] = amt_val
-                    elif 'provision' in item:
+                    elif 'provision' in item_lower:
                         data['provisions'] = amt_val
-                elif 'net profit' in cat or (cat == '' and 'net profit' in item):
+                elif 'net profit' in cat or (cat == '' and 'net profit' in item_lower):
                     data['net_profit'] = amt_val
         return data
     
-    def _parse_trading_account_rows(self, sheet):
-        """Parse Trading_Account sheet: Item, Amount (one row per item)"""
+    def _parse_trading_account_rows(self, sheet, company=None):
+        """Parse Trading_Account sheet: Item, Amount. Uses StatementColumnConfig for item name matching first."""
         data = {}
         item_col = amount_col = None
         for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
@@ -1036,21 +1083,14 @@ class UploadExcelView(APIView):
                         elif 'amount' in h:
                             amount_col = col_idx
             elif row_idx > 1 and item_col is not None and amount_col is not None:
-                item = str(row[item_col] or '').strip().lower() if item_col < len(row) else ''
+                item = str(row[item_col] or '').strip() if item_col < len(row) else ''
                 amt = row[amount_col] if amount_col < len(row) else None
                 if not item or amt is None:
                     continue
                 amt_val = self._parse_decimal(amt)
-                if 'opening' in item and 'stock' in item:
-                    data['opening_stock'] = amt_val
-                elif 'purchases' in item:
-                    data['purchases'] = amt_val
-                elif 'sales' in item:
-                    data['sales'] = amt_val
-                elif 'trade' in item and 'charges' in item:
-                    data['trade_charges'] = amt_val
-                elif 'closing' in item and 'stock' in item:
-                    data['closing_stock'] = amt_val
+                field_name = self._map_trading_account_field(item, company)
+                if field_name:
+                    data[field_name] = amt_val
         return data
     
     def _parse_decimal(self, value):
