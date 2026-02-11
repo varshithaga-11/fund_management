@@ -78,11 +78,14 @@ const UploadDataPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error uploading file:", error);
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Failed to upload Excel file. Please check the file format.");
-      }
+      const message =
+        error.response?.data?.message ??
+        (typeof error.response?.data === "string" ? error.response.data : null) ??
+        error.message;
+      const displayMessage = message
+        ? String(message)
+        : "Failed to upload Excel file. Please check the file format.";
+      toast.error(displayMessage, { autoClose: 10000 });
     } finally {
       setUploading(false);
     }
