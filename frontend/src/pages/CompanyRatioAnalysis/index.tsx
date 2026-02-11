@@ -331,52 +331,41 @@ const CompanyRatioAnalysis: React.FC = () => {
 
                 return (
                   <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center justify-between">
-                      <a
-                        href={fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity cursor-pointer"
-                      >
-                        {/* File Icon based on type */}
-                        {selectedPeriod.file_type === 'excel' && (
-                          <svg className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
-                            <path d="M14 2v6h6"></path>
-                            <path d="M9 15l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none"></path>
-                          </svg>
-                        )}
-                        {selectedPeriod.file_type === 'docx' && (
-                          <svg className="w-8 h-8 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
-                            <path d="M14 2v6h6"></path>
-                          </svg>
-                        )}
-                        {selectedPeriod.file_type === 'pdf' && (
-                          <svg className="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
-                            <path d="M14 2v6h6"></path>
-                          </svg>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {selectedPeriod.uploaded_file.split('/').pop()?.split('_').slice(1).join('_') || 'Financial Document'}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {selectedPeriod.file_type?.toUpperCase()} file • Click to open
-                          </p>
-                        </div>
-                      </a>
-                      <a
-                        href={fileUrl}
-                        download
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex-shrink-0 ml-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Download className="w-4 h-4" />
-                        Download
-                      </a>
-                    </div>
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                    >
+                      {/* File Icon based on type */}
+                      {selectedPeriod.file_type === 'excel' && (
+                        <svg className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                          <path d="M14 2v6h6"></path>
+                          <path d="M9 15l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none"></path>
+                        </svg>
+                      )}
+                      {selectedPeriod.file_type === 'docx' && (
+                        <svg className="w-8 h-8 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                          <path d="M14 2v6h6"></path>
+                        </svg>
+                      )}
+                      {selectedPeriod.file_type === 'pdf' && (
+                        <svg className="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                          <path d="M14 2v6h6"></path>
+                        </svg>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {selectedPeriod.uploaded_file.split('/').pop()?.split('_').slice(1).join('_') || 'Financial Document'}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {selectedPeriod.file_type?.toUpperCase()} file • Click to open
+                        </p>
+                      </div>
+                    </a>
                   </div>
                 );
               })()}
