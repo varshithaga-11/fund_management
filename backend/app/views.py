@@ -751,27 +751,37 @@ class UploadExcelView(APIView):
             return canonical
         
         # Fallback: Try pattern matching against common model field names (if StatementColumnConfig doesn't have entry)
-        normalized_clean = normalized.replace('&', '').replace('_', '').replace('-', '').replace(' ', '')
+        # Clean normalized string for better matching (remove special chars, keep only alphanumeric)
+        normalized_clean = normalized.replace('&', '').replace('/', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '').replace('_', '').lower()
         
         # Pattern matching for common variations
-        if 'share' in normalized and 'capital' in normalized:
+        if 'share' in normalized_clean and 'capital' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> share_capital")
             return 'share_capital'
-        if ('member' in normalized or 'deposit' in normalized) and 'deposit' in normalized:
+        if ('member' in normalized_clean or 'deposit' in normalized_clean) and 'deposit' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> deposits")
             return 'deposits'
-        if 'provision' in normalized and 'made' not in normalized:
+        if 'provision' in normalized_clean and 'made' not in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> provisions")
             return 'provisions'
-        if 'investment' in normalized:
+        if 'investment' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> investments")
             return 'investments'
-        if 'other' in normalized and 'asset' in normalized:
+        if 'other' in normalized_clean and 'asset' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> other_assets")
             return 'other_assets'
-        if ('stock' in normalized or 'trade' in normalized) and 'stock' in normalized:
+        if ('stock' in normalized_clean or 'trade' in normalized_clean) and 'stock' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> stock_in_trade")
             return 'stock_in_trade'
+        if 'loan' in normalized_clean and 'advance' in normalized_clean:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> loans_advances")
+            return 'loans_advances'
+        if 'reserve' in normalized_clean and ('statutory' in normalized_clean or 'free' in normalized_clean):
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> reserves_statutory_free")
+            return 'reserves_statutory_free'
+        if 'statutory' in normalized_clean and 'free' in normalized_clean:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> reserves_statutory_free")
+            return 'reserves_statutory_free'
         
         # Direct match if normalized name matches exactly
         common_balance_sheet_fields = [
@@ -936,22 +946,26 @@ class UploadExcelView(APIView):
             return canonical
         
         # Fallback: Try pattern matching against common model field names (if StatementColumnConfig doesn't have entry)
-        normalized_clean = normalized.replace('&', '').replace('_', '').replace('-', '').replace(' ', '')
+        # Clean normalized string for better matching (remove special chars, handle a/c -> ac)
+        normalized_clean = normalized.replace('&', '').replace('/', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '').replace('_', '').replace('a/c', 'ac').replace('ac', 'ac').lower()
         
         # Pattern matching for common variations
-        if 'interest' in normalized and 'deposit' in normalized:
+        if 'interest' in normalized_clean and 'deposit' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> interest_on_deposits")
             return 'interest_on_deposits'
-        if ('establishment' in normalized or 'establishm' in normalized) and ('contingenc' in normalized or 'conting' in normalized):
+        if 'interest' in normalized_clean and 'bank' in normalized_clean:
+            logger.info(f"✓ Fallback: Pattern match '{item_str}' -> interest_on_bank_ac")
+            return 'interest_on_bank_ac'
+        if ('establishment' in normalized_clean or 'establishm' in normalized_clean) and ('contingenc' in normalized_clean or 'conting' in normalized_clean):
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> establishment_contingencies")
             return 'establishment_contingencies'
-        if 'provision' in normalized and 'made' in normalized:
+        if 'provision' in normalized_clean and 'made' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> provisions")
             return 'provisions'
-        if 'net' in normalized and 'profit' in normalized:
+        if 'net' in normalized_clean and 'profit' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> net_profit")
             return 'net_profit'
-        if 'miscellaneous' in normalized or 'miscellane' in normalized:
+        if 'miscellaneous' in normalized_clean or 'miscellane' in normalized_clean:
             logger.info(f"✓ Fallback: Pattern match '{item_str}' -> miscellaneous_income")
             return 'miscellaneous_income'
         
