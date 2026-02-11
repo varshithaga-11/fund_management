@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   getFinancialPeriod,
-  getCompanyList,
-  CompanyData,
   FinancialPeriodData,
   calculateRatios,
 } from "./api";
@@ -12,10 +10,9 @@ import ProfitLossForm from "./ProfitLossForm";
 import BalanceSheetForm from "./BalanceSheetForm";
 import OperationalMetricsForm from "./OperationalMetricsForm";
 import Button from "../../components/ui/button/Button";
-import Select from "../../components/form/Select";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { getCompanyList as getCompanies } from "../Companies/api";
+import { getCompanyList as getCompanies, CompanyData } from "../Companies/api";
 
 const FinancialPeriodPage: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
@@ -26,9 +23,7 @@ const FinancialPeriodPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
 
-  // Only master can update existing data; admin can view and create new
-  const userRole = typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
-  const canUpdate = userRole === "master";
+  // All data is read-only - no updates allowed
 
   useEffect(() => {
     if (periodId) {
@@ -174,38 +169,36 @@ const FinancialPeriodPage: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      {!canUpdate && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
-          View only. Only Master role can update existing financial statements.
-        </div>
-      )}
+      <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-sm">
+        View only mode - Financial statements are read-only and cannot be updated.
+      </div>
       <div className="mt-6">
         {activeTab === "trading" && (
           <TradingAccountForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
-            canUpdate={canUpdate}
+            canUpdate={false}
           />
         )}
         {activeTab === "profit-loss" && (
           <ProfitLossForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
-            canUpdate={canUpdate}
+            canUpdate={false}
           />
         )}
         {activeTab === "balance-sheet" && (
           <BalanceSheetForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
-            canUpdate={canUpdate}
+            canUpdate={false}
           />
         )}
         {activeTab === "operational" && (
           <OperationalMetricsForm
             periodId={parseInt(periodId!)}
             onSave={loadPeriod}
-            canUpdate={canUpdate}
+            canUpdate={false}
           />
         )}
       </div>

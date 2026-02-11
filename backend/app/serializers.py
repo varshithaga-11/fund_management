@@ -183,7 +183,7 @@ class TradingAccountSerializer(serializers.ModelSerializer):
             'closing_stock',
             'gross_profit'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'period']
 
 
 class ProfitAndLossSerializer(serializers.ModelSerializer):
@@ -207,7 +207,7 @@ class ProfitAndLossSerializer(serializers.ModelSerializer):
             'total_interest_income',
             'total_interest_expense'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'period']
 
 
 class BalanceSheetSerializer(serializers.ModelSerializer):
@@ -236,7 +236,7 @@ class BalanceSheetSerializer(serializers.ModelSerializer):
             'working_fund',
             'own_funds'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'period']
 
 
 class OperationalMetricsSerializer(serializers.ModelSerializer):
@@ -247,7 +247,7 @@ class OperationalMetricsSerializer(serializers.ModelSerializer):
             'period',
             'staff_count'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'period']
 
 
 class FinancialPeriodSerializer(serializers.ModelSerializer):
