@@ -1543,90 +1543,142 @@ class UploadExcelView(APIView):
         return sheet_mapping
     
     def _parse_docx_table(self, uploaded_file, company):
-        """Parse .docx file with table format: Field | Value columns. Returns dicts for balance_sheet, profit_loss, trading_account, operational_metrics."""
+        """Parse .docx file with 4 tables format matching template: Balance Sheet, Profit & Loss, Trading Account, Operational Metrics."""
         try:
             # Reset file pointer
             uploaded_file.seek(0)
             doc = Document(uploaded_file)
             
-            # Find the first table in the document
-            table = None
-            for t in doc.tables:
-                if len(t.rows) > 0:
-                    table = t
-                    break
-            
-            if not table:
-                logger.warning("No table found in .docx file")
+            # Get all tables and headings to identify each section
+            tables = doc.tables
+            if not tables:
+                logger.warning("No tables found in .docx file")
                 return {}, {}, {}, {}
             
-            # Parse table: Field | Value format
-            field_value_map = {}
-            for row in table.rows:
-                if len(row.cells) >= 2:
-                    field_name = row.cells[0].text.strip()
-                    value_str = row.cells[1].text.strip()
-                    if field_name and value_str:
-                        field_value_map[field_name.lower()] = value_str
+            logger.info(f"DEBUG: Found {len(tables)} tables in .docx file")
             
-            logger.info(f"DEBUG: Parsed {len(field_value_map)} fields from .docx table")
-            
-            # Separate into different statement types
+            # Initialize data dicts
             balance_sheet_data = {}
             profit_loss_data = {}
             trading_account_data = {}
             operational_metrics_data = {}
             
-            # Map fields to appropriate categories
-            for field_lower, value_str in field_value_map.items():
-                # Handle "Provisions Made" first - this is P&L provisions, different from Balance Sheet provisions
-                if 'provisions made' in field_lower or ('provisions' in field_lower and 'made' in field_lower):
-                    profit_loss_data['provisions'] = self._parse_decimal(value_str)
+            # Track which table we're processing (by index)
+            table_index = 0
+            
+            # Parse each table based on its structure
+            for table_idx, table in enumerate(tables):
+                if len(table.rows) < 2:  # Need at least header + 1 data row
                     continue
                 
-                # Balance Sheet fields (check before P&L to avoid conflicts)
-                bs_field = self._map_balance_sheet_field(field_lower, company)
-                if bs_field:
-                    balance_sheet_data[bs_field] = self._parse_decimal(value_str)
-                    continue
+                num_cols = len(table.rows[0].cells)
+                logger.info(f"DEBUG: Table {table_idx + 1}: {len(table.rows)} rows, {num_cols} columns")
                 
-                # Trading Account fields (check before P&L since Gross Profit is in Trading Account)
-                ta_field = self._map_trading_account_field(field_lower, company)
-                if ta_field:
-                    trading_account_data[ta_field] = self._parse_decimal(value_str)
-                    continue
+                # Identify table type by structure and content
+                # Table 1: Balance Sheet - 4 columns (Liabilities, Amount, Assets, Amount)
+                if num_cols == 4:
+                    header_row = [cell.text.strip().lower() for cell in table.rows[0].cells]
+                    logger.info(f"DEBUG: Table {table_idx + 1} header: {header_row}")
+                    
+                    # Check if it's Balance Sheet or Profit & Loss by header
+                    if 'liabilities' in ' '.join(header_row) and 'assets' in ' '.join(header_row):
+                        # Balance Sheet table
+                        logger.info(f"DEBUG: Parsing Balance Sheet table")
+                        for row_idx in range(1, len(table.rows)):
+                            row = table.rows[row_idx]
+                            if len(row.cells) >= 4:
+                                liability_name = row.cells[0].text.strip()
+                                liability_amount = row.cells[1].text.strip()
+                                asset_name = row.cells[2].text.strip()
+                                asset_amount = row.cells[3].text.strip()
+                                
+                                # Map liability
+                                if liability_name and liability_amount:
+                                    bs_field = self._map_balance_sheet_field(liability_name.lower(), company)
+                                    if bs_field:
+                                        balance_sheet_data[bs_field] = self._parse_decimal(liability_amount)
+                                        logger.info(f"DEBUG: BS Liability '{liability_name}' -> {bs_field} = {liability_amount}")
+                                
+                                # Map asset
+                                if asset_name and asset_amount:
+                                    bs_field = self._map_balance_sheet_field(asset_name.lower(), company)
+                                    if bs_field:
+                                        balance_sheet_data[bs_field] = self._parse_decimal(asset_amount)
+                                        logger.info(f"DEBUG: BS Asset '{asset_name}' -> {bs_field} = {asset_amount}")
+                    
+                    elif 'expenses' in ' '.join(header_row) and 'income' in ' '.join(header_row):
+                        # Profit & Loss table
+                        logger.info(f"DEBUG: Parsing Profit & Loss table")
+                        for row_idx in range(1, len(table.rows)):
+                            row = table.rows[row_idx]
+                            if len(row.cells) >= 4:
+                                expense_name = row.cells[0].text.strip()
+                                expense_amount = row.cells[1].text.strip()
+                                income_name = row.cells[2].text.strip()
+                                income_amount = row.cells[3].text.strip()
+                                
+                                # Map expense
+                                if expense_name and expense_amount:
+                                    expense_lower = expense_name.lower()
+                                    # Handle "Provisions Made" separately
+                                    if 'provisions made' in expense_lower or ('provisions' in expense_lower and 'made' in expense_lower):
+                                        profit_loss_data['provisions'] = self._parse_decimal(expense_amount)
+                                    elif 'net profit' in expense_lower:
+                                        profit_loss_data['net_profit'] = self._parse_decimal(expense_amount)
+                                    else:
+                                        pl_field = self._map_profit_loss_field(expense_lower, is_income=False, company=company)
+                                        if pl_field:
+                                            profit_loss_data[pl_field] = self._parse_decimal(expense_amount)
+                                            logger.info(f"DEBUG: PL Expense '{expense_name}' -> {pl_field} = {expense_amount}")
+                                
+                                # Map income
+                                if income_name and income_amount:
+                                    income_lower = income_name.lower()
+                                    pl_field = self._map_profit_loss_field(income_lower, is_income=True, company=company)
+                                    if pl_field:
+                                        profit_loss_data[pl_field] = self._parse_decimal(income_amount)
+                                        logger.info(f"DEBUG: PL Income '{income_name}' -> {pl_field} = {income_amount}")
+                                
+                                # Handle Net Profit if in income column
+                                if income_name and 'net profit' in income_name.lower() and income_amount:
+                                    profit_loss_data['net_profit'] = self._parse_decimal(income_amount)
                 
-                # Handle Gross Profit - it's calculated from Trading Account, skip if provided
-                if 'gross profit' in field_lower:
-                    # Gross profit is calculated, skip as it's a computed field
-                    continue
-                
-                # Profit & Loss fields
-                # Determine if income or expense
-                income_keywords = ['interest on loans', 'interest on bank', 'miscellaneous', 'return on investment']
-                is_income = any(x in field_lower for x in income_keywords)
-                
-                # Special handling for "Miscellaneous" vs "Miscellaneous Income"
-                if 'miscellaneous' in field_lower and 'income' not in field_lower:
-                    is_income = True
-                
-                # Handle Net Profit separately (it's in P&L but not income/expense)
-                if 'net profit' in field_lower:
-                    profit_loss_data['net_profit'] = self._parse_decimal(value_str)
-                    continue
-                
-                pl_field = self._map_profit_loss_field(field_lower, is_income=is_income, company=company)
-                if pl_field:
-                    profit_loss_data[pl_field] = self._parse_decimal(value_str)
-                    continue
-                
-                # Operational Metrics
-                if 'staff' in field_lower and 'count' in field_lower:
-                    try:
-                        operational_metrics_data['staff_count'] = int(float(value_str.replace(',', '')))
-                    except:
-                        operational_metrics_data['staff_count'] = 1
-                    continue
+                # Table 2/3: Trading Account or Operational Metrics - 2 columns (Item/Metric, Amount/Value)
+                elif num_cols == 2:
+                    header_row = [cell.text.strip().lower() for cell in table.rows[0].cells]
+                    logger.info(f"DEBUG: Table {table_idx + 1} header: {header_row}")
+                    
+                    # Check header to identify table type
+                    if 'item' in ' '.join(header_row) or 'trading' in ' '.join(header_row):
+                        # Trading Account table
+                        logger.info(f"DEBUG: Parsing Trading Account table")
+                        for row_idx in range(1, len(table.rows)):
+                            row = table.rows[row_idx]
+                            if len(row.cells) >= 2:
+                                item_name = row.cells[0].text.strip()
+                                item_amount = row.cells[1].text.strip()
+                                
+                                if item_name and item_amount:
+                                    ta_field = self._map_trading_account_field(item_name.lower(), company)
+                                    if ta_field:
+                                        trading_account_data[ta_field] = self._parse_decimal(item_amount)
+                                        logger.info(f"DEBUG: TA '{item_name}' -> {ta_field} = {item_amount}")
+                    
+                    elif 'metric' in ' '.join(header_row) or 'staff' in ' '.join(header_row):
+                        # Operational Metrics table
+                        logger.info(f"DEBUG: Parsing Operational Metrics table")
+                        for row_idx in range(1, len(table.rows)):
+                            row = table.rows[row_idx]
+                            if len(row.cells) >= 2:
+                                metric_name = row.cells[0].text.strip().lower()
+                                metric_value = row.cells[1].text.strip()
+                                
+                                if 'staff' in metric_name and 'count' in metric_name and metric_value:
+                                    try:
+                                        operational_metrics_data['staff_count'] = int(float(metric_value.replace(',', '')))
+                                        logger.info(f"DEBUG: OM Staff Count = {operational_metrics_data['staff_count']}")
+                                    except:
+                                        operational_metrics_data['staff_count'] = 1
             
             # Apply defaults
             balance_sheet_data = self._default_balance_sheet(balance_sheet_data)
@@ -1635,7 +1687,7 @@ class UploadExcelView(APIView):
             if 'staff_count' not in operational_metrics_data:
                 operational_metrics_data['staff_count'] = 1
             
-            logger.info(f"DEBUG: Parsed .docx - BS: {len(balance_sheet_data)}, PL: {len(profit_loss_data)}, TA: {len(trading_account_data)}")
+            logger.info(f"DEBUG: Parsed .docx - BS: {len(balance_sheet_data)}, PL: {len(profit_loss_data)}, TA: {len(trading_account_data)}, OM: {operational_metrics_data}")
             
             return balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data
             
