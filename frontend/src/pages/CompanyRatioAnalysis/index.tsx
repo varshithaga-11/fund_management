@@ -9,6 +9,7 @@ import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
 import { ArrowLeft, Download } from "lucide-react";
 import { exportRatioAnalysisToExcel, exportRatioAnalysisToPDF } from "../../utils/exportUtils";
+import PeriodDataEditForm from "./PeriodDataEditForm";
 
 const CompanyRatioAnalysis: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
@@ -274,44 +275,46 @@ const CompanyRatioAnalysis: React.FC = () => {
                 </button>
               </div>
 
-              {/* Export Buttons */}
-              {ratios && (
-                <div className="relative group">
-                  <button
-                    disabled={isExporting}
-                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export
-                    <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              {/* Export and Update buttons */}
+              <div className="flex items-center gap-3">
+                {ratios && (
+                  <div className="relative group">
                     <button
-                      onClick={handleExportToExcel}
                       disabled={isExporting}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 first:rounded-t-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                      <Download className="w-4 h-4" />
+                      Export
+                      <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
-                      Export to Excel
                     </button>
-                    <button
-                      onClick={handleExportToPDF}
-                      disabled={isExporting}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 last:rounded-b-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                        <polyline points="13 2 13 9 20 9"></polyline>
-                      </svg>
-                      Export to PDF
-                    </button>
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                      <button
+                        onClick={handleExportToExcel}
+                        disabled={isExporting}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 first:rounded-t-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                        </svg>
+                        Export to Excel
+                      </button>
+                      <button
+                        onClick={handleExportToPDF}
+                        disabled={isExporting}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 last:rounded-b-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                          <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        Export to PDF
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="mb-6">
@@ -378,12 +381,30 @@ const CompanyRatioAnalysis: React.FC = () => {
             ) : !ratios ? (
               <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <p className="text-red-600 dark:text-red-400">
-                  No ratio data found. Please calculate ratios first.
+                  No ratio data found. Enter period data below and click Update to calculate ratios.
                 </p>
               </div>
             ) : (
               <RatioAnalysisDisplay ratios={ratios} />
             )}
+
+            {/* Edit period data (all 4 tables) and single Update → recalculate → store RatioResult */}
+            <div className="mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+                Edit period data & recalculate ratios
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click &quot;Update data & recalculate ratios&quot; to save and store updated ratio results.
+              </p>
+              <PeriodDataEditForm
+                periodId={selectedPeriod.id}
+                onSuccess={async () => {
+                  const ratioData = await getRatioResults(selectedPeriod.id);
+                  setRatios(ratioData);
+                  toast.success("Period data updated and ratio results recalculated and saved.");
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
