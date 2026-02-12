@@ -165,17 +165,23 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
     const v = (k: keyof typeof bs) => parseFloat(bs[k]) || 0;
     return v("cash_in_hand") + v("cash_at_bank") + v("investments") + v("loans_advances") + v("fixed_assets") + v("other_assets") + v("stock_in_trade");
   };
-  const isBalanced = Math.abs(totalLiabilities() - totalAssets()) < 0.01;
+  const balanceDiff = () => Math.abs(totalLiabilities() - totalAssets());
+  // UI-only indicator; do NOT block updates based on this.
+  const isBalanced = balanceDiff() < 0.01;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isBalanced) return;
     const sc = parseInt(staffCount, 10);
     if (!staffCount || isNaN(sc) || sc < 1) return;
 
     setLoading(true);
     try {
+      if (!isBalanced) {
+        toast.warning(
+          `Balance Sheet is not balanced (Δ ${balanceDiff().toFixed(2)}). Saving anyway.`
+        );
+      }
       const taPayload = {
         opening_stock: parseFloat(ta.opening_stock) || 0,
         purchases: parseFloat(ta.purchases) || 0,
@@ -367,7 +373,9 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
             ))}
           </div>
           <p className={`text-sm ${isBalanced ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-            {isBalanced ? "Liabilities = Assets" : `Unbalanced: Liabilities ${totalLiabilities().toFixed(2)} vs Assets ${totalAssets().toFixed(2)}`}
+            {isBalanced
+              ? "Liabilities = Assets"
+              : `Assets not equal to Liabilities. Liabilities ${totalLiabilities().toFixed(2)} vs Assets ${totalAssets().toFixed(2)} (Δ ${balanceDiff().toFixed(2)})`}
           </p>
         </div>
       </Section>
@@ -389,7 +397,7 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
       <div className="flex justify-end pt-4">
         <button
           type="submit"
-          disabled={loading || !isBalanced || !staffCount || parseInt(staffCount, 10) < 1}
+          disabled={loading || !staffCount || parseInt(staffCount, 10) < 1}
           className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
