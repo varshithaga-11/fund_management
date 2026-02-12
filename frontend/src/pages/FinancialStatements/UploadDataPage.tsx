@@ -6,15 +6,16 @@ import Select from "../../components/form/Select";
 import Label from "../../components/form/Label";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { uploadExcelData } from "./api";
+import { uploadExcelData, downloadExcelTemplate, downloadWordTemplate } from "./api";
+import { Download } from "lucide-react";
 
 const UploadDataPage: React.FC = () => {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     loadCompanies();
@@ -47,6 +48,32 @@ const UploadDataPage: React.FC = () => {
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompany(parseInt(value));
+  };
+
+  const handleDownloadExcelTemplate = async () => {
+    try {
+      setDownloadingTemplate("excel");
+      await downloadExcelTemplate();
+      toast.success("Excel template downloaded successfully!");
+    } catch (error: any) {
+      console.error("Error downloading Excel template:", error);
+      toast.error(error?.response?.data?.message || "Failed to download Excel template");
+    } finally {
+      setDownloadingTemplate(null);
+    }
+  };
+
+  const handleDownloadWordTemplate = async () => {
+    try {
+      setDownloadingTemplate("word");
+      await downloadWordTemplate();
+      toast.success("Word template downloaded successfully!");
+    } catch (error: any) {
+      console.error("Error downloading Word template:", error);
+      toast.error(error?.response?.data?.message || "Failed to download Word template");
+    } finally {
+      setDownloadingTemplate(null);
+    }
   };
 
   const handleUpload = async () => {
@@ -107,6 +134,26 @@ const UploadDataPage: React.FC = () => {
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
           Upload an Excel file (.xlsx, .xls), Word document (.docx), or PDF for financial data or statements
         </p>
+        
+        {/* Download Template Buttons */}
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={handleDownloadExcelTemplate}
+            disabled={downloadingTemplate !== null}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            <Download className="w-4 h-4" />
+            {downloadingTemplate === "excel" ? "Downloading..." : "Download Excel Template"}
+          </button>
+          <button
+            onClick={handleDownloadWordTemplate}
+            disabled={downloadingTemplate !== null}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            <Download className="w-4 h-4" />
+            {downloadingTemplate === "word" ? "Downloading..." : "Download Word Template"}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
@@ -145,7 +192,6 @@ const UploadDataPage: React.FC = () => {
         <div>
           <Label htmlFor="company">Select Company *</Label>
           <Select
-            id="company"
             options={companyOptions}
             placeholder="Select a company"
             onChange={handleCompanyChange}

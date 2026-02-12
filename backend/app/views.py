@@ -17,9 +17,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import pdfplumber
+from io import BytesIO
 
 from .models import *
 from .serializers import *
@@ -2270,3 +2273,184 @@ class BulkImportCompaniesView(APIView):
                 "response_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                 "message": str(e)
             })
+
+
+class DownloadExcelTemplateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Download Excel template with 4 sheets"""
+        try:
+            wb = Workbook()
+            
+            # Remove default sheet
+            wb.remove(wb.active)
+            
+            # Sheet 1: Balance Sheet
+            ws_bs = wb.create_sheet("Balance Sheet")
+            ws_bs.append(["Liabilities", "Amount", "Assets", "Amount"])
+            ws_bs.append(["Share Capital", 5281006, "Cash in Hand", 484706199])
+            ws_bs.append(["Deposits", 484706199, "Cash at Bank", 90000000])
+            ws_bs.append(["Borrowings", 7001911, "Investments", 13328928])
+            ws_bs.append(["Reserves (Statutory & Free)", 10569840, "Loans & Advances", 437223261])
+            ws_bs.append(["Provisions", 53117811, "Fixed Assets", 55501843])
+            ws_bs.append(["Other Liabilities", 46444029, "Other Assets", 5678014])
+            ws_bs.append(["Undistributed Profit", 10866453, "Stock in Trade", 40000])
+            
+            # Sheet 2: Profit & Loss
+            ws_pl = wb.create_sheet("Profit & Loss")
+            ws_pl.append(["Expenses", "Amount", "Income", "Amount"])
+            ws_pl.append(["Interest on Deposits", 26698057, "Interest on Loans", 42488657])
+            ws_pl.append(["Interest on Borrowings", 770021, "Interest on Bank A/c", 6300000])
+            ws_pl.append(["Establishment & Contingencies", 13476132, "Return on Investment", 1066314])
+            ws_pl.append(["Provisions Made", 4533930, "Miscellaneous Income", 3485633])
+            ws_pl.append(["Net Profit", 7863516, "", ""])
+            
+            # Sheet 3: Trading Account
+            ws_ta = wb.create_sheet("Trading Account")
+            ws_ta.append(["Item", "Amount"])
+            ws_ta.append(["Opening Stock", 25080])
+            ws_ta.append(["Purchases", 572444])
+            ws_ta.append(["Trade Charges", 8176])
+            ws_ta.append(["Sales", 552264])
+            ws_ta.append(["Closing Stock", 40000])
+            
+            # Sheet 4: Operational Metrics
+            ws_om = wb.create_sheet("Operational Metrics")
+            ws_om.append(["Metric", "Value"])
+            ws_om.append(["Staff Count", 24])
+            
+            # Save to BytesIO
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = 'attachment; filename="Financial_Data_Template.xlsx"'
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating Excel template: {e}")
+            return Response({
+                "status": "failed",
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DownloadWordTemplateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Download Word template with 4 tables"""
+        try:
+            doc = Document()
+            
+            # Title
+            title = doc.add_heading('Financial Data Template', 0)
+            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # 1. Balance Sheet
+            doc.add_heading('1. Balance Sheet', level=1)
+            table_bs = doc.add_table(rows=8, cols=4)
+            table_bs.style = 'Light Grid Accent 1'
+            
+            # Header
+            table_bs.cell(0, 0).text = 'Liabilities'
+            table_bs.cell(0, 1).text = 'Amount'
+            table_bs.cell(0, 2).text = 'Assets'
+            table_bs.cell(0, 3).text = 'Amount'
+            
+            # Data
+            bs_data = [
+                ['Share Capital', '5281006', 'Cash in Hand', '484706199'],
+                ['Deposits', '484706199', 'Cash at Bank', '90000000'],
+                ['Borrowings', '7001911', 'Investments', '13328928'],
+                ['Reserves (Statutory & Free)', '10569840', 'Loans & Advances', '437223261'],
+                ['Provisions', '53117811', 'Fixed Assets', '55501843'],
+                ['Other Liabilities', '46444029', 'Other Assets', '5678014'],
+                ['Undistributed Profit', '10866453', 'Stock in Trade', '40000'],
+            ]
+            
+            for i, row_data in enumerate(bs_data, start=1):
+                for j, cell_text in enumerate(row_data):
+                    table_bs.cell(i, j).text = cell_text
+            
+            doc.add_paragraph()
+            
+            # 2. Profit and Loss
+            doc.add_heading('2. Profit and Loss', level=1)
+            table_pl = doc.add_table(rows=6, cols=4)
+            table_pl.style = 'Light Grid Accent 1'
+            
+            table_pl.cell(0, 0).text = 'Expenses'
+            table_pl.cell(0, 1).text = 'Amount'
+            table_pl.cell(0, 2).text = 'Income'
+            table_pl.cell(0, 3).text = 'Amount'
+            
+            pl_data = [
+                ['Interest on Deposits', '26698057', 'Interest on Loans', '42488657'],
+                ['Interest on Borrowings', '770021', 'Interest on Bank A/c', '6300000'],
+                ['Establishment & Contingencies', '13476132', 'Return on Investment', '1066314'],
+                ['Provisions Made', '4533930', 'Miscellaneous Income', '3485633'],
+                ['Net Profit', '7863516', '', ''],
+            ]
+            
+            for i, row_data in enumerate(pl_data, start=1):
+                for j, cell_text in enumerate(row_data):
+                    table_pl.cell(i, j).text = cell_text
+            
+            doc.add_paragraph()
+            
+            # 3. Trading Account
+            doc.add_heading('3. Trading Account', level=1)
+            table_ta = doc.add_table(rows=6, cols=2)
+            table_ta.style = 'Light Grid Accent 1'
+            
+            table_ta.cell(0, 0).text = 'Item'
+            table_ta.cell(0, 1).text = 'Amount'
+            
+            ta_data = [
+                ['Opening Stock', '25080'],
+                ['Purchases', '572444'],
+                ['Trade Charges', '8176'],
+                ['Sales', '552264'],
+                ['Closing Stock', '40000'],
+            ]
+            
+            for i, row_data in enumerate(ta_data, start=1):
+                table_ta.cell(i, 0).text = row_data[0]
+                table_ta.cell(i, 1).text = row_data[1]
+            
+            doc.add_paragraph()
+            
+            # 4. Operational Metrics
+            doc.add_heading('4. Operational Metrics', level=1)
+            table_om = doc.add_table(rows=2, cols=2)
+            table_om.style = 'Light Grid Accent 1'
+            
+            table_om.cell(0, 0).text = 'Metric'
+            table_om.cell(0, 1).text = 'Value'
+            table_om.cell(1, 0).text = 'Staff Count'
+            table_om.cell(1, 1).text = '24'
+            
+            # Save to BytesIO
+            output = BytesIO()
+            doc.save(output)
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+            response['Content-Disposition'] = 'attachment; filename="Financial_Data_Template.docx"'
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating Word template: {e}")
+            return Response({
+                "status": "failed",
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

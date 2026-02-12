@@ -410,6 +410,57 @@ export const calculateRatios = async (periodId: number): Promise<RatioResultData
   }
 };
 
+// Download Templates
+export const downloadExcelTemplate = async (): Promise<void> => {
+  try {
+    const url = createApiUrl("api/download-excel-template/");
+    const response = await axios.get(url, {
+      headers: await getAuthHeaders(),
+      responseType: "blob",
+    });
+    
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "Financial_Data_Template.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error("Error downloading Excel template:", error);
+    throw error;
+  }
+};
+
+export const downloadWordTemplate = async (): Promise<void> => {
+  try {
+    const url = createApiUrl("api/download-word-template/");
+    const response = await axios.get(url, {
+      headers: await getAuthHeaders(),
+      responseType: "blob",
+    });
+    
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "Financial_Data_Template.docx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error("Error downloading Word template:", error);
+    throw error;
+  }
+};
+
 // Excel Upload
 export const uploadExcelData = async (formData: FormData): Promise<{ period_id: number }> => {
   try {
