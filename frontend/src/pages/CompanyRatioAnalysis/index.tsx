@@ -557,6 +557,31 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
 
   return (
     <div className="space-y-8">
+      {/* Working Fund Summary */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Working Fund
+        </h2>
+        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          ₹{ratios.working_fund?.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }) ?? "0.00"}
+        </p>
+      </div>
+
+      {/* Interpretation Section */}
+      {ratios.interpretation && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+          <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
+            Interpretation
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+            {ratios.interpretation}
+          </p>
+        </div>
+      )}
+
       {/* Trading Ratios */}
       <div>
         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">

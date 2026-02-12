@@ -228,6 +228,18 @@ const RatioDashboard: React.FC = () => {
         </p>
       </div>
 
+      {/* Interpretation Section */}
+      {ratios.interpretation && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+          <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
+            Interpretation
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+            {ratios.interpretation}
+          </p>
+        </div>
+      )}
+
       {/* Trading Ratios */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
