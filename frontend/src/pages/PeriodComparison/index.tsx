@@ -194,233 +194,14 @@ const PeriodComparison: React.FC = () => {
     );
   }
 
-  // Step 2: Show period selection
-  if (!comparisonData) {
-    return (
-      <div>
-        <PageMeta title="Period Comparison" description="Select periods and compare financial ratios" />
-        <PageBreadcrumb pageTitle="Period Comparison" />
-
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
-
-        <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-          <button
-            onClick={handleBack}
-            className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-
-          <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
-            Compare Periods for {selectedCompany.name}
-          </h3>
-
-          {loadingPeriods ? (
-            <div className="flex items-center justify-center h-96">
-              <BeatLoader color="#3b82f6" />
-            </div>
-          ) : periods.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">
-              No financial periods available for this company
-            </p>
-          ) : (
-            <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Period 1 Dropdown */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Period 1
-                  </label>
-                  <button
-                    onClick={() => setOpenDropdown1(!openDropdown1)}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex items-center justify-between hover:border-blue-500 focus:border-blue-500 focus:outline-none"
-                  >
-                    <span>
-                      {selectedPeriod1 ? (
-                        <div>
-                          <p className="font-medium">{selectedPeriod1.label}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {selectedPeriod1.period_type}
-                          </p>
-                        </div>
-                      ) : (
-                        "Select a period..."
-                      )}
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        openDropdown1 ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {openDropdown1 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-lg z-10">
-                      <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search periods..."
-                            value={searchPeriod1}
-                            onChange={(e) => setSearchPeriod1(e.target.value)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {filterPeriods(searchPeriod1, selectedPeriod2?.id).length > 0 ? (
-                          filterPeriods(searchPeriod1, selectedPeriod2?.id).map((period) => (
-                            <button
-                              key={period.id}
-                              onClick={() => {
-                                setSelectedPeriod1(period);
-                                setOpenDropdown1(false);
-                                setSearchPeriod1("");
-                              }}
-                              className={`w-full p-3 text-left border-b border-gray-200 dark:border-gray-700 transition ${
-                                selectedPeriod1?.id === period.id
-                                  ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
-                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                              }`}
-                            >
-                              <p className="font-medium">{period.label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {period.period_type}
-                              </p>
-                            </button>
-                          ))
-                        ) : (
-                          <p className="p-3 text-center text-gray-500 dark:text-gray-400">
-                            No periods found
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Period 2 Dropdown */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Period 2
-                  </label>
-                  <button
-                    onClick={() => setOpenDropdown2(!openDropdown2)}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex items-center justify-between hover:border-blue-500 focus:border-blue-500 focus:outline-none"
-                  >
-                    <span>
-                      {selectedPeriod2 ? (
-                        <div>
-                          <p className="font-medium">{selectedPeriod2.label}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {selectedPeriod2.period_type}
-                          </p>
-                        </div>
-                      ) : (
-                        "Select a period..."
-                      )}
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        openDropdown2 ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {openDropdown2 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-lg z-10">
-                      <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search periods..."
-                            value={searchPeriod2}
-                            onChange={(e) => setSearchPeriod2(e.target.value)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {filterPeriods(searchPeriod2, selectedPeriod1?.id).length > 0 ? (
-                          filterPeriods(searchPeriod2, selectedPeriod1?.id).map((period) => (
-                            <button
-                              key={period.id}
-                              onClick={() => {
-                                setSelectedPeriod2(period);
-                                setOpenDropdown2(false);
-                                setSearchPeriod2("");
-                              }}
-                              className={`w-full p-3 text-left border-b border-gray-200 dark:border-gray-700 transition ${
-                                selectedPeriod2?.id === period.id
-                                  ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
-                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                              }`}
-                            >
-                              <p className="font-medium">{period.label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {period.period_type}
-                              </p>
-                            </button>
-                          ))
-                        ) : (
-                          <p className="p-3 text-center text-gray-500 dark:text-gray-400">
-                            No periods found
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Selected Periods Display */}
-              {(selectedPeriod1 || selectedPeriod2) && (
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-6">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedPeriod1 && (
-                      <span className="font-semibold">Period 1: {selectedPeriod1.label}</span>
-                    )}
-                    {selectedPeriod1 && selectedPeriod2 && <span className="mx-2">→</span>}
-                    {selectedPeriod2 && (
-                      <span className="font-semibold">Period 2: {selectedPeriod2.label}</span>
-                    )}
-                  </p>
-                </div>
-              )}
-
-              {/* Compare Button */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCompare}
-                  disabled={!selectedPeriod1 || !selectedPeriod2 || loadingComparison}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
-                >
-                  {loadingComparison ? "Comparing..." : "Compare Periods"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Step 3: Show comparison results
+  // Step 2: Show period selection (with results below if available)
   return (
     <div>
-      <PageMeta title="Period Comparison Results" description="View detailed comparison of financial periods" />
-      <PageBreadcrumb pageTitle="Period Comparison Results" />
+      <PageMeta 
+        title={"Period Comparison"} 
+        description={"Compare financial periods and analyze ratio changes"} 
+      />
+      <PageBreadcrumb pageTitle={"Period Comparison"} />
 
       <ToastContainer
         position="top-right"
@@ -436,88 +217,293 @@ const PeriodComparison: React.FC = () => {
 
       <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
         <button
-          onClick={handleBackFromComparison}
+          onClick={handleBack}
           className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
 
-        <div className="mb-6">
-          <h3 className="text-2xl font-semibold text-black dark:text-white mb-2">
-            {comparisonData.data.company}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Comparing <span className="font-semibold">{comparisonData.data.period1}</span> vs{" "}
-            <span className="font-semibold">{comparisonData.data.period2}</span>
-          </p>
-        </div>
+        <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
+          {comparisonData ? comparisonData.data.company : `Compare Periods for ${selectedCompany.name}`}
+        </h3>
 
-        {/* Ratios Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto border-collapse">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-gray-800">
-                <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                  Ratio
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                  {comparisonData.data.period1}
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                  {comparisonData.data.period2}
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                  Difference
-                </th>
-                <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                  % Change
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(comparisonData.data.ratios).map(([ratioName, ratioData]) => (
-                <tr
-                  key={ratioName}
-                  className="border-b border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+        {loadingPeriods ? (
+          <div className="flex items-center justify-center h-96">
+            <BeatLoader color="#3b82f6" />
+          </div>
+        ) : periods.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">
+            No financial periods available for this company
+          </p>
+        ) : (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Period 1 Dropdown */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Period 1
+                </label>
+                <button
+                  onClick={() => setOpenDropdown1(!openDropdown1)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex items-center justify-between hover:border-blue-500 focus:border-blue-500 focus:outline-none"
                 >
-                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white font-medium">
-                    {formatRatioName(ratioName)}
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-                    {ratioData.period1 !== null ? ratioData.period1.toFixed(2) : "-"}
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-                    {ratioData.period2 !== null ? ratioData.period2.toFixed(2) : "-"}
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold">
-                    <span className={getChangeColor(ratioData.difference)}>
-                      {ratioData.difference !== null
-                        ? ratioData.difference > 0
-                          ? `+${ratioData.difference.toFixed(2)}`
-                          : ratioData.difference.toFixed(2)
-                        : "-"}
-                    </span>
-                  </td>
-                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold">
-                    <span className={getChangeColor(ratioData.percentage_change)}>
-                      {ratioData.percentage_change !== null
-                        ? ratioData.percentage_change > 0
-                          ? `+${ratioData.percentage_change.toFixed(2)}%`
-                          : `${ratioData.percentage_change.toFixed(2)}%`
-                        : "-"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  <span>
+                    {selectedPeriod1 ? (
+                      <div>
+                        <p className="font-medium">{selectedPeriod1.label}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {selectedPeriod1.period_type}
+                        </p>
+                      </div>
+                    ) : (
+                      "Select a period..."
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${
+                      openDropdown1 ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openDropdown1 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-lg z-10">
+                    <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search periods..."
+                          value={searchPeriod1}
+                          onChange={(e) => setSearchPeriod1(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {filterPeriods(searchPeriod1, selectedPeriod2?.id).length > 0 ? (
+                        filterPeriods(searchPeriod1, selectedPeriod2?.id).map((period) => (
+                          <button
+                            key={period.id}
+                            onClick={() => {
+                              setSelectedPeriod1(period);
+                              setOpenDropdown1(false);
+                              setSearchPeriod1("");
+                            }}
+                            className={`w-full p-3 text-left border-b border-gray-200 dark:border-gray-700 transition ${
+                              selectedPeriod1?.id === period.id
+                                ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                            }`}
+                          >
+                            <p className="font-medium">{period.label}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {period.period_type}
+                            </p>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="p-3 text-center text-gray-500 dark:text-gray-400">
+                          No periods found
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-        {Object.keys(comparisonData.data.ratios).length === 0 && (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-            No ratio data available for comparison
-          </p>
+              {/* Period 2 Dropdown */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Period 2
+                </label>
+                <button
+                  onClick={() => setOpenDropdown2(!openDropdown2)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex items-center justify-between hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                >
+                  <span>
+                    {selectedPeriod2 ? (
+                      <div>
+                        <p className="font-medium">{selectedPeriod2.label}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {selectedPeriod2.period_type}
+                        </p>
+                      </div>
+                    ) : (
+                      "Select a period..."
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${
+                      openDropdown2 ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openDropdown2 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-lg z-10">
+                    <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search periods..."
+                          value={searchPeriod2}
+                          onChange={(e) => setSearchPeriod2(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {filterPeriods(searchPeriod2, selectedPeriod1?.id).length > 0 ? (
+                        filterPeriods(searchPeriod2, selectedPeriod1?.id).map((period) => (
+                          <button
+                            key={period.id}
+                            onClick={() => {
+                              setSelectedPeriod2(period);
+                              setOpenDropdown2(false);
+                              setSearchPeriod2("");
+                            }}
+                            className={`w-full p-3 text-left border-b border-gray-200 dark:border-gray-700 transition ${
+                              selectedPeriod2?.id === period.id
+                                ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                            }`}
+                          >
+                            <p className="font-medium">{period.label}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {period.period_type}
+                            </p>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="p-3 text-center text-gray-500 dark:text-gray-400">
+                          No periods found
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Selected Periods Display */}
+            {(selectedPeriod1 || selectedPeriod2) && (
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedPeriod1 && (
+                    <span className="font-semibold">Period 1: {selectedPeriod1.label}</span>
+                  )}
+                  {selectedPeriod1 && selectedPeriod2 && <span className="mx-2">→</span>}
+                  {selectedPeriod2 && (
+                    <span className="font-semibold">Period 2: {selectedPeriod2.label}</span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Compare Button */}
+            <div className="flex gap-2 mb-8">
+              <Button
+                onClick={handleCompare}
+                disabled={!selectedPeriod1 || !selectedPeriod2 || loadingComparison}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+              >
+                {loadingComparison ? "Comparing..." : "Compare Periods"}
+              </Button>
+            </div>
+
+            {/* Comparison Results - displayed on same page below selection */}
+            {comparisonData && (
+              <>
+                <div className="border-t border-gray-300 dark:border-gray-600 pt-8 mt-8">
+                  <h4 className="mb-6 text-lg font-semibold text-black dark:text-white">
+                    Comparison Results
+                  </h4>
+
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Comparing <span className="font-semibold">{comparisonData.data.period1}</span> vs{" "}
+                    <span className="font-semibold">{comparisonData.data.period2}</span>
+                  </p>
+
+                  {/* Ratios Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-auto border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-800">
+                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">
+                            Ratio
+                          </th>
+                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
+                            {comparisonData.data.period1}
+                          </th>
+                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
+                            {comparisonData.data.period2}
+                          </th>
+                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
+                            Difference
+                          </th>
+                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
+                            % Change
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(comparisonData.data.ratios).map(([ratioName, ratioData]) => (
+                          <tr
+                            key={ratioName}
+                            className="border-b border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          >
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white font-medium">
+                              {formatRatioName(ratioName)}
+                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                              {ratioData.period1 !== null ? ratioData.period1.toFixed(2) : "-"}
+                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                              {ratioData.period2 !== null ? ratioData.period2.toFixed(2) : "-"}
+                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold">
+                              <span className={getChangeColor(ratioData.difference)}>
+                                {ratioData.difference !== null
+                                  ? ratioData.difference > 0
+                                    ? `+${ratioData.difference.toFixed(2)}`
+                                    : ratioData.difference.toFixed(2)
+                                  : "-"}
+                              </span>
+                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold">
+                              <span className={getChangeColor(ratioData.percentage_change)}>
+                                {ratioData.percentage_change !== null
+                                  ? ratioData.percentage_change > 0
+                                    ? `+${ratioData.percentage_change.toFixed(2)}%`
+                                    : `${ratioData.percentage_change.toFixed(2)}%`
+                                  : "-"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {Object.keys(comparisonData.data.ratios).length === 0 && (
+                    <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                      No ratio data available for comparison
+                    </p>
+                  )}
+
+                  <div className="mt-6">
+                    <Button
+                      onClick={handleBackFromComparison}
+                      className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg"
+                    >
+                      Clear Results
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>
