@@ -58,7 +58,7 @@ export function appRoutes() {
         {/* Dashboard Layout */}
         <Route element={<MasterLayout />}>
 
-          <Route path="master-dashboard" element={<MasterDashboard />} />
+          <Route path="master/master-dashboard" element={<MasterDashboard />} />
 
           <Route path="companies" element={<CompanyPage />} />
 

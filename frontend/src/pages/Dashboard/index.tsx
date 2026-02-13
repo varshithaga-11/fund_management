@@ -1,375 +1,804 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ReactApexChart from "react-apexcharts";
-import { Link } from "react-router-dom";
 import {
-  LucideBuilding2,
-  LucideFileText,
-  LucideTrendingUp,
-  LucideUsers,
-  LucideCalendar
+    LucideBuilding2,
+    LucideFileText,
+    LucideTrendingUp,
+    LucideCheckCircle,
+    LucideActivity,
+    LucideDownload,
+    LucidePrinter,
+    LucideRefreshCw,
+    LucideArrowUpRight,
+    LucideArrowDownRight,
+    LucidePercent,
+    LucideTrophy,
+    LucidePlus
 } from "lucide-react";
 import { CompanyData, getCompanyList } from "../Companies/api";
 import {
-  FinancialPeriodData,
-  getFinancialPeriods,
+    FinancialPeriodData,
+    getFinancialPeriods,
 } from "../FinancialStatements/api";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const MasterDashboard = () => {
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
-  const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [companies, setCompanies] = useState<CompanyData[]>([]);
+    const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+    // Close export menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+                setShowExportMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [companiesData, periodsData] = await Promise.all([
-        getCompanyList(),
-        getFinancialPeriods(),
-      ]);
-      setCompanies(companiesData);
-      setPeriods(periodsData);
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // --- Filter States ---
+    const [filterCompany, setFilterCompany] = useState<string>("");
+    const [filterType, setFilterType] = useState<string>("");
+    // filterStatus removed by user in Step 303.
+    const [, setFilterStatus] = useState<string>("");
 
-  // --- Calculations ---
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-  const totalCompanies = companies.length;
-  const totalPeriods = periods.length;
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [companiesData, periodsData] = await Promise.all([
+                getCompanyList(),
+                getFinancialPeriods(),
+            ]);
+            setCompanies(companiesData);
+            setPeriods(periodsData);
+        } catch (error) {
+            console.error("Error loading dashboard data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  // Calculate total finalized periods
-  const finalizedPeriods = periods.filter((p) => p.is_finalized).length;
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchData();
+        setRefreshing(false);
+    };
 
-  // Get recent periods (last 5)
-  const recentPeriods = [...periods]
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 5);
+    // --- Calculations with Filtering ---
 
-  // Prepare chart data: Period Types Distribution
-  const periodTypeCounts = periods.reduce((acc, curr) => {
-    acc[curr.period_type] = (acc[curr.period_type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+    // Apply filters
+    const filteredPeriods = periods.filter(p => {
+        const matchCompany = filterCompany ? p.company.toString() === filterCompany : true;
+        const matchType = filterType ? p.period_type === filterType : true;
+        return matchCompany && matchType;
+    });
 
-  const pieChartOptions: ApexCharts.ApexOptions = {
-    chart: { type: "donut", fontFamily: "inherit" },
-    labels: Object.keys(periodTypeCounts).map((key) =>
-      key.replace("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
-    ),
-    colors: ["#3C50E0", "#80CAEE", "#0FADCF", "#6577F3"],
-    legend: { position: "bottom" },
-    dataLabels: { enabled: false },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: "65%",
-          labels: {
-            show: true,
-            total: {
-              show: true,
-              label: "Periods",
-              fontSize: "16px",
-              fontWeight: 600,
-            },
-          },
-        },
-      },
-    },
-  };
+    const totalCompanies = companies.length;
+    // Note: Calculations use filteredPeriods not periods for the dashboard stats
+    // Wait, my Step 299 code used filteredPeriods for revenue, profit etc.
+    // But Activity Timeline uses ALL periods (slice 0,5).
+    // Let's stick to Step 299 logic.
 
-  const pieChartSeries = Object.values(periodTypeCounts);
+    const totalPeriods = filteredPeriods.length;
+    const finalizedPeriods = filteredPeriods.filter((p) => p.is_finalized).length;
 
-  // Prepare chart data: Recent Net Profit Trends (Last 10 periods with profit data)
-  // detailedPeriods are periods that actually have profit_loss data
-  const periodsWithProfit = periods
-    .filter((p) => p.profit_loss?.net_profit !== undefined)
-    .sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )
-    .slice(-10); // Take last 10
+    // Calculate total revenue across filters
+    const totalRevenue = filteredPeriods.reduce((sum, p) => {
+        const sales = p.trading_account?.sales;
+        const salesNum = typeof sales === 'string' ? parseFloat(sales) : sales;
+        return sum + (typeof salesNum === 'number' && !isNaN(salesNum) ? salesNum : 0);
+    }, 0);
 
-  const barChartSeries = [
-    {
-      name: "Net Profit",
-      data: periodsWithProfit.map((p) => p.profit_loss?.net_profit || 0),
-    },
-    {
-      name: "Revenue",
-      data: periodsWithProfit.map((p) => p.trading_account?.sales || 0),
-    },
-  ];
+    // Calculate total profit across filters
+    const totalProfit = filteredPeriods.reduce((sum, p) => {
+        const profit = p.profit_loss?.net_profit;
+        const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
+        return sum + (typeof profitNum === 'number' && !isNaN(profitNum) ? profitNum : 0);
+    }, 0);
 
-  const barChartOptions: ApexCharts.ApexOptions = {
-    chart: {
-      type: "bar",
-      height: 350,
-      toolbar: { show: false },
-      fontFamily: "inherit",
-    },
-    colors: ["#3C50E0", "#80CAEE"],
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: "55%",
-        borderRadius: 2,
-      },
-    },
-    dataLabels: { enabled: false },
-    stroke: { show: true, width: 2, colors: ["transparent"] },
-    xaxis: {
-      categories: periodsWithProfit.map((p) => {
-        const companyName =
-          companies.find((c) => c.id === p.company)?.name || "Unknown";
-        return `${companyName} (${p.label})`;
-      }),
-      labels: {
-        rotate: -45,
-        trim: true,
-        maxHeight: 60,
-      }
-    },
-    yaxis: { title: { text: "Amount (₹)" } },
-    fill: { opacity: 1 },
-    tooltip: {
-      y: {
-        formatter: function (val) {
-          return "₹ " + val.toLocaleString("en-IN");
-        },
-      },
-    },
-  };
+    // Calculate average profit margin
+    const avgProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-  // Helper to get company name
-  const getCompanyName = (id: number) => {
-    return companies.find((c) => c.id === id)?.name || "Unknown Company";
-  };
+    // Calculate growth rate (comparing recent vs older periods)
+    const periodsWithProfit = filteredPeriods.filter((p) => {
+        const profit = p.profit_loss?.net_profit;
+        const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
+        return typeof profitNum === 'number' && !isNaN(profitNum);
+    });
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-      </div>
+    const sortedByDate = [...periodsWithProfit].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
-  }
 
-  return (
-    <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-        {/* Card 1: Total Companies */}
-        <div className="rounded-sm border border-stroke bg-white px-7.5 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
-            <LucideBuilding2 className="text-primary dark:text-white" />
-          </div>
-          <div className="mt-4 flex items-end justify-between">
-            <div>
-              <h4 className="text-title-md font-bold text-black dark:text-white">
-                {totalCompanies}
-              </h4>
-              <span className="text-sm font-medium">Total Companies</span>
-            </div>
-          </div>
-        </div>
+    const halfPoint = Math.floor(sortedByDate.length / 2);
+    const olderPeriods = sortedByDate.slice(0, halfPoint);
+    const recentPeriodsForGrowth = sortedByDate.slice(halfPoint);
 
-        {/* Card 2: Total Financial Periods */}
-        <div className="rounded-sm border border-stroke bg-white px-7.5 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
-            <LucideFileText className="text-primary dark:text-white" />
-          </div>
-          <div className="mt-4 flex items-end justify-between">
-            <div>
-              <h4 className="text-title-md font-bold text-black dark:text-white">
-                {totalPeriods}
-              </h4>
-              <span className="text-sm font-medium">Financial Periods</span>
-            </div>
-            <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">
-              {finalizedPeriods} Finalized
-            </span>
-          </div>
-        </div>
+    const olderAvgProfit = olderPeriods.length > 0
+        ? olderPeriods.reduce((sum, p) => {
+            const profit = p.profit_loss?.net_profit;
+            const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
+            return sum + (profitNum || 0);
+        }, 0) / olderPeriods.length
+        : 0;
+    const recentAvgProfit = recentPeriodsForGrowth.length > 0
+        ? recentPeriodsForGrowth.reduce((sum, p) => {
+            const profit = p.profit_loss?.net_profit;
+            const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
+            return sum + (profitNum || 0);
+        }, 0) / recentPeriodsForGrowth.length
+        : 0;
 
-        {/* Card 3: Recent Activity (Placeholder logic) */}
-        <div className="rounded-sm border border-stroke bg-white px-7.5 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
-            <LucideCalendar className="text-primary dark:text-white" />
-          </div>
-          <div className="mt-4 flex items-end justify-between">
-            <div>
-              <h4 className="text-title-md font-bold text-black dark:text-white">
-                {recentPeriods.length > 0 ? new Date(recentPeriods[0].created_at).toLocaleDateString() : "N/A"}
-              </h4>
-              <span className="text-sm font-medium">Last Update</span>
-            </div>
-          </div>
-        </div>
+    const growthRate = olderAvgProfit > 0
+        ? ((recentAvgProfit - olderAvgProfit) / olderAvgProfit) * 100
+        : 0;
 
-        {/* Card 4: Users (Placeholder) */}
-        <div className="rounded-sm border border-stroke bg-white px-7.5 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
-            <LucideTrendingUp className="text-primary dark:text-white" />
-          </div>
-          <div className="mt-4 flex items-end justify-between">
-            <div>
-              <h4 className="text-title-md font-bold text-black dark:text-white">
-                Overview
-              </h4>
-              <span className="text-sm font-medium">System Status</span>
-            </div>
-            <span className="text-xs text-success bg-success/10 px-2 py-1 rounded">
-              Active
-            </span>
-          </div>
-        </div>
-      </div>
+    // Helper function to format currency
+    const formatCurrency = (value: number) => {
+        if (isNaN(value) || !isFinite(value)) return '0.00';
+        return (value / 1000000).toFixed(2);
+    };
 
-      {/* Charts Section */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:mt-6 md:grid-cols-2 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
-        {/* Bar Chart: Revenue vs Profit */}
-        <div className="col-span-12 rounded-sm border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:col-span-8">
-          <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
-            <div className="flex w-full flex-wrap gap-3 sm:gap-5">
-              <div className="flex min-w-47.5">
-                <span className="mt-1 mr-2 flex h-4 w-full max-w-4 items-center justify-center rounded-full border border-primary">
-                  <span className="block h-2.5 w-full max-w-2.5 rounded-full bg-primary"></span>
-                </span>
-                <div className="w-full">
-                  <p className="font-semibold text-primary">Net Profit</p>
-                  <p className="text-sm font-medium">Recent Periods</p>
+    // Helper function to format percentage
+    const formatPercentage = (value: number) => {
+        if (isNaN(value) || !isFinite(value)) return '0.0';
+        // Avoid -0.0 display
+        const rounded = Math.abs(value) < 0.05 ? 0 : value;
+        return rounded.toFixed(1);
+    };
+
+    // Helper to get company name
+    const getCompanyName = (id: number) => {
+        return companies.find((c) => c.id === id)?.name || "Unknown Company";
+    };
+
+    // Top Performers Logic
+    const companyProfits = companies.map((company) => {
+        const companyPeriods = filteredPeriods.filter((p) => p.company === company.id);
+        const totalCompanyProfit = companyPeriods.reduce((sum, p) => {
+            const profit = p.profit_loss?.net_profit;
+            const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
+            return sum + (profitNum || 0);
+        }, 0);
+        const totalCompanyRevenue = companyPeriods.reduce((sum, p) => {
+            const sales = p.trading_account?.sales;
+            const salesNum = typeof sales === 'string' ? parseFloat(sales) : sales;
+            return sum + (salesNum || 0);
+        }, 0);
+        return {
+            ...company,
+            totalProfit: totalCompanyProfit,
+            totalRevenue: totalCompanyRevenue,
+            periodCount: companyPeriods.length,
+        };
+    });
+
+    const topPerformers = [...companyProfits]
+        .filter(c => c.periodCount > 0)
+        .sort((a, b) => b.totalProfit - a.totalProfit)
+        .slice(0, 5);
+
+    // --- Export Functions ---
+
+    const getExportData = () => {
+        return filteredPeriods.map(p => ({
+            Company: getCompanyName(p.company),
+            Label: p.label,
+            Type: p.period_type,
+            StartDate: p.start_date,
+            EndDate: p.end_date,
+            Status: p.is_finalized ? "Finalized" : "Draft",
+            Revenue: typeof p.trading_account?.sales === 'string' ? parseFloat(p.trading_account.sales) : (p.trading_account?.sales || 0),
+            NetProfit: typeof p.profit_loss?.net_profit === 'string' ? parseFloat(p.profit_loss.net_profit) : (p.profit_loss?.net_profit || 0)
+        }));
+    };
+
+    const handleExportCSV = () => {
+        const data = getExportData();
+        if (data.length === 0) return;
+
+        const headers = Object.keys(data[0]);
+        const rows = data.map(row => Object.values(row).map(v => JSON.stringify(v)).join(","));
+        const csvContent = [headers.join(","), ...rows].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `financial_data_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        setShowExportMenu(false);
+    };
+
+    const handleExportExcel = () => {
+        const data = getExportData();
+        if (data.length === 0) return;
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Financial Data");
+        XLSX.writeFile(wb, `financial_data_${new Date().toISOString().split('T')[0]}.xlsx`);
+        setShowExportMenu(false);
+    };
+
+    const handleExportPDF = () => {
+        const data = getExportData();
+        if (data.length === 0) return;
+
+        const doc = new jsPDF();
+        doc.text("Financial Dashboard Report", 14, 15);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+
+        const tableData = data.map(row => [
+            row.Company,
+            row.Label,
+            row.Type,
+            row.StartDate,
+            row.Status,
+            row.Revenue.toFixed(2),
+            row.NetProfit.toFixed(2)
+        ]);
+
+        autoTable(doc, {
+            head: [['Company', 'Label', 'Type', 'Start', 'Status', 'Revenue', 'Net Profit']],
+            body: tableData,
+            startY: 30,
+        });
+
+        doc.save(`financial_report_${new Date().toISOString().split('T')[0]}.pdf`);
+        setShowExportMenu(false);
+    };
+
+    const handleExportWord = () => {
+        const data = getExportData();
+        if (data.length === 0) return;
+
+        const tableRows = data.map(row => `
+      <tr>
+        <td>${row.Company}</td>
+        <td>${row.Label}</td>
+        <td>${row.Type}</td>
+        <td>${row.StartDate}</td>
+        <td>${row.Status}</td>
+        <td>${row.Revenue.toFixed(2)}</td>
+        <td>${row.NetProfit.toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+        const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Export HTML To Doc</title></head>
+      <body>
+        <h2>Financial Dashboard Report</h2>
+        <p>Generated: ${new Date().toLocaleDateString()}</p>
+        <table border="1" style="border-collapse:collapse;width:100%">
+          <thead>
+            <tr style="background-color:#f2f2f2">
+              <th>Company</th><th>Label</th><th>Type</th><th>Start Date</th><th>Status</th><th>Revenue</th><th>Net Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+        const blob = new Blob([content], { type: 'application/msword' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `financial_report_${new Date().toISOString().split('T')[0]}.doc`;
+        link.click();
+        setShowExportMenu(false);
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    // --- Chart Data Preparation ---
+
+    // Period Types Distribution
+    const periodTypeCounts = filteredPeriods.reduce((acc, curr) => {
+        acc[curr.period_type] = (acc[curr.period_type] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const pieChartOptions: ApexCharts.ApexOptions = {
+        chart: { type: "donut", fontFamily: "inherit", background: 'transparent' },
+        theme: { mode: 'light' },
+        labels: Object.keys(periodTypeCounts).map((key) =>
+            key.replace("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+        ),
+        colors: ["#3C50E0", "#80CAEE", "#0FADCF", "#6577F3"],
+        legend: {
+            position: "bottom",
+            fontSize: "14px",
+            labels: {
+                colors: 'var(--color-gray-500)',
+                useSeriesColors: false
+            }
+        },
+        dataLabels: { enabled: false },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: "70%",
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: "Periods",
+                            fontSize: "16px",
+                            fontWeight: 600,
+                            color: "#3C50E0",
+                            formatter: function () {
+                                return filteredPeriods.length.toString();
+                            }
+                        },
+                    },
+                },
+            },
+        },
+        tooltip: {
+            theme: 'dark',
+            y: {
+                formatter: function (val) {
+                    return val + " periods";
+                },
+            },
+        },
+    };
+
+    const pieChartSeries = Object.values(periodTypeCounts);
+
+    // Revenue vs Profit Chart
+    const last10Periods = [...periodsWithProfit]
+        .sort(
+            (a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+        .slice(-10);
+
+    const barChartSeries = [
+        {
+            name: "Net Profit",
+            data: last10Periods.map((p) => {
+                const profit = p.profit_loss?.net_profit;
+                const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
+                return profitNum || 0;
+            }),
+        },
+        {
+            name: "Revenue",
+            data: last10Periods.map((p) => {
+                const sales = p.trading_account?.sales;
+                const salesNum = typeof sales === 'string' ? parseFloat(sales) : sales;
+                return salesNum || 0;
+            }),
+        },
+    ];
+
+    const barChartOptions: ApexCharts.ApexOptions = {
+        chart: {
+            type: "bar",
+            height: 350,
+            toolbar: { show: false },
+            fontFamily: "inherit",
+            background: 'transparent'
+        },
+        theme: { mode: 'light' },
+        colors: ["#3C50E0", "#80CAEE"],
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: "60%",
+                borderRadius: 4,
+            },
+        },
+        dataLabels: { enabled: false },
+        stroke: { show: true, width: 2, colors: ["transparent"] },
+        xaxis: {
+            categories: last10Periods.map((p) => {
+                const companyName = getCompanyName(p.company);
+                return `${companyName.substring(0, 15)}${companyName.length > 15 ? '...' : ''} (${p.label})`;
+            }),
+            labels: {
+                rotate: -45,
+                trim: true,
+                maxHeight: 80,
+                style: { fontSize: "11px", colors: '#9CA3AF' }
+            }
+        },
+        yaxis: {
+            title: { text: "Amount (₹)", style: { fontSize: "14px", fontWeight: 500, color: '#9CA3AF' } },
+            labels: {
+                style: { colors: '#9CA3AF' },
+                formatter: function (val) {
+                    return "₹" + (val / 1000).toFixed(0) + "K";
+                }
+            }
+        },
+        fill: { opacity: 1 },
+        tooltip: {
+            theme: 'dark',
+            y: {
+                formatter: function (val) {
+                    return "₹ " + val.toLocaleString("en-IN");
+                },
+            },
+        },
+        grid: {
+            borderColor: '#374151',
+            strokeDashArray: 4,
+        },
+    };
+
+    if (loading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900">
+                <div className="text-center">
+                    <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent mx-auto"></div>
+                    <p className="mt-4 text-lg font-medium text-gray-600 dark:text-gray-300">Loading Dashboard...</p>
                 </div>
-              </div>
-              <div className="flex min-w-47.5">
-                <span className="mt-1 mr-2 flex h-4 w-full max-w-4 items-center justify-center rounded-full border border-secondary">
-                  <span className="block h-2.5 w-full max-w-2.5 rounded-full bg-[#80CAEE]"></span>
-                </span>
-                <div className="w-full">
-                  <p className="font-semibold text-secondary">Revenue</p>
-                  <p className="text-sm font-medium">Recent Periods</p>
+            </div>
+        );
+    }
+
+    // --- RENDER ---
+    return (
+        <div className="animate-fadeIn pb-8">
+            {/* Header Section */}
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-black dark:text-white">
+                        Financial Dashboard
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Overview of your fund management system
+                    </p>
                 </div>
-              </div>
+                <div className="flex flex-wrap gap-3">
+                    {/* Export Dropdown */}
+                    <div className="relative" ref={exportMenuRef}>
+                        <button
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 border border-stroke dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                        >
+                            <LucideDownload className="h-4 w-4" />
+                            Export
+                            <svg className={`h-4 w-4 transition-transform duration-200 ${showExportMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        {showExportMenu && (
+                            <div className="absolute right-0 mt-2 w-48 rounded-lg border border-stroke bg-white shadow-default dark:border-gray-700 dark:bg-gray-800 z-50 animate-fadeIn">
+                                <ul className="flex flex-col py-1">
+                                    <li>
+                                        <button onClick={handleExportCSV} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 text-left">
+                                            <span className="font-medium">CSV</span><span className="text-xs text-gray-500 ml-auto">.csv</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button onClick={handleExportExcel} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 text-left">
+                                            <span className="font-medium">Excel</span><span className="text-xs text-gray-500 ml-auto">.xlsx</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button onClick={handleExportPDF} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 text-left">
+                                            <span className="font-medium">PDF</span><span className="text-xs text-gray-500 ml-auto">.pdf</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button onClick={handleExportWord} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 text-left">
+                                            <span className="font-medium">Word</span><span className="text-xs text-gray-500 ml-auto">.doc</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handlePrint}
+                        className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 border border-stroke dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                        title="Print Dashboard"
+                    >
+                        <LucidePrinter className="h-4 w-4" />
+                        Print
+                    </button>
+
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 border border-stroke dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50"
+                        title="Refresh Data"
+                    >
+                        <LucideRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
+                </div>
             </div>
-          </div>
-          <div>
-            <div id="chartOne" className="-ml-5">
-              <ReactApexChart
-                options={barChartOptions}
-                series={barChartSeries}
-                type="bar"
-                height={350}
-              />
+
+            {/* Filter Bar */}
+            <div className="mb-6 rounded-xl border border-stroke bg-white p-4 shadow-md dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-500">
+                            <LucideActivity className="h-4 w-4" />
+                        </div>
+                        <span className="font-semibold text-black dark:text-white">Filters</span>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <select
+                            value={filterCompany}
+                            onChange={(e) => setFilterCompany(e.target.value)}
+                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        >
+                            <option value="">All Companies</option>
+                            {companies.map(company => (
+                                <option key={company.id} value={company.id}>{company.name}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={filterType}
+                            onChange={(e) => setFilterType(e.target.value)}
+                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        >
+                            <option value="">All Periods</option>
+                            <option value="MONTHLY">Monthly</option>
+                            <option value="QUARTERLY">Quarterly</option>
+                            <option value="HALF_YEARLY">Half Yearly</option>
+                            <option value="YEARLY">Yearly</option>
+                        </select>
+                    </div>
+                </div>
+
+                {(filterCompany || filterType) && (
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-stroke pt-3 dark:border-gray-700">
+                        <span className="text-xs text-gray-500 py-1">Active:</span>
+                        {filterCompany && (
+                            <span className="flex items-center gap-1 rounded bg-brand-50 px-2 py-1 text-xs font-medium text-brand-500">
+                                Company: {getCompanyName(parseInt(filterCompany))}
+                                <button onClick={() => setFilterCompany("")} className="ml-1 hover:text-brand-700">×</button>
+                            </span>
+                        )}
+                        {filterType && (
+                            <span className="flex items-center gap-1 rounded bg-brand-50 px-2 py-1 text-xs font-medium text-brand-500">
+                                Type: {filterType}
+                                <button onClick={() => setFilterType("")} className="ml-1 hover:text-brand-700">×</button>
+                            </span>
+                        )}
+                        <button onClick={() => { setFilterCompany(""); setFilterType(""); setFilterStatus(""); }} className="text-xs text-gray-500 hover:text-black hover:underline px-2">Clear all</button>
+                    </div>
+                )}
             </div>
-          </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
+                {/* Card 1: Total Companies */}
+                <div className="group relative overflow-hidden rounded-xl border border-stroke bg-white px-7.5 py-6 shadow-lg hover:shadow-xl transition-all duration-300 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-blue-400/10 to-blue-600/10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div className="relative">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
+                            <LucideBuilding2 className="text-white h-6 w-6" />
+                        </div>
+                        <div className="mt-4">
+                            <h4 className="text-3xl font-bold text-black dark:text-white">{totalCompanies}</h4>
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Companies</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 2: Total Revenue */}
+                <div className="group relative overflow-hidden rounded-xl border border-stroke bg-white px-7.5 py-6 shadow-lg hover:shadow-xl transition-all duration-300 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-green-400/10 to-green-600/10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div className="relative">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-md">
+                            <LucideTrendingUp className="text-white h-6 w-6" />
+                        </div>
+                        <div className="mt-4">
+                            <h4 className="text-3xl font-bold text-black dark:text-white">₹{formatCurrency(totalRevenue)}M</h4>
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Revenue</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 3: Profit Margin */}
+                <div className="group relative overflow-hidden rounded-xl border border-stroke bg-white px-7.5 py-6 shadow-lg hover:shadow-xl transition-all duration-300 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-purple-400/10 to-purple-600/10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div className="relative">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-md">
+                            <LucidePercent className="text-white h-6 w-6" />
+                        </div>
+                        <div className="mt-4 flex items-end justify-between">
+                            <div>
+                                <h4 className="text-3xl font-bold text-black dark:text-white">{formatPercentage(avgProfitMargin)}%</h4>
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Profit Margin</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 4: Growth Rate */}
+                <div className="group relative overflow-hidden rounded-xl border border-stroke bg-white px-7.5 py-6 shadow-lg hover:shadow-xl transition-all duration-300 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/10 to-orange-600/10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div className="relative">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-md">
+                            <LucideTrendingUp className="text-white h-6 w-6" />
+                        </div>
+                        <div className="mt-4 flex items-end justify-between">
+                            <div>
+                                <h4 className="text-3xl font-bold text-black dark:text-white flex items-center gap-2">
+                                    {growthRate > 0 ? '+' : ''}{formatPercentage(growthRate)}%
+                                    {growthRate >= 0 ? (<LucideArrowUpRight className="h-5 w-5 text-success" />) : (<LucideArrowDownRight className="h-5 w-5 text-danger" />)}
+                                </h4>
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Growth Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Secondary Stats Row */}
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+                <div className="rounded-xl border border-stroke bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 px-6 py-5 shadow-md dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Financial Periods</p>
+                            <h3 className="text-2xl font-bold text-black dark:text-white mt-1">{totalPeriods}</h3>
+                        </div>
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm">
+                            <LucideFileText className="text-primary h-7 w-7" />
+                        </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-500">
+                            <LucideActivity className="h-3 w-3" />
+                            {finalizedPeriods} Finalized
+                        </span>
+                    </div>
+                </div>
+
+                <div className="rounded-xl border border-stroke bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900 px-6 py-5 shadow-md dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Net Profit</p>
+                            <h3 className="text-2xl font-bold text-black dark:text-white mt-1">₹{formatCurrency(totalProfit)}M</h3>
+                        </div>
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm">
+                            <LucideTrendingUp className="text-success h-7 w-7" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="mt-6 grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-12 2xl:gap-7.5">
+                <div className="xl:col-span-8 rounded-xl border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:px-7.5">
+                    <h4 className="text-xl font-bold text-black dark:text-white mb-4">Revenue & Profit Analysis</h4>
+                    <ReactApexChart options={barChartOptions} series={barChartSeries} type="bar" height={350} />
+                </div>
+                <div className="xl:col-span-4 rounded-xl border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:px-7.5">
+                    <h4 className="text-xl font-bold text-black dark:text-white mb-4">Period Distribution</h4>
+                    <ReactApexChart options={pieChartOptions} series={pieChartSeries} type="donut" height={300} />
+                </div>
+            </div>
+
+            {/* Top Performers & Recent Activity Section */}
+            <div className="mt-6 grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-2">
+                <div className="rounded-xl border border-stroke bg-white px-5 pt-6 pb-5 shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:px-7.5">
+                    <div className="mb-5 flex items-center gap-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500">
+                            <LucideTrophy className="text-white h-5 w-5" />
+                        </div>
+                        <h4 className="text-lg font-bold text-black dark:text-white">Top Performers</h4>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        {topPerformers.map((company, index) => (
+                            <div key={company.id} className="flex items-center justify-between rounded-lg border border-stroke dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                                <div className="flex items-center gap-3">
+                                    <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' : 'bg-gradient-to-br from-blue-400 to-blue-600'}`}>
+                                        {index + 1}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-black dark:text-white">{company.name}</p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">{company.periodCount} periods</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-success">₹{(company.totalProfit / 1000000).toFixed(2)}M</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Activity Timeline */}
+                <div className="rounded-xl border border-stroke bg-white px-5 pt-6 pb-5 shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:px-7.5">
+                    <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md">
+                                <LucideActivity className="text-white h-5 w-5" />
+                            </div>
+                            <h4 className="text-lg font-bold text-black dark:text-white">Recent Activity</h4>
+                        </div>
+                    </div>
+
+                    <div className="relative pl-4 space-y-2">
+                        {/* Continuous Vertical Line */}
+                        <div className="absolute left-6 top-2 bottom-6 w-0.5 border-l-2 border-dashed border-gray-200 dark:border-gray-700 transition-colors duration-300"></div>
+
+                        {[...periods].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map((period) => {
+                            const timeAgo = (() => {
+                                const diff = new Date().getTime() - new Date(period.created_at).getTime();
+                                const minutes = Math.floor(diff / 60000);
+                                const hours = Math.floor(minutes / 60);
+                                const days = Math.floor(hours / 24);
+                                if (minutes < 60) return `${minutes}m ago`;
+                                if (hours < 24) return `${hours}h ago`;
+                                return `${days}d ago`;
+                            })();
+
+                            return (
+                                <div key={period.id} className="group relative flex gap-4 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-default">
+                                    {/* Timeline Dot */}
+                                    <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${period.is_finalized
+                                            ? 'bg-gradient-to-br from-green-400 to-green-600'
+                                            : 'bg-gradient-to-br from-blue-400 to-blue-600'
+                                        }`}>
+                                        {period.is_finalized ? (
+                                            <LucideCheckCircle className="text-white h-4 w-4" />
+                                        ) : (
+                                            <LucidePlus className="text-white h-4 w-4" />
+                                        )}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex flex-1 flex-col gap-1">
+                                        <div className="flex justify-between items-start">
+                                            <h5 className={`text-sm font-bold ${period.is_finalized ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'
+                                                }`}>
+                                                {period.is_finalized ? 'Period Finalized' : 'New Draft Created'}
+                                            </h5>
+                                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                                                {timeAgo}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-black dark:text-white leading-tight">
+                                            {getCompanyName(period.company)}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                            <LucideFileText className="h-3 w-3" />
+                                            {period.label} • <span className="uppercase">{period.period_type.replace('_', ' ')}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {periods.length === 0 && (
+                            <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                No recent activity found.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
-
-        {/* Pie Chart: Period Types */}
-        <div className="col-span-12 rounded-sm border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:col-span-4">
-          <div className="mb-3 justify-between gap-4 sm:flex">
-            <div>
-              <h5 className="text-xl font-semibold text-black dark:text-white">
-                Period Types
-              </h5>
-            </div>
-          </div>
-          <div className="mb-2">
-            <div id="chartThree" className="mx-auto flex justify-center">
-              <ReactApexChart
-                options={pieChartOptions}
-                series={pieChartSeries}
-                type="donut"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity Table */}
-      <div className="mt-4 rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-        <h4 className="mb-6 text-xl font-semibold text-black dark:text-white">
-          Recent Financial Periods
-        </h4>
-
-        <div className="flex flex-col">
-          <div className="grid grid-cols-3 rounded-sm bg-gray-2 dark:bg-meta-4 sm:grid-cols-5">
-            <div className="p-2.5 xl:p-5">
-              <h5 className="text-sm font-medium uppercase xsm:text-base">
-                Company
-              </h5>
-            </div>
-            <div className="p-2.5 text-center xl:p-5">
-              <h5 className="text-sm font-medium uppercase xsm:text-base">
-                Label
-              </h5>
-            </div>
-            <div className="p-2.5 text-center xl:p-5">
-              <h5 className="text-sm font-medium uppercase xsm:text-base">
-                Type
-              </h5>
-            </div>
-            <div className="hidden p-2.5 text-center sm:block xl:p-5">
-              <h5 className="text-sm font-medium uppercase xsm:text-base">
-                Status
-              </h5>
-            </div>
-            <div className="hidden p-2.5 text-center sm:block xl:p-5">
-              <h5 className="text-sm font-medium uppercase xsm:text-base">
-                Net Profit
-              </h5>
-            </div>
-          </div>
-
-          {recentPeriods.map((period, key) => (
-            <div
-              className={`grid grid-cols-3 sm:grid-cols-5 ${key === recentPeriods.length - 1
-                ? ""
-                : "border-b border-stroke dark:border-strokedark"
-                }`}
-              key={key}
-            >
-              <div className="flex items-center gap-3 p-2.5 xl:p-5">
-                <p className="hidden text-black dark:text-white sm:block">
-                  {getCompanyName(period.company)}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-center p-2.5 xl:p-5">
-                <p className="text-black dark:text-white">{period.label}</p>
-              </div>
-
-              <div className="flex items-center justify-center p-2.5 xl:p-5">
-                <span className="inline-block rounded bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                  {period.period_type}
-                </span>
-              </div>
-
-              <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                <p className={`text-meta-3`}>
-                  {period.is_finalized ? "Finalized" : "Draft"}
-                </p>
-              </div>
-
-              <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                <p className="text-meta-5">
-                  {period.profit_loss?.net_profit
-                    ? `₹${period.profit_loss.net_profit.toLocaleString("en-IN")}`
-                    : "-"}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
+    );
 };
 
 export default MasterDashboard;
