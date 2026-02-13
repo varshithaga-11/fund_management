@@ -47,7 +47,7 @@ export const createUser = async (data: UserRegister) => {
 
 // Get user by ID
 export const getUserById = async (id: number) => {
-  const url = createApiUrl(`/app/usermanagement/${id}/`);
+  const url = createApiUrl(`/api/usermanagement/${id}/`);
   const response = await axios.get(url, {
       headers: await getAuthHeaders(),
   });
@@ -56,7 +56,7 @@ export const getUserById = async (id: number) => {
 
 // Update user by ID (full update)
 export const updateUser = async (id: number, data: Partial<UserRegister>) => {
-  const url = createApiUrl(`/app/usermanagement/${id}/`);
+  const url = createApiUrl(`/api/usermanagement/${id}/`);
   const response = await axios.put(url, data, {
       headers: await getAuthHeaders(),
   });
@@ -65,7 +65,7 @@ export const updateUser = async (id: number, data: Partial<UserRegister>) => {
 
 // Delete user by ID
 export const deleteUser = async (id: number) => {
-  const url = createApiUrl(`/app/usermanagement/${id}/`);
+  const url = createApiUrl(`/api/usermanagement/${id}/`);
   const response = await axios.delete(url, {
       headers: await getAuthHeaders(),
   });
@@ -73,7 +73,7 @@ export const deleteUser = async (id: number) => {
 };
 
 export const getUserList = async (createdBy?: number): Promise<UserRegister[]> => {
-  let url = createApiUrl("/app/usermanagement/");
+  let url = createApiUrl("/api/usermanagement/");
   if (createdBy) {
     url += `?created_by=${createdBy}`;
   }

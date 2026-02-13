@@ -358,3 +358,66 @@ class StatementColumnConfigSerializer(serializers.ModelSerializer):
             "is_required",
         ]
         read_only_fields = ["id"]
+
+
+
+
+class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+    created_by = serializers.PrimaryKeyRelatedField(
+        queryset=UserRegister.objects.all(), required=False, allow_null=True
+    )
+    created_by_first_name = serializers.CharField(
+        source='created_by.first_name', read_only=True
+    )
+    created_by_last_name = serializers.CharField(
+        source='created_by.last_name', read_only=True
+    )
+
+    class Meta:
+        model = UserRegister
+        fields = [
+            'id',
+            'username',
+            'email',
+            'password',
+            'is_active',
+            'first_name',
+            'last_name',
+            'role',
+            'phone_number',
+            'created_by',            
+            'created_by_first_name',  
+            'created_by_last_name',  
+        ]
+        extra_kwargs = {
+            'phone_number': {'required': False, 'allow_null': True},
+            'role': {'required': True},
+        }
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        created_by = validated_data.pop('created_by', None)
+        
+        user = UserRegister.objects.create_user(**validated_data)
+        if password:
+            user.set_password(password)
+        if created_by:
+            user.created_by = created_by
+            
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        created_by = validated_data.pop('created_by', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password:
+            instance.set_password(password)
+        if created_by:
+            instance.created_by = created_by
+        instance.save()
+        return instance

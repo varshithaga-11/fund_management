@@ -16,6 +16,7 @@ router.register(r"balance-sheets", BalanceSheetViewSet, basename="balance-sheet"
 router.register(r"operational-metrics", OperationalMetricsViewSet, basename="operational-metrics")
 router.register(r"ratio-results", RatioResultViewSet, basename="ratio-result")
 router.register(r"statement-columns", StatementColumnConfigViewSet, basename="statement-column")
+router.register(r'usermanagement', UserManagementViewSet, basename='usermanagement')
 
 
 

@@ -35,7 +35,7 @@ const CompanyRatioAnalysis = lazy(() => import("./pages/CompanyRatioAnalysis"));
 const PeriodComparison = lazy(() => import("./pages/PeriodComparison"));
 
 
-
+import UserManagementPage from "./pages/UserManagement";
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -74,6 +74,7 @@ export function appRoutes() {
           <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
           <Route path="company-ratio-analysis" element={<CompanyRatioAnalysis />} />
           <Route path="period-comparison" element={<PeriodComparison />} />
+          <Route path="user-management" element={<UserManagementPage />} />
 
           {/* Others Page */}
           <Route path="/profile" element={<UserProfiles />} />

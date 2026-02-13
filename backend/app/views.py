@@ -2774,3 +2774,13 @@ class PeriodComparisonView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+
+class UserManagementViewSet(viewsets.ModelViewSet):
+    serializer_class = UserSerializer    
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # ✅ Return all users (no role restriction)
+        return UserRegister.objects.all()

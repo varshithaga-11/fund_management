@@ -9,6 +9,8 @@ import {
   ChevronDownIcon,
   BarChart3,
   TrendingUp,
+  Table,
+  Building,
 } from "lucide-react"; // 👈 Example icons
 
 import { HorizontaLDots } from "../../icons";
@@ -29,18 +31,19 @@ const navItems: NavItem[] = [
     path: "/master/master-dashboard",
   },
   {
-    icon: <LayoutDashboard className="w-5 h-5" />,
+    icon: <Building className="w-5 h-5" />,
     name: "Company",
     path: "/companies",
   },
   {
     icon: <FileText className="w-5 h-5" />,
-    name: "Financial Statements",
-    subItems: [
-      { name: "Upload Data", path: "/upload-data" },
-      { name: "Companies", path: "/companies" },
-      { name: "Column Mapping", path: "/statement-columns" },
-    ],
+    name: "Upload Data",
+    path: "/upload-data",
+  },
+  {
+    icon: <Table className="w-5 h-5" />,
+    name: "Column Mapping",
+    path: "/statement-columns",
   },
   {
     icon: <BarChart3 className="w-5 h-5" />,
@@ -54,85 +57,14 @@ const navItems: NavItem[] = [
   },
   {
     icon: <BarChart3 className="w-5 h-5" />,
-    name: "Ratio Analysis",
-    subItems: [
-      { name: "Ratio Benchmarks", path: "/ratio-benchmarks" },
-      { name: "Ratio Dashboard", path: "/ratio-analysis" },
-      { name: "Productivity Analysis", path: "/productivity-analysis" },
-      { name: "Interpretation", path: "/interpretation" },
-    ],
+    name: "Ratio Benchmarks",
+    path: "/ratio-benchmarks",
   },
-  // {
-  //   icon: <FileText className="w-5 h-5" />,
-  //   name: "Client and Supplier Registration ",
-  //   subItems: [
-  //     { name: "Client", path: "/master/client" },
-  //     { name: "Supplier", path: "/master/supplier" },
-  //   ],
-  // },
-  // {
-  //   icon: <Newspaper className="w-5 h-5" />,
-  //   name: "Quotation creation",
-  //   subItems: [
-  //     { name: "client", path: "/master/quotation/client" },
-  //     { name: "supplier", path: "/master/quotation/supplier" },
-  //   ],
-  // },
-  // {
-  //   icon: <HelpCircle className="w-5 h-5" />,
-  //   name: "FAQ",
-  //   subItems: [
-  //     { name: "Categories", path: "/master/faqcategories" },
-  //     { name: "FAQs", path: "/master/faqs" },
-  //   ],
-  // },
-  // {
-  //   icon: <FolderKanban className="w-5 h-5" />,
-  //   name: "Services",
-  //   subItems: [
-  //     { name: "Service Categories", path: "/master/servicecategory" },
-  //     { name: "Services", path: "/master/services" },
-  //   ],
-  // },
-  // {
-  //   icon: <Images className="w-5 h-5" />,
-  //   name: "Products",
-  //   subItems: [
-  //     { name: "Product Categories", path: "/master/productcategory" },
-  //     { name: "Products", path: "/master/products" },
-  //   ],
-  // },
-  // {
-  //   icon: <Users className="w-5 h-5" />,
-  //   name: "Team",
-  //   subItems: [
-  //     { name: "Team Positions", path: "/master/teampositions" },
-  //     { name: "Team Members", path: "/master/teammembers" },
-  //   ],
-  // },
-  // {
-  //   icon: <MessageCircle className="w-5 h-5" />,
-  //   name: "Contact Us Requests",
-  //   path: "/master/contactus" 
-  // },
-  // {
-  //   icon: <Briefcase className="w-5 h-5" />,
-  //   name: "Career",
-  //   subItems: [
-  //     { name: "Departments", path: "/master/departments" },
-  //     { name: "Job Openings", path: "/master/jobopenings" },
-  //     { name: "Job Applications", path: "/master/jobapplications" },
-  //   ],
-  // },
-  // {
-  //   icon: <MapPin className="w-5 h-5" />,
-  //   name: "Locations",
-  //   path: "/master/locations",
-  // },
+
   {
     icon: <UserCog className="w-5 h-5" />,
     name: "User Management",
-    path: "/master/usermanagement",
+    path: "/user-management",
   },
 ];
 const MasterSidebar: React.FC = () => {

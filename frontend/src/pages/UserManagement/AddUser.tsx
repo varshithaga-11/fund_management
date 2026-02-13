@@ -16,7 +16,7 @@ interface AddUserProps {
 const AddUser: React.FC<AddUserProps> = ({ onClose, onAdd }) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("employee"); // default role
+  const [role, setRole] = useState("master"); // default role
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -165,7 +165,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               options={[
                 { value: "master", label: "Master" },
                 { value: "admin", label: "Admin" },
-                { value: "employee", label: "Employee" },
               ]}
               className="w-full"
               disabled={loading}

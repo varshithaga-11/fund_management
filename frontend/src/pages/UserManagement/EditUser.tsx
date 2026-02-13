@@ -192,12 +192,11 @@ const EditUser: React.FC<EditUserProps> = ({ userId, isOpen, onClose, onUpdated 
           <div>
             <Label htmlFor="role">Role</Label>
             <Select
-              value={userData.role || "employee"}
+              value={userData.role || "master"}
               onChange={(val) => handleChange("role", val)}
               options={[
                 { value: "master", label: "Master" },
-                { value: "admin", label: "Admin" },
-                { value: "employee", label: "Employee" },
+                { value: "admin", label: "Admin" }
               ]}
               className="w-full"
               disabled={saving}
