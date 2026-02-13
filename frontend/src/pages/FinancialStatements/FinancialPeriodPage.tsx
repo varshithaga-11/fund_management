@@ -129,38 +129,39 @@ const FinancialPeriodPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <ToastContainer position="bottom-right" autoClose={3000} />
-      
+
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Financial Statements - {period.label}
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+            {period.label}
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {companies.find((c) => c.id === period.company)?.name || ""} -{" "}
-            {period.period_type}
+          <p className="text-lg font-bold text-gray-800 dark:text-gray-200 mt-1">
+            {companies.find((c) => c.id === period.company)?.name || ""}
+            <span className="mx-2 text-gray-400">|</span>
+            <span className="uppercase tracking-wider">{period.period_type}</span>
           </p>
         </div>
         <Button
           onClick={handleCalculateRatios}
           disabled={!canCalculateRatios || calculating}
+          className="font-bold shadow-md"
         >
           {calculating ? "Calculating..." : "Calculate Ratios"}
         </Button>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-gray-200 dark:border-gray-700 mt-6">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-brand-500 text-brand-600 dark:text-brand-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-bold text-base transition-colors ${activeTab === tab.id
+                  ? "border-brand-600 text-brand-700 dark:text-brand-400"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
             >
               {tab.label}
             </button>
@@ -169,10 +170,10 @@ const FinancialPeriodPage: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-sm">
-        View only mode - Financial statements are read-only and cannot be updated.
+      <div className="mb-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-100 font-semibold text-sm mt-4">
+        Info: Financial statements are read-only and cannot be updated.
       </div>
-      <div className="mt-6">
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         {activeTab === "trading" && (
           <TradingAccountForm
             periodId={parseInt(periodId!)}
@@ -204,56 +205,52 @@ const FinancialPeriodPage: React.FC = () => {
       </div>
 
       {/* Status Indicators */}
-      <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+      <div className="mt-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b pb-2">
           Completion Status
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="flex items-center">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
-              className={`w-3 h-3 rounded-full mr-2 ${
-                period.trading_account
-                  ? "bg-green-500"
+              className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.trading_account
+                  ? "bg-green-600"
                   : "bg-gray-300 dark:bg-gray-600"
-              }`}
+                }`}
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-bold text-gray-800 dark:text-gray-200">
               Trading Account
             </span>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
-              className={`w-3 h-3 rounded-full mr-2 ${
-                period.profit_loss
-                  ? "bg-green-500"
+              className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.profit_loss
+                  ? "bg-green-600"
                   : "bg-gray-300 dark:bg-gray-600"
-              }`}
+                }`}
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-bold text-gray-800 dark:text-gray-200">
               Profit & Loss
             </span>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
-              className={`w-3 h-3 rounded-full mr-2 ${
-                period.balance_sheet
-                  ? "bg-green-500"
+              className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.balance_sheet
+                  ? "bg-green-600"
                   : "bg-gray-300 dark:bg-gray-600"
-              }`}
+                }`}
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-bold text-gray-800 dark:text-gray-200">
               Balance Sheet
             </span>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
-              className={`w-3 h-3 rounded-full mr-2 ${
-                period.operational_metrics
-                  ? "bg-green-500"
+              className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.operational_metrics
+                  ? "bg-green-600"
                   : "bg-gray-300 dark:bg-gray-600"
-              }`}
+                }`}
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-bold text-gray-800 dark:text-gray-200">
               Operational Metrics
             </span>
           </div>

@@ -502,6 +502,12 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
 
   const fundStructureRatios = [
     {
+      name: "Net Own Funds",
+      value: ratios.net_own_funds || 0,
+      unit: "₹",
+      status: ratios.traffic_light_status?.net_own_funds,
+    },
+    {
       name: "Own Fund to Working Fund",
       value: ratios.own_fund_to_wf || 0,
       unit: "%",
@@ -533,6 +539,18 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
       unit: "%",
       idealValue: 25.0,
       status: ratios.traffic_light_status?.investments_to_wf,
+    },
+    {
+      name: "Earning Assets to Working Fund",
+      value: ratios.earning_assets_to_wf || 0,
+      unit: "%",
+      status: ratios.traffic_light_status?.earning_assets_to_wf,
+    },
+    {
+      name: "Interest Tagged Funds to WF",
+      value: ratios.interest_tagged_funds_to_wf || 0,
+      unit: "%",
+      status: ratios.traffic_light_status?.interest_tagged_funds_to_wf,
     },
   ];
 
@@ -576,6 +594,18 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
       idealValue: 3.5,
       status: ratios.traffic_light_status?.avg_yield_on_wf,
     },
+    {
+      name: "Misc Income to Working Fund",
+      value: ratios.misc_income_to_wf || 0,
+      unit: "%",
+      status: ratios.traffic_light_status?.misc_income_to_wf,
+    },
+    {
+      name: "Interest Exp to Interest Income",
+      value: ratios.interest_exp_to_interest_income || 0,
+      unit: "%",
+      status: ratios.traffic_light_status?.interest_exp_to_interest_income,
+    },
   ];
 
   const marginRatios = [
@@ -613,6 +643,42 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
       unit: "%",
       idealValue: 1.0,
       status: ratios.traffic_light_status?.net_margin,
+    },
+  ];
+
+  const capitalEfficiencyRatios = [
+    {
+      name: "Capital Turnover Ratio",
+      value: ratios.capital_turnover_ratio || 0,
+      unit: "times",
+      status: ratios.traffic_light_status?.capital_turnover_ratio,
+    },
+  ];
+
+  const productivityRatios = [
+    {
+      name: "Per Employee Deposit",
+      value: ratios.per_employee_deposit || 0,
+      unit: "Lakhs",
+      status: ratios.traffic_light_status?.per_employee_deposit,
+    },
+    {
+      name: "Per Employee Loan",
+      value: ratios.per_employee_loan || 0,
+      unit: "Lakhs",
+      status: ratios.traffic_light_status?.per_employee_loan,
+    },
+    {
+      name: "Per Employee Contribution",
+      value: ratios.per_employee_contribution || 0,
+      unit: "Lakhs",
+      status: ratios.traffic_light_status?.per_employee_contribution,
+    },
+    {
+      name: "Per Employee Operating Cost",
+      value: ratios.per_employee_operating_cost || 0,
+      unit: "Lakhs",
+      status: ratios.traffic_light_status?.per_employee_operating_cost,
     },
   ];
 
@@ -686,6 +752,30 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {marginRatios.map((ratio, idx) => (
+            <RatioCard key={idx} {...ratio} />
+          ))}
+        </div>
+      </div>
+
+      {/* Capital Efficiency Ratios */}
+      <div>
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+          Capital Efficiency
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {capitalEfficiencyRatios.map((ratio, idx) => (
+            <RatioCard key={idx} {...ratio} />
+          ))}
+        </div>
+      </div>
+
+      {/* Productivity Ratios */}
+      <div>
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+          Productivity Analysis
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {productivityRatios.map((ratio, idx) => (
             <RatioCard key={idx} {...ratio} />
           ))}
         </div>
