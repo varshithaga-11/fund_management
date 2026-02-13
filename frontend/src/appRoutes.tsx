@@ -35,6 +35,8 @@ const CompanyRatioAnalysis = lazy(() => import("./pages/CompanyRatioAnalysis"));
 const PeriodComparison = lazy(() => import("./pages/PeriodComparison"));
 
 
+
+
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -50,85 +52,85 @@ const LoadingSpinner = () => (
 export function appRoutes() {
   return (
 
-  <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingSpinner />}>
 
-    <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<MasterLayout />}>
+      <Routes>
+        {/* Dashboard Layout */}
+        <Route element={<MasterLayout />}>
 
-            <Route path="master/master-dashboard" element={<MasterDashboard />} />
+          <Route path="master-dashboard" element={<MasterDashboard />} />
 
-            <Route path="companies" element={<CompanyPage />} />
+          <Route path="companies" element={<CompanyPage />} />
 
-            {/* Financial Statements */}
-            <Route path="upload-data" element={<UploadDataPage />} />
-            <Route path="financial-statements/:periodId" element={<FinancialPeriodPage />} />
-            <Route path="statement-columns" element={<StatementColumnsConfigPage />} />
+          {/* Financial Statements */}
+          <Route path="upload-data" element={<UploadDataPage />} />
+          <Route path="financial-statements/:periodId" element={<FinancialPeriodPage />} />
+          <Route path="statement-columns" element={<StatementColumnsConfigPage />} />
 
-            {/* Ratio Analysis */}
-            <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />
-            <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
-            <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
-            <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
-            <Route path="company-ratio-analysis" element={<CompanyRatioAnalysis />} />
-            <Route path="period-comparison" element={<PeriodComparison />} />
+          {/* Ratio Analysis */}
+          <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />
+          <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
+          <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
+          <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
+          <Route path="company-ratio-analysis" element={<CompanyRatioAnalysis />} />
+          <Route path="period-comparison" element={<PeriodComparison />} />
 
-            {/* Others Page */}
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
+          {/* Others Page */}
+          <Route path="/profile" element={<UserProfiles />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/blank" element={<Blank />} />
 
-            {/* Forms */}
-            {/* <Route path="/form-elements" element={<FormElements />} /> */}
-            
-            {/* Tables */}
-            {/* <Route path="/basic-tables" element={<BasicTables />} /> */}
+          {/* Forms */}
+          {/* <Route path="/form-elements" element={<FormElements />} /> */}
 
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
+          {/* Tables */}
+          {/* <Route path="/basic-tables" element={<BasicTables />} /> */}
 
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
-          </Route>
+          {/* Ui Elements */}
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/avatars" element={<Avatars />} />
+          <Route path="/badge" element={<Badges />} />
+          <Route path="/buttons" element={<Buttons />} />
+          <Route path="/images" element={<Images />} />
+          <Route path="/videos" element={<Videos />} />
+
+          {/* Charts */}
+          <Route path="/line-chart" element={<LineChart />} />
+          <Route path="/bar-chart" element={<BarChart />} />
+        </Route>
 
 
-            {/* Admin Management */}
-            {/* Create Admin */}
+        {/* Admin Management */}
+        {/* Create Admin */}
 
-            {/* Tables */}
+        {/* Tables */}
 
-            {/* Admin Management */}
-            {/* Create Admin */}
+        {/* Admin Management */}
+        {/* Create Admin */}
 
-            {/* Tables */}
-            {/* <Route path="basic-tables" element={<BasicTables />} /> */}
+        {/* Tables */}
+        {/* <Route path="basic-tables" element={<BasicTables />} /> */}
 
-            {/* Ui Elements */}
-            <Route path="alerts" element={<Alerts />} />
-            <Route path="avatars" element={<Avatars />} />
-            <Route path="badge" element={<Badges />} />
-            <Route path="buttons" element={<Buttons />} />
-            <Route path="images" element={<Images />} />
-            <Route path="videos" element={<Videos />} />
+        {/* Ui Elements */}
+        <Route path="alerts" element={<Alerts />} />
+        <Route path="avatars" element={<Avatars />} />
+        <Route path="badge" element={<Badges />} />
+        <Route path="buttons" element={<Buttons />} />
+        <Route path="images" element={<Images />} />
+        <Route path="videos" element={<Videos />} />
 
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
+        {/* Charts */}
+        <Route path="/line-chart" element={<LineChart />} />
+        <Route path="/bar-chart" element={<BarChart />} />
 
-            {/* Auth Routes */}
-            <Route path="/" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
+        {/* Auth Routes */}
+        <Route path="/" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
 
-            {/* Fallback Route */}
-            <Route path="*" element={<NotFound />} />
-    </Routes>
-  </Suspense>
+        {/* Fallback Route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
 
   );
 }
