@@ -87,6 +87,9 @@ class RatioCalculator:
         ratios = {}
         
         if wf > 0:
+            # Net Own Funds (Absolute Value)
+            ratios['net_own_funds'] = float(base_vars['own_funds'])
+
             # Own Fund to WF = (Own Fund / WF) * 100
             ratios['own_fund_to_wf'] = float((base_vars['own_funds'] / wf) * Decimal('100.0'))
             
@@ -101,12 +104,22 @@ class RatioCalculator:
             
             # Investments to WF = (Investments / WF) * 100
             ratios['investments_to_wf'] = float((bs.investments / wf) * Decimal('100.0'))
+            
+            # Earning Assets to WF = ((Loans + Investments + Cash at Bank) / WF) * 100
+            earning_assets = bs.loans_advances + bs.investments + bs.cash_at_bank
+            ratios['earning_assets_to_wf'] = float((earning_assets / wf) * Decimal('100.0'))
+            
+            # Interest Tagged Funds to WF = ((Deposits + Borrowings) / WF) * 100
+            interest_tagged_funds = bs.deposits + bs.borrowings
+            ratios['interest_tagged_funds_to_wf'] = float((interest_tagged_funds / wf) * Decimal('100.0'))
         else:
             ratios['own_fund_to_wf'] = 0.0
             ratios['deposits_to_wf'] = 0.0
             ratios['borrowings_to_wf'] = 0.0
             ratios['loans_to_wf'] = 0.0
             ratios['investments_to_wf'] = 0.0
+            ratios['earning_assets_to_wf'] = 0.0
+            ratios['interest_tagged_funds_to_wf'] = 0.0
         
         return ratios
     
@@ -154,6 +167,25 @@ class RatioCalculator:
             ratios['avg_yield_on_wf'] = float((pl.total_interest_income / wf) * Decimal('100.0'))
         else:
             ratios['avg_yield_on_wf'] = 0.0
+            
+        # Miscellaneous Income to WF = (Misc Income / WF) * 100
+        if wf > 0:
+            ratios['misc_income_to_wf'] = float((pl.miscellaneous_income / wf) * Decimal('100.0'))
+        else:
+            ratios['misc_income_to_wf'] = 0.0
+            
+        # Interest Expenses to Interest Income = (Total Interest Expenses / Total Interest Income) * 100
+        # Access properties from ProfitAndLoss model (based on previous file content, total_interest_income and expense are properties)
+        # Assuming they are computed properties on the model instance 'pl'
+        # Check models.py content in memory: yes, lines 146 and 154 show @property methods.
+        
+        income = pl.total_interest_income
+        expense = pl.total_interest_expense
+        
+        if income > 0:
+            ratios['interest_exp_to_interest_income'] = float((expense / income) * Decimal('100.0'))
+        else:
+            ratios['interest_exp_to_interest_income'] = 0.0
         
         return ratios
     
@@ -189,6 +221,64 @@ class RatioCalculator:
         # Net Margin = Net Financial Margin - Risk Cost %
         ratios['net_margin'] = ratios['net_fin_margin'] - ratios['risk_cost_to_wf']
         
+        ratios['net_margin'] = ratios['net_fin_margin'] - ratios['risk_cost_to_wf']
+        
+        return ratios
+
+    def calculate_capital_efficiency_ratios(self):
+        """Calculate Capital Turnover Ratio (Sales / Capital Employed)"""
+        bs = self.period.balance_sheet
+        ta = self.period.trading_account
+        
+        ratios = {}
+        
+        # Capital Employed = Share Capital + Reserves + Undistributed Profit
+        capital_employed = (
+            bs.share_capital 
+            + bs.reserves_statutory_free 
+            + bs.undistributed_profit
+        )
+        # Note: We don't store capital_employed in DB anymore, just use it for calculation
+        
+        if capital_employed > 0:
+            # Capital Turnover Ratio = Sales / Capital Employed
+            ratios['capital_turnover_ratio'] = float(ta.sales / capital_employed)
+        else:
+            ratios['capital_turnover_ratio'] = 0.0
+            
+        return ratios
+
+    def calculate_productivity_ratios(self):
+        """Calculate per-employee productivity ratios (in Lakhs)"""
+        bs = self.period.balance_sheet
+        pl = self.period.profit_loss
+        op = self.period.operational_metrics
+        
+        ratios = {}
+        staff = op.staff_count
+        
+        if staff > 0:
+            # Per Employee Deposit (Lakhs) = (Deposits / Staff) / 100000
+            ratios['per_employee_deposit'] = float((bs.deposits / staff) / Decimal('100000.0'))
+            
+            # Per Employee Loan (Lakhs) = (Loans / Staff) / 100000
+            ratios['per_employee_loan'] = float((bs.loans_advances / staff) / Decimal('100000.0'))
+            
+            # Per Employee Contribution (Lakhs) = ((Total Income - Interest Exp) / Staff) / 100000
+            # Total Income = Total Interest Income + Misc Income
+            total_income = pl.total_interest_income + pl.miscellaneous_income
+            contribution = total_income - pl.total_interest_expense
+            ratios['per_employee_contribution'] = float((contribution / staff) / Decimal('100000.0'))
+            
+            # Per Employee Operating Cost (Lakhs) = (Establishment / Staff) / 100000
+            # Assuming establishment_contingencies covers "Salary + Contingencies"
+            ratios['per_employee_operating_cost'] = float((pl.establishment_contingencies / staff) / Decimal('100000.0'))
+        else:
+            ratios['per_employee_deposit'] = 0.0
+            ratios['per_employee_loan'] = 0.0
+            ratios['per_employee_contribution'] = 0.0
+            ratios['per_employee_operating_cost'] = 0.0
+            
         return ratios
     
     def get_traffic_light_status(self, ratio_name: str, calculated_value: float, ideal_value=None):
@@ -273,7 +363,62 @@ class RatioCalculator:
                 return 'green'
             if mn is not None and calculated_value >= mn * 0.7:
                 return 'yellow'
+            if mn is not None and calculated_value >= mn * 0.7:
+                return 'yellow'
             return 'red'
+        
+        elif ratio_name == 'earning_assets_to_wf':
+            # Ideal is dynamic (should be > Interest Tagged Funds to WF)
+            # If ideal_value is passed (from get_traffic_light_statuses), use it.
+            # Otherwise fallback to config (though config might be None or 80)
+            target = ideal_value if ideal_value is not None else b.get('earning_assets_to_wf_min')
+            
+            if target is None:
+                return 'yellow'
+            
+            if calculated_value >= target:
+                return 'green'
+            elif calculated_value >= target * 0.9:
+                return 'yellow'
+            else:
+                return 'red'
+        
+        elif ratio_name == 'interest_tagged_funds_to_wf':
+            # Ideal is dynamic (should be <= Earning Assets to WF)
+            target = ideal_value
+            
+            if target is None:
+                return 'yellow'
+            
+            if calculated_value <= target:
+                return 'green'
+            elif calculated_value <= target * 1.1:
+                return 'yellow'
+            else:
+                return 'red'
+        
+        elif ratio_name == 'misc_income_to_wf':
+            ideal = b.get('misc_income_to_wf_min')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
+                return 'green'
+            elif calculated_value >= ideal * 0.5:
+                # Allowing a wider range for misc income as it can fluctuate
+                return 'yellow'
+            else:
+                return 'red'
+        
+        elif ratio_name == 'interest_exp_to_interest_income':
+            ideal = b.get('interest_exp_to_interest_income_max')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value <= ideal:
+                return 'green'
+            elif calculated_value <= ideal * 1.1:
+                return 'yellow'
+            else:
+                return 'red'
         
         elif ratio_name == 'credit_deposit_ratio':
             ideal = b.get('credit_deposit_ratio_min')
@@ -318,6 +463,56 @@ class RatioCalculator:
             else:
                 return 'red'
         
+        elif ratio_name == 'capital_turnover_ratio':
+            ideal = b.get('capital_turnover_ratio')
+            if ideal is None:
+                return 'yellow'
+            if calculated_value >= ideal:
+                return 'green'
+            elif calculated_value >= ideal * 0.7:
+                return 'yellow'
+            else:
+                return 'red'
+        
+        elif ratio_name == 'per_employee_deposit' or ratio_name == 'per_employee_loan':
+            # Use defined benchmarks
+            target = self._get_ideal_value(ratio_name) if ideal_value is None else ideal_value
+            if target is None:
+                return 'yellow'
+            if calculated_value >= target:
+                return 'green'
+            elif calculated_value >= target * 0.8:
+                return 'yellow'
+            else:
+                return 'red'
+                
+        elif ratio_name == 'per_employee_contribution':
+            # Ideal is Op Cost. Contrib > Op Cost is Green.
+            target = ideal_value
+            if target is None or target == 0:
+                # Fallback check if simple calculation is positive
+                return 'green' if calculated_value > 0 else 'red'
+            
+            if calculated_value > target:
+                return 'green'
+            elif calculated_value >= target * 0.9:
+                return 'yellow'
+            else:
+                return 'red'
+                
+        elif ratio_name == 'per_employee_operating_cost':
+            # Ideal is Contribution. Op Cost < Contribution is Green.
+            target = ideal_value
+            if target is None:
+                return 'yellow'
+            
+            if calculated_value < target:
+                return 'green'
+            elif calculated_value <= target * 1.1:
+                return 'yellow'
+            else:
+                return 'red'
+        
         # Default: compare with ideal value
         if calculated_value >= ideal_value:
             return 'green'
@@ -335,12 +530,18 @@ class RatioCalculator:
             'own_fund_to_wf': b.get('own_fund_to_wf'),
             'loans_to_wf': b.get('loans_to_wf_min'),
             'investments_to_wf': b.get('investments_to_wf_min'),
+            'earning_assets_to_wf': b.get('earning_assets_to_wf_min'),
+            'misc_income_to_wf': b.get('misc_income_to_wf_min'),
+            'interest_exp_to_interest_income': b.get('interest_exp_to_interest_income_max'),
             'gross_fin_margin': b.get('gross_financial_margin'),
             'net_fin_margin': b.get('net_financial_margin'),
             'net_margin': b.get('net_margin'),
             'operating_cost_to_wf': b.get('operating_cost_to_wf_max'),
             'risk_cost_to_wf': b.get('risk_cost_to_wf_max'),
             'credit_deposit_ratio': b.get('credit_deposit_ratio_min'),
+            'capital_turnover_ratio': b.get('capital_turnover_ratio'),
+            'per_employee_deposit': b.get('per_employee_deposit_min'),
+            'per_employee_loan': b.get('per_employee_loan_min'),
         }
         return ideal_map.get(ratio_name)
     
@@ -391,6 +592,52 @@ class RatioCalculator:
             interpretations.append("Loans deployment below optimal level.")
         elif all_ratios['loans_to_wf'] > 75:
             interpretations.append("High loan deployment - ensure adequate liquidity.")
+            
+        # Net Own Funds interpretation
+        net_own_funds = all_ratios.get('net_own_funds', 0)
+        if net_own_funds > 0:
+             interpretations.append("Positive Own Funds indicate financial stability and asset quality.")
+        else:
+             interpretations.append("Negative Own Funds indicate accumulated losses or instability.")
+            
+        # Earning Assets interpretation
+        ea_ratio = all_ratios.get('earning_assets_to_wf', 0)
+        itf_ratio = all_ratios.get('interest_tagged_funds_to_wf', 0)
+        
+        if ea_ratio >= itf_ratio:
+             interpretations.append(f"Healthy: Earning assets ({ea_ratio:.2f}%) cover interest-bearing liabilities ({itf_ratio:.2f}%).")
+        else:
+             interpretations.append(f"Warning: Earning assets ({ea_ratio:.2f}%) are less than interest-bearing funds ({itf_ratio:.2f}%).")
+
+        # Misc Income interpretation
+        if all_ratios.get('misc_income_to_wf', 0) >= 0.5:
+            interpretations.append("Good non-fund income generation.")
+        else:
+            interpretations.append("Low non-fund income - try to increase miscellaneous income.")
+            
+        # Interest Exp to Income interpretation
+        int_exp_ratio = all_ratios.get('interest_exp_to_interest_income', 0)
+        if int_exp_ratio <= 62:
+            interpretations.append("Efficient resource management (Interest Exp < 62% of Income).")
+        else:
+            interpretations.append("Interest expenses are high relative to income.")
+        
+        # Capital Turnover interpretation
+        cap_val = all_ratios.get('capital_turnover_ratio', 0)
+        
+        if cap_val < 1:
+             interpretations.append(f"Capital Turnover Ratio ({cap_val:.2f} times) may be low for trading, but normal for banks.")
+        
+        # Calculate adjusted ratio on the fly for interpretation only
+        bs = self.period.balance_sheet
+        pl = self.period.profit_loss
+        capital_employed = float(bs.share_capital + bs.reserves_statutory_free + bs.undistributed_profit)
+        
+        if capital_employed > 0:
+             total_income = float(pl.interest_on_loans + pl.interest_on_bank_ac + pl.return_on_investment + pl.miscellaneous_income)
+             adj_cap_val = total_income / capital_employed
+             if adj_cap_val > 0:
+                 interpretations.append(f"Adjusted Capital Turnover Ratio is {adj_cap_val:.2f} times (measure of income generation).")
         
         return " ".join(interpretations)
     
@@ -401,6 +648,8 @@ class RatioCalculator:
         fund_structure = self.calculate_fund_structure_ratios()
         yield_cost = self.calculate_yield_cost_ratios()
         margins = self.calculate_margin_ratios()
+        capital = self.calculate_capital_efficiency_ratios()
+        productivity = self.calculate_productivity_ratios()
         
         # Combine all ratios
         all_ratios = {
@@ -408,7 +657,9 @@ class RatioCalculator:
             **trading,
             **fund_structure,
             **yield_cost,
-            **margins
+            **margins,
+            **capital,
+            **productivity
         }
         
         # Convert Decimal values to float for JSON serialization
@@ -423,8 +674,24 @@ class RatioCalculator:
         all_ratios = self.calculate_all_ratios()
         statuses = {}
         
+        # Get dynamic references
+        interest_tagged_ratio = all_ratios.get('interest_tagged_funds_to_wf', 0)
+        earning_assets_ratio = all_ratios.get('earning_assets_to_wf', 0)
+        op_cost = all_ratios.get('per_employee_operating_cost', 0)
+        contribution = all_ratios.get('per_employee_contribution', 0)
+        
         for ratio_name, value in all_ratios.items():
             if isinstance(value, (int, float)) and ratio_name not in ['working_fund', 'own_funds', 'average_stock', 'cogs']:
-                statuses[ratio_name] = self.get_traffic_light_status(ratio_name, value)
+                ideal = None
+                if ratio_name == 'earning_assets_to_wf':
+                    ideal = interest_tagged_ratio
+                elif ratio_name == 'interest_tagged_funds_to_wf':
+                    ideal = earning_assets_ratio
+                elif ratio_name == 'per_employee_contribution':
+                    ideal = op_cost
+                elif ratio_name == 'per_employee_operating_cost':
+                    ideal = contribution
+                
+                statuses[ratio_name] = self.get_traffic_light_status(ratio_name, value, ideal_value=ideal)
         
         return statuses

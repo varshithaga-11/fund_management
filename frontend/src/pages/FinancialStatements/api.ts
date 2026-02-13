@@ -81,6 +81,7 @@ export interface RatioResultData {
   stock_turnover: number;
   gross_profit_ratio: number;
   net_profit_ratio: number;
+  net_own_funds?: number;
   own_fund_to_wf: number;
   deposits_to_wf: number;
   borrowings_to_wf: number;
@@ -97,6 +98,15 @@ export interface RatioResultData {
   net_fin_margin: number;
   risk_cost_to_wf: number;
   net_margin: number;
+  capital_turnover_ratio?: number;
+  earning_assets_to_wf?: number;
+  interest_tagged_funds_to_wf?: number;
+  misc_income_to_wf?: number;
+  interest_exp_to_interest_income?: number;
+  per_employee_deposit?: number;
+  per_employee_loan?: number;
+  per_employee_contribution?: number;
+  per_employee_operating_cost?: number;
   all_ratios: Record<string, any>;
   traffic_light_status: Record<string, "green" | "yellow" | "red">;
   calculated_at: string;
@@ -418,7 +428,7 @@ export const downloadExcelTemplate = async (): Promise<void> => {
       headers: await getAuthHeaders(),
       responseType: "blob",
     });
-    
+
     const blob = new Blob([response.data], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
@@ -443,7 +453,7 @@ export const downloadWordTemplate = async (): Promise<void> => {
       headers: await getAuthHeaders(),
       responseType: "blob",
     });
-    
+
     const blob = new Blob([response.data], {
       type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
@@ -468,7 +478,7 @@ export const uploadExcelData = async (formData: FormData): Promise<{ period_id: 
     const headers = await getAuthHeaders();
     // Remove Content-Type header for FormData (browser will set it with boundary)
     delete headers['Content-Type'];
-    
+
     const response = await axios.post(url, formData, {
       headers,
     });

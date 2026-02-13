@@ -18,8 +18,14 @@ const CATEGORIES: Record<string, string[]> = {
     "loans_to_wf_max",
     "investments_to_wf_min",
     "investments_to_wf_max",
+    "earning_assets_to_wf_min",
   ],
-  "Yield & Cost": ["avg_cost_of_wf", "avg_yield_on_wf"],
+  "Yield & Cost": [
+    "avg_cost_of_wf",
+    "avg_yield_on_wf",
+    "misc_income_to_wf_min",
+    "interest_exp_to_interest_income_max",
+  ],
   Margins: [
     "gross_financial_margin",
     "operating_cost_to_wf_min",
@@ -29,6 +35,8 @@ const CATEGORIES: Record<string, string[]> = {
     "net_margin",
   ],
   "Credit Deposit": ["credit_deposit_ratio_min"],
+  "Capital Efficiency": ["capital_turnover_ratio"],
+  Productivity: ["per_employee_deposit_min", "per_employee_loan_min"],
 };
 
 const RatioBenchmarksPage: React.FC = () => {
@@ -164,30 +172,30 @@ const RatioBenchmarksPage: React.FC = () => {
       {/* Any keys not in CATEGORIES */}
       {allKeys.filter((k) => !Object.values(CATEGORIES).flat().includes(k))
         .length > 0 && (
-        <div className="mt-8 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Other
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allKeys
-              .filter((k) => !Object.values(CATEGORIES).flat().includes(k))
-              .map((key) => (
-                <div key={key}>
-                  <Label htmlFor={key}>{labels[key] || key}</Label>
-                  <Input
-                    id={key}
-                    type="number"
-                    step="any"
-                    value={values[key] ?? ""}
-                    onChange={(e) => handleChange(key, e.target.value)}
-                    disabled={!canUpdate}
-                    placeholder="—"
-                  />
-                </div>
-              ))}
+          <div className="mt-8 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Other
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {allKeys
+                .filter((k) => !Object.values(CATEGORIES).flat().includes(k))
+                .map((key) => (
+                  <div key={key}>
+                    <Label htmlFor={key}>{labels[key] || key}</Label>
+                    <Input
+                      id={key}
+                      type="number"
+                      step="any"
+                      value={values[key] ?? ""}
+                      onChange={(e) => handleChange(key, e.target.value)}
+                      disabled={!canUpdate}
+                      placeholder="—"
+                    />
+                  </div>
+                ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };

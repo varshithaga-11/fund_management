@@ -273,22 +273,32 @@ class CalculateRatiosView(APIView):
                     'stock_turnover': Decimal(str(all_ratios.get('stock_turnover', 0))),
                     'gross_profit_ratio': Decimal(str(all_ratios.get('gross_profit_ratio', 0))),
                     'net_profit_ratio': Decimal(str(all_ratios.get('net_profit_ratio', 0))),
+                    'net_own_funds': Decimal(str(all_ratios.get('net_own_funds', 0))),
                     'own_fund_to_wf': Decimal(str(all_ratios.get('own_fund_to_wf', 0))),
                     'deposits_to_wf': Decimal(str(all_ratios.get('deposits_to_wf', 0))),
                     'borrowings_to_wf': Decimal(str(all_ratios.get('borrowings_to_wf', 0))),
                     'loans_to_wf': Decimal(str(all_ratios.get('loans_to_wf', 0))),
                     'investments_to_wf': Decimal(str(all_ratios.get('investments_to_wf', 0))),
+                    'earning_assets_to_wf': Decimal(str(all_ratios.get('earning_assets_to_wf', 0))),
+                    'interest_tagged_funds_to_wf': Decimal(str(all_ratios.get('interest_tagged_funds_to_wf', 0))),
                     'cost_of_deposits': Decimal(str(all_ratios.get('cost_of_deposits', 0))),
                     'yield_on_loans': Decimal(str(all_ratios.get('yield_on_loans', 0))),
                     'yield_on_investments': Decimal(str(all_ratios.get('yield_on_investments', 0))),
                     'credit_deposit_ratio': Decimal(str(all_ratios.get('credit_deposit_ratio', 0))),
                     'avg_cost_of_wf': Decimal(str(all_ratios.get('avg_cost_of_wf', 0))),
                     'avg_yield_on_wf': Decimal(str(all_ratios.get('avg_yield_on_wf', 0))),
+                    'misc_income_to_wf': Decimal(str(all_ratios.get('misc_income_to_wf', 0))),
+                    'interest_exp_to_interest_income': Decimal(str(all_ratios.get('interest_exp_to_interest_income', 0))),
                     'gross_fin_margin': Decimal(str(all_ratios.get('gross_fin_margin', 0))),
                     'operating_cost_to_wf': Decimal(str(all_ratios.get('operating_cost_to_wf', 0))),
                     'net_fin_margin': Decimal(str(all_ratios.get('net_fin_margin', 0))),
                     'risk_cost_to_wf': Decimal(str(all_ratios.get('risk_cost_to_wf', 0))),
                     'net_margin': Decimal(str(all_ratios.get('net_margin', 0))),
+                    'capital_turnover_ratio': Decimal(str(all_ratios.get('capital_turnover_ratio', 0))),
+                    'per_employee_deposit': Decimal(str(all_ratios.get('per_employee_deposit', 0))),
+                    'per_employee_loan': Decimal(str(all_ratios.get('per_employee_loan', 0))),
+                    'per_employee_contribution': Decimal(str(all_ratios.get('per_employee_contribution', 0))),
+                    'per_employee_operating_cost': Decimal(str(all_ratios.get('per_employee_operating_cost', 0))),
                     'all_ratios': all_ratios,
                     'traffic_light_status': traffic_light_statuses
                 }
@@ -300,22 +310,32 @@ class CalculateRatiosView(APIView):
                 ratio_result.stock_turnover = Decimal(str(all_ratios.get('stock_turnover', 0)))
                 ratio_result.gross_profit_ratio = Decimal(str(all_ratios.get('gross_profit_ratio', 0)))
                 ratio_result.net_profit_ratio = Decimal(str(all_ratios.get('net_profit_ratio', 0)))
+                ratio_result.net_own_funds = Decimal(str(all_ratios.get('net_own_funds', 0)))
                 ratio_result.own_fund_to_wf = Decimal(str(all_ratios.get('own_fund_to_wf', 0)))
                 ratio_result.deposits_to_wf = Decimal(str(all_ratios.get('deposits_to_wf', 0)))
                 ratio_result.borrowings_to_wf = Decimal(str(all_ratios.get('borrowings_to_wf', 0)))
                 ratio_result.loans_to_wf = Decimal(str(all_ratios.get('loans_to_wf', 0)))
                 ratio_result.investments_to_wf = Decimal(str(all_ratios.get('investments_to_wf', 0)))
+                ratio_result.earning_assets_to_wf = Decimal(str(all_ratios.get('earning_assets_to_wf', 0)))
+                ratio_result.interest_tagged_funds_to_wf = Decimal(str(all_ratios.get('interest_tagged_funds_to_wf', 0)))
                 ratio_result.cost_of_deposits = Decimal(str(all_ratios.get('cost_of_deposits', 0)))
                 ratio_result.yield_on_loans = Decimal(str(all_ratios.get('yield_on_loans', 0)))
                 ratio_result.yield_on_investments = Decimal(str(all_ratios.get('yield_on_investments', 0)))
                 ratio_result.credit_deposit_ratio = Decimal(str(all_ratios.get('credit_deposit_ratio', 0)))
                 ratio_result.avg_cost_of_wf = Decimal(str(all_ratios.get('avg_cost_of_wf', 0)))
                 ratio_result.avg_yield_on_wf = Decimal(str(all_ratios.get('avg_yield_on_wf', 0)))
+                ratio_result.misc_income_to_wf = Decimal(str(all_ratios.get('misc_income_to_wf', 0)))
+                ratio_result.interest_exp_to_interest_income = Decimal(str(all_ratios.get('interest_exp_to_interest_income', 0)))
                 ratio_result.gross_fin_margin = Decimal(str(all_ratios.get('gross_fin_margin', 0)))
                 ratio_result.operating_cost_to_wf = Decimal(str(all_ratios.get('operating_cost_to_wf', 0)))
                 ratio_result.net_fin_margin = Decimal(str(all_ratios.get('net_fin_margin', 0)))
                 ratio_result.risk_cost_to_wf = Decimal(str(all_ratios.get('risk_cost_to_wf', 0)))
                 ratio_result.net_margin = Decimal(str(all_ratios.get('net_margin', 0)))
+                ratio_result.capital_turnover_ratio = Decimal(str(all_ratios.get('capital_turnover_ratio', 0)))
+                ratio_result.per_employee_deposit = Decimal(str(all_ratios.get('per_employee_deposit', 0)))
+                ratio_result.per_employee_loan = Decimal(str(all_ratios.get('per_employee_loan', 0)))
+                ratio_result.per_employee_contribution = Decimal(str(all_ratios.get('per_employee_contribution', 0)))
+                ratio_result.per_employee_operating_cost = Decimal(str(all_ratios.get('per_employee_operating_cost', 0)))
                 ratio_result.all_ratios = all_ratios
                 ratio_result.traffic_light_status = traffic_light_statuses
                 ratio_result.save()
@@ -585,22 +605,32 @@ class UploadExcelView(APIView):
                         'stock_turnover': Decimal(str(all_ratios.get('stock_turnover', 0))),
                         'gross_profit_ratio': Decimal(str(all_ratios.get('gross_profit_ratio', 0))),
                         'net_profit_ratio': Decimal(str(all_ratios.get('net_profit_ratio', 0))),
+                        'net_own_funds': Decimal(str(all_ratios.get('net_own_funds', 0))),
                         'own_fund_to_wf': Decimal(str(all_ratios.get('own_fund_to_wf', 0))),
                         'deposits_to_wf': Decimal(str(all_ratios.get('deposits_to_wf', 0))),
                         'borrowings_to_wf': Decimal(str(all_ratios.get('borrowings_to_wf', 0))),
                         'loans_to_wf': Decimal(str(all_ratios.get('loans_to_wf', 0))),
                         'investments_to_wf': Decimal(str(all_ratios.get('investments_to_wf', 0))),
+                        'earning_assets_to_wf': Decimal(str(all_ratios.get('earning_assets_to_wf', 0))),
+                        'interest_tagged_funds_to_wf': Decimal(str(all_ratios.get('interest_tagged_funds_to_wf', 0))),
                         'cost_of_deposits': Decimal(str(all_ratios.get('cost_of_deposits', 0))),
                         'yield_on_loans': Decimal(str(all_ratios.get('yield_on_loans', 0))),
                         'yield_on_investments': Decimal(str(all_ratios.get('yield_on_investments', 0))),
                         'credit_deposit_ratio': Decimal(str(all_ratios.get('credit_deposit_ratio', 0))),
                         'avg_cost_of_wf': Decimal(str(all_ratios.get('avg_cost_of_wf', 0))),
                         'avg_yield_on_wf': Decimal(str(all_ratios.get('avg_yield_on_wf', 0))),
+                        'misc_income_to_wf': Decimal(str(all_ratios.get('misc_income_to_wf', 0))),
+                        'interest_exp_to_interest_income': Decimal(str(all_ratios.get('interest_exp_to_interest_income', 0))),
                         'gross_fin_margin': Decimal(str(all_ratios.get('gross_fin_margin', 0))),
                         'operating_cost_to_wf': Decimal(str(all_ratios.get('operating_cost_to_wf', 0))),
                         'net_fin_margin': Decimal(str(all_ratios.get('net_fin_margin', 0))),
                         'risk_cost_to_wf': Decimal(str(all_ratios.get('risk_cost_to_wf', 0))),
                         'net_margin': Decimal(str(all_ratios.get('net_margin', 0))),
+                        'capital_turnover_ratio': Decimal(str(all_ratios.get('capital_turnover_ratio', 0))),
+                        'per_employee_deposit': Decimal(str(all_ratios.get('per_employee_deposit', 0))),
+                        'per_employee_loan': Decimal(str(all_ratios.get('per_employee_loan', 0))),
+                        'per_employee_contribution': Decimal(str(all_ratios.get('per_employee_contribution', 0))),
+                        'per_employee_operating_cost': Decimal(str(all_ratios.get('per_employee_operating_cost', 0))),
                         'all_ratios': all_ratios,
                         'traffic_light_status': traffic_light_statuses
                     }

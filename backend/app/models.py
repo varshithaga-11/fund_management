@@ -229,11 +229,14 @@ class RatioResult(models.Model):
     net_profit_ratio = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
 
     # Fund Structure Ratios
+    net_own_funds = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     own_fund_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     deposits_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     borrowings_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     loans_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     investments_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    earning_assets_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    interest_tagged_funds_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
 
     # Yield & Cost Ratios
     cost_of_deposits = models.DecimalField(max_digits=15, decimal_places=2)
@@ -242,6 +245,8 @@ class RatioResult(models.Model):
     credit_deposit_ratio = models.DecimalField(max_digits=15, decimal_places=2)
     avg_cost_of_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     avg_yield_on_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    misc_income_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    interest_exp_to_interest_income = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
 
     # Margin Ratios
     gross_fin_margin = models.DecimalField(max_digits=15, decimal_places=2)
@@ -249,6 +254,15 @@ class RatioResult(models.Model):
     net_fin_margin = models.DecimalField(max_digits=15, decimal_places=2)
     risk_cost_to_wf = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     net_margin = models.DecimalField(max_digits=15, decimal_places=2)
+
+    # Capital Efficiency Ratios
+    capital_turnover_ratio = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+
+    # Productivity Ratios
+    per_employee_deposit = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    per_employee_loan = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    per_employee_contribution = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    per_employee_operating_cost = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
 
     # Store all ratios in JSON for flexibility
     all_ratios = models.JSONField(default=dict, blank=True)
