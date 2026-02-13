@@ -4,12 +4,13 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
-import { getCompanies, getCompanyPeriods, CompanyData, FinancialPeriodData } from "./api";
+import { getCompanies, getCompanyPeriods, getCompanyRatioTrends, CompanyData, FinancialPeriodData } from "./api";
 import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, TrendingUp } from "lucide-react";
 import { exportRatioAnalysisToExcel, exportRatioAnalysisToPDF } from "../../utils/exportUtils";
 import PeriodDataEditForm from "./PeriodDataEditForm";
+import TrendAnalysisChart from "./TrendAnalysisChart";
 
 const CompanyRatioAnalysis: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
@@ -17,10 +18,13 @@ const CompanyRatioAnalysis: React.FC = () => {
   const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<FinancialPeriodData | null>(null);
   const [ratios, setRatios] = useState<RatioResultData | null>(null);
+  const [ratioTrends, setRatioTrends] = useState<any[]>([]);
+  const [showTrendAnalysis, setShowTrendAnalysis] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [loadingPeriods, setLoadingPeriods] = useState(false);
   const [loadingRatios, setLoadingRatios] = useState(false);
+  const [loadingTrends, setLoadingTrends] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   // Load companies on component mount
@@ -46,6 +50,7 @@ const CompanyRatioAnalysis: React.FC = () => {
       setSelectedCompany(company);
       setSelectedPeriod(null);
       setRatios(null);
+      setShowTrendAnalysis(false);
       setLoadingPeriods(true);
 
       console.log(`Fetching periods for company: ${company.id} (${company.name})`);
@@ -53,6 +58,18 @@ const CompanyRatioAnalysis: React.FC = () => {
       console.log("Periods fetched:", periodsData);
 
       setPeriods(periodsData);
+
+      // Fetch ratio trends for the company
+      try {
+        setLoadingTrends(true);
+        const trendsData = await getCompanyRatioTrends(company.id);
+        setRatioTrends(trendsData);
+      } catch (error) {
+        console.error("Error loading trends:", error);
+        // Don't show error toast for trends as it's optional
+      } finally {
+        setLoadingTrends(false);
+      }
 
       if (periodsData.length === 0) {
         toast.info("No financial periods found for this company");
@@ -86,6 +103,8 @@ const CompanyRatioAnalysis: React.FC = () => {
     setSelectedPeriod(null);
     setRatios(null);
     setPeriods([]);
+    setRatioTrends([]);
+    setShowTrendAnalysis(false);
   };
 
   const handleBackToPeriods = () => {
@@ -190,9 +209,9 @@ const CompanyRatioAnalysis: React.FC = () => {
         )}
 
         {/* Periods Selection Screen */}
-        {selectedCompany && !selectedPeriod && (
+        {selectedCompany && !selectedPeriod && !showTrendAnalysis && (
           <div>
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center justify-between gap-3 mb-6">
               <button
                 onClick={handleBackToCompanies}
                 className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -200,6 +219,15 @@ const CompanyRatioAnalysis: React.FC = () => {
                 <ArrowLeft className="w-5 h-5" />
                 Back to Companies
               </button>
+              {ratioTrends.length > 1 && (
+                <button
+                  onClick={() => setShowTrendAnalysis(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  View Trend Analysis
+                </button>
+              )}
             </div>
 
             <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
@@ -405,6 +433,39 @@ const CompanyRatioAnalysis: React.FC = () => {
                 }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Trend Analysis Screen */}
+        {selectedCompany && showTrendAnalysis && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <button
+                onClick={() => setShowTrendAnalysis(false)}
+                className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Back to Periods
+              </button>
+            </div>
+
+            {loadingTrends ? (
+              <div className="flex items-center justify-center h-64">
+                <BeatLoader color="#3b82f6" />
+              </div>
+            ) : ratioTrends.length < 2 ? (
+              <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <p className="text-yellow-800 dark:text-yellow-200">
+                  At least 2 periods with ratio data are required for trend analysis.
+                </p>
+              </div>
+            ) : (
+              <TrendAnalysisChart
+                companyName={selectedCompany.name}
+                ratioData={ratioTrends}
+                periods={periods}
+              />
+            )}
           </div>
         )}
       </div>

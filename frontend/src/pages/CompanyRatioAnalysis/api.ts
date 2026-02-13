@@ -55,3 +55,17 @@ export const getCompanyPeriods = async (companyId: number): Promise<FinancialPer
     throw error;
   }
 };
+
+// Fetch all ratio results for all periods of a company
+export const getCompanyRatioTrends = async (companyId: number): Promise<any[]> => {
+  try {
+    const url = createApiUrl(`api/ratio-results/?period__company=${companyId}`);
+    const response = await axios.get(url, {
+      headers: await getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching ratio trends:", error);
+    throw error;
+  }
+};

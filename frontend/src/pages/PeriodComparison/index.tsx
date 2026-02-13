@@ -30,6 +30,7 @@ const PeriodComparison: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingPeriods, setLoadingPeriods] = useState(false);
   const [loadingComparison, setLoadingComparison] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadCompanies();
@@ -38,11 +39,15 @@ const PeriodComparison: React.FC = () => {
   const loadCompanies = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await getCompanies();
+      console.log("Companies loaded:", data);
       setCompanies(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading companies:", error);
-      toast.error("Failed to load companies");
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to load companies";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -143,16 +148,57 @@ const PeriodComparison: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <BeatLoader color="#3b82f6" />
-      </div>
+      <>
+        <PageMeta title="Period Comparison" description="Compare financial periods for companies" />
+        <PageBreadcrumb pageTitle="Period Comparison" />
+        <div className="flex items-center justify-center h-96">
+          <BeatLoader color="#3b82f6" />
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageMeta title="Period Comparison" description="Compare financial periods for companies" />
+        <PageBreadcrumb pageTitle="Period Comparison" />
+        <div className="p-6">
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
+          <div className="rounded-sm border border-red-500 bg-red-50 dark:bg-red-900/20 px-5 py-6 shadow-default dark:border-red-800 dark:bg-red-900/10">
+            <h3 className="mb-2 text-xl font-semibold text-red-800 dark:text-red-300">
+              Error Loading Data
+            </h3>
+            <p className="text-red-700 dark:text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                loadCompanies();
+              }}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </>
     );
   }
 
   // Step 1: Show companies
   if (!selectedCompany) {
     return (
-      <div>
+      <>
         <PageMeta title="Period Comparison" description="Compare financial periods for companies" />
         <PageBreadcrumb pageTitle="Period Comparison" />
 
@@ -168,35 +214,45 @@ const PeriodComparison: React.FC = () => {
           pauseOnHover
         />
 
-        <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-          <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
-            Select Company
-          </h3>
+        <div className="p-6">
+          <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+            <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
+              Select Company
+            </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {companies.map((company) => (
-              <button
-                key={company.id}
-                onClick={() => handleSelectCompany(company)}
-                className="p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:border-gray-600 dark:hover:bg-gray-700 transition text-left"
-              >
-                <h4 className="font-semibold text-gray-900 dark:text-white">
-                  {company.name}
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Reg: {company.registration_no}
+            {companies.length === 0 ? (
+              <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <p className="text-yellow-800 dark:text-yellow-200">
+                  No companies found. Please add a company first.
                 </p>
-              </button>
-            ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {companies.map((company) => (
+                  <button
+                    key={company.id}
+                    onClick={() => handleSelectCompany(company)}
+                    className="p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:border-gray-600 dark:hover:bg-gray-700 transition text-left"
+                  >
+                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                      {company.name}
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Reg: {company.registration_no}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Step 2: Show period selection (with results below if available)
   return (
-    <div>
+    <>
       <PageMeta 
         title={"Period Comparison"} 
         description={"Compare financial periods and analyze ratio changes"} 
@@ -215,30 +271,31 @@ const PeriodComparison: React.FC = () => {
         pauseOnHover
       />
 
-      <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-        <button
-          onClick={handleBack}
-          className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+      <div className="p-6">
+        <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+          <button
+            onClick={handleBack}
+            className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
 
-        <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
-          {comparisonData ? comparisonData.data.company : `Compare Periods for ${selectedCompany.name}`}
-        </h3>
+          <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
+            {comparisonData ? comparisonData.data.company : `Compare Periods for ${selectedCompany.name}`}
+          </h3>
 
-        {loadingPeriods ? (
-          <div className="flex items-center justify-center h-96">
-            <BeatLoader color="#3b82f6" />
-          </div>
-        ) : periods.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">
-            No financial periods available for this company
-          </p>
-        ) : (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {loadingPeriods ? (
+            <div className="flex items-center justify-center h-96">
+              <BeatLoader color="#3b82f6" />
+            </div>
+          ) : periods.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">
+              No financial periods available for this company
+            </p>
+          ) : (
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Period 1 Dropdown */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -492,6 +549,153 @@ const PeriodComparison: React.FC = () => {
                     </p>
                   )}
 
+                  {/* Variance Analysis Summary */}
+                  {Object.keys(comparisonData.data.ratios).length > 0 && (
+                    <div className="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
+                      <h5 className="mb-6 text-lg font-semibold text-black dark:text-white">
+                        Variance Analysis
+                      </h5>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        {/* Variance Statistics */}
+                        {(() => {
+                          const ratios = comparisonData.data.ratios;
+                          let totalAbsoluteChange = 0;
+                          let totalPercentChange = 0;
+                          let favorableCount = 0;
+                          let unfavorableCount = 0;
+                          let validRatioCount = 0;
+
+                          Object.entries(ratios).forEach(([_, ratioData]) => {
+                            if (
+                              ratioData.difference !== null &&
+                              ratioData.percentage_change !== null &&
+                              ratioData.period1 !== null
+                            ) {
+                              validRatioCount++;
+                              totalAbsoluteChange += Math.abs(ratioData.difference);
+                              totalPercentChange += Math.abs(ratioData.percentage_change);
+                              
+                              // Determine if change is favorable (typically positive is good, but depends on ratio type)
+                              if (ratioData.percentage_change > 0) {
+                                favorableCount++;
+                              } else if (ratioData.percentage_change < 0) {
+                                unfavorableCount++;
+                              }
+                            }
+                          });
+
+                          const avgAbsoluteChange = validRatioCount > 0 ? totalAbsoluteChange / validRatioCount : 0;
+                          const avgPercentChange = validRatioCount > 0 ? totalPercentChange / validRatioCount : 0;
+
+                          return (
+                            <>
+                              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <p className="text-sm text-blue-700 dark:text-blue-400 mb-2">Average Absolute Change</p>
+                                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">
+                                  {avgAbsoluteChange.toFixed(2)}
+                                </p>
+                              </div>
+
+                              <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <p className="text-sm text-purple-700 dark:text-purple-400 mb-2">Average % Change</p>
+                                <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">
+                                  {avgPercentChange.toFixed(2)}%
+                                </p>
+                              </div>
+
+                              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                                <p className="text-sm text-green-700 dark:text-green-400 mb-2">Positive Changes</p>
+                                <p className="text-2xl font-bold text-green-900 dark:text-green-300">
+                                  {favorableCount}
+                                </p>
+                                <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                                  {validRatioCount > 0 ? ((favorableCount / validRatioCount) * 100).toFixed(1) : 0}%
+                                </p>
+                              </div>
+
+                              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                                <p className="text-sm text-red-700 dark:text-red-400 mb-2">Negative Changes</p>
+                                <p className="text-2xl font-bold text-red-900 dark:text-red-300">
+                                  {unfavorableCount}
+                                </p>
+                                <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+                                  {validRatioCount > 0 ? ((unfavorableCount / validRatioCount) * 100).toFixed(1) : 0}%
+                                </p>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Variance Detail Table */}
+                      <div className="overflow-x-auto mt-6">
+                        <h6 className="mb-4 font-semibold text-gray-900 dark:text-white">Variance Details</h6>
+                        <table className="w-full table-auto border-collapse text-sm">
+                          <thead>
+                            <tr className="bg-gray-100 dark:bg-gray-800">
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
+                                Ratio
+                              </th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-right font-semibold text-gray-900 dark:text-white">
+                                Absolute Change
+                              </th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-right font-semibold text-gray-900 dark:text-white">
+                                % Change
+                              </th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                                Variance Type
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(comparisonData.data.ratios).map(([ratioName, ratioData]) => {
+                              const isPositive = (ratioData.percentage_change ?? 0) > 0;
+                              const varianceType = isPositive ? "Favorable" : "Unfavorable";
+                              const varianceColor = isPositive 
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
+                                : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+
+                              return (
+                                <tr
+                                  key={ratioName}
+                                  className="border-b border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white font-medium">
+                                    {formatRatioName(ratioName)}
+                                  </td>
+                                  <td className={`border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold ${getChangeColor(
+                                    ratioData.difference
+                                  )}`}>
+                                    {ratioData.difference !== null
+                                      ? ratioData.difference > 0
+                                        ? `+${ratioData.difference.toFixed(2)}`
+                                        : ratioData.difference.toFixed(2)
+                                      : "-"}
+                                  </td>
+                                  <td className={`border border-gray-300 dark:border-gray-600 px-4 py-3 text-right font-semibold ${getChangeColor(
+                                    ratioData.percentage_change
+                                  )}`}>
+                                    {ratioData.percentage_change !== null
+                                      ? ratioData.percentage_change > 0
+                                        ? `+${ratioData.percentage_change.toFixed(2)}%`
+                                        : `${ratioData.percentage_change.toFixed(2)}%`
+                                      : "-"}
+                                  </td>
+                                  <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${varianceColor}`}>
+                                      {varianceType}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-6">
                     <Button
                       onClick={handleBackFromComparison}
@@ -503,10 +707,11 @@ const PeriodComparison: React.FC = () => {
                 </div>
               </>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
