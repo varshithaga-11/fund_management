@@ -30,6 +30,7 @@ urlpatterns = [
     path('periods/<int:period_id>/calculate-ratios/', CalculateRatiosView.as_view(), name='calculate-ratios'),
     path('upload-excel/', UploadExcelView.as_view(), name='upload-excel'),
     path('ratio-benchmarks/', RatioBenchmarksView.as_view(), name='ratio-benchmarks'),
+    path('period-comparison/', PeriodComparisonView.as_view(), name='period-comparison'),
     path('download-excel-template/', DownloadExcelTemplateView.as_view(), name='download-excel-template'),
     path('download-word-template/', DownloadWordTemplateView.as_view(), name='download-word-template'),
     # path('sendotp/', SendOtpView.as_view(),name='sendotp'),

@@ -2506,3 +2506,241 @@ class DownloadWordTemplateView(APIView):
                 "status": "failed",
                 "message": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PeriodComparisonView(APIView):
+    """
+    Compare financial ratios between two periods of the same company.
+    
+    Query Parameters:
+        - company_id: ID of the company
+        - period1: Label of the first period (e.g., "2024", "FY-2023-24")
+        - period2: Label of the second period (e.g., "2025", "FY-2024-25")
+    
+    Returns:
+        {
+            "company": "Company Name",
+            "period1": "2024",
+            "period2": "2025",
+            "ratios": {
+                "ratio_name": {
+                    "period1": 1.8,
+                    "period2": 2.1,
+                    "difference": 0.3,
+                    "percentage_change": 16.67
+                }
+            }
+        }
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def _convert_decimal(self, value):
+        """Safely convert Decimal to float, handling None values."""
+        if value is None:
+            return None
+        if isinstance(value, Decimal):
+            return float(value)
+        return value
+    
+    def _calculate_percentage_change(self, period1_value, period2_value):
+        """Calculate percentage change safely."""
+        if period1_value is None or period2_value is None:
+            return None
+        if period1_value == 0:
+            return None  # Can't calculate percentage change from zero
+        
+        try:
+            change = Decimal(str(period2_value)) - Decimal(str(period1_value))
+            percentage = (change / Decimal(str(period1_value))) * Decimal(100)
+            return float(round(percentage, 2))
+        except Exception:
+            return None
+    
+    def _format_ratio_comparison(self, ratio_name, period1_value, period2_value):
+        """Format a single ratio comparison."""
+        p1_val = self._convert_decimal(period1_value)
+        p2_val = self._convert_decimal(period2_value)
+        
+        # Skip if both values are None
+        if p1_val is None and p2_val is None:
+            return None
+        
+        difference = None
+        if p1_val is not None and p2_val is not None:
+            difference = round(float(p2_val) - float(p1_val), 2)
+        
+        percentage_change = self._calculate_percentage_change(period1_value, period2_value)
+        
+        return {
+            "period1": p1_val,
+            "period2": p2_val,
+            "difference": difference,
+            "percentage_change": percentage_change
+        }
+    
+    def get(self, request):
+        """Fetch and compare ratios between two periods."""
+        try:
+            # Get query parameters
+            company_id = request.query_params.get("company_id")
+            period1_label = request.query_params.get("period1")
+            period2_label = request.query_params.get("period2")
+            
+            # Validate required parameters
+            if not all([company_id, period1_label, period2_label]):
+                return Response(
+                    {
+                        "status": "failed",
+                        "response_code": status.HTTP_400_BAD_REQUEST,
+                        "message": "Missing required parameters: company_id, period1, period2"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate company exists
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                return Response(
+                    {
+                        "status": "failed",
+                        "response_code": status.HTTP_404_NOT_FOUND,
+                        "message": f"Company with ID {company_id} not found"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Fetch periods
+            try:
+                period1 = FinancialPeriod.objects.get(
+                    company=company,
+                    label=period1_label
+                )
+            except FinancialPeriod.DoesNotExist:
+                return Response(
+                    {
+                        "status": "failed",
+                        "response_code": status.HTTP_404_NOT_FOUND,
+                        "message": f"Period '{period1_label}' not found for company '{company.name}'"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            try:
+                period2 = FinancialPeriod.objects.get(
+                    company=company,
+                    label=period2_label
+                )
+            except FinancialPeriod.DoesNotExist:
+                return Response(
+                    {
+                        "status": "failed",
+                        "response_code": status.HTTP_404_NOT_FOUND,
+                        "message": f"Period '{period2_label}' not found for company '{company.name}'"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Fetch ratio results for both periods
+            try:
+                ratios_period1 = RatioResult.objects.get(period=period1)
+            except RatioResult.DoesNotExist:
+                return Response(
+                    {
+                        "status": "failed",
+                        "response_code": status.HTTP_404_NOT_FOUND,
+                        "message": f"No ratio data found for period '{period1_label}'"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            try:
+                ratios_period2 = RatioResult.objects.get(period=period2)
+            except RatioResult.DoesNotExist:
+                return Response(
+                    {
+                        "status": "failed",
+                        "response_code": status.HTTP_404_NOT_FOUND,
+                        "message": f"No ratio data found for period '{period2_label}'"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Key ratios to compare (from RatioResult model)
+            ratio_fields = [
+                # Trading Ratios
+                "stock_turnover",
+                "gross_profit_ratio",
+                "net_profit_ratio",
+                # Fund Structure Ratios
+                "own_fund_to_wf",
+                "deposits_to_wf",
+                "borrowings_to_wf",
+                "loans_to_wf",
+                "investments_to_wf",
+                # Yield & Cost Ratios
+                "cost_of_deposits",
+                "yield_on_loans",
+                "yield_on_investments",
+                "credit_deposit_ratio",
+                "avg_cost_of_wf",
+                "avg_yield_on_wf",
+                # Margin Ratios
+                "gross_fin_margin",
+                "operating_cost_to_wf",
+                "net_fin_margin",
+                "risk_cost_to_wf",
+                "net_margin",
+                # Working Fund
+                "working_fund",
+            ]
+            
+            # Build comparison data
+            ratios_comparison = {}
+            
+            # Compare each predefined ratio field
+            for field in ratio_fields:
+                value1 = getattr(ratios_period1, field, None)
+                value2 = getattr(ratios_period2, field, None)
+                
+                formatted = self._format_ratio_comparison(field, value1, value2)
+                if formatted is not None:
+                    ratios_comparison[field] = formatted
+            
+            # Include additional ratios from all_ratios JSON field if available
+            if ratios_period1.all_ratios and isinstance(ratios_period1.all_ratios, dict):
+                if ratios_period2.all_ratios and isinstance(ratios_period2.all_ratios, dict):
+                    for ratio_name in ratios_period1.all_ratios.keys():
+                        if ratio_name not in ratios_comparison:  # Don't override main fields
+                            value1 = ratios_period1.all_ratios.get(ratio_name)
+                            value2 = ratios_period2.all_ratios.get(ratio_name)
+                            
+                            formatted = self._format_ratio_comparison(ratio_name, value1, value2)
+                            if formatted is not None:
+                                ratios_comparison[ratio_name] = formatted
+            
+            # Return comparison data
+            return Response(
+                {
+                    "status": "success",
+                    "response_code": status.HTTP_200_OK,
+                    "data": {
+                        "company": company.name,
+                        "period1": period1_label,
+                        "period2": period2_label,
+                        "ratios": ratios_comparison
+                    }
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        except Exception as e:
+            logger.error(f"Error in PeriodComparisonView: {str(e)}")
+            return Response(
+                {
+                    "status": "failed",
+                    "response_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "message": "An error occurred while comparing periods"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

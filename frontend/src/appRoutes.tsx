@@ -21,10 +21,6 @@ const Calendar = lazy(() => import("./pages/Calendar"));
 const MasterLayout = lazy(() => import("./layout/MasterLayout/MasterLayout"));
 const Blank = lazy(() => import("./pages/Blank"));
 
-import UserManagementPage from "./pages/UserManagement/index";
-
-
-
 import CompanyPage from "./pages/Companies/Company";
 const FinancialPeriodPage = lazy(() => import("./pages/FinancialStatements/FinancialPeriodPage"));
 const UploadDataPage = lazy(() => import("./pages/FinancialStatements/UploadDataPage"));
@@ -36,6 +32,7 @@ const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/Productivi
 const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
 const RatioBenchmarksPage = lazy(() => import("./pages/RatioAnalysis/RatioBenchmarksPage"));
 const CompanyRatioAnalysis = lazy(() => import("./pages/CompanyRatioAnalysis"));
+const PeriodComparison = lazy(() => import("./pages/PeriodComparison"));
 
 
 const LoadingSpinner = () => (
@@ -74,6 +71,7 @@ export function appRoutes() {
             <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
             <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
             <Route path="company-ratio-analysis" element={<CompanyRatioAnalysis />} />
+            <Route path="period-comparison" element={<PeriodComparison />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
