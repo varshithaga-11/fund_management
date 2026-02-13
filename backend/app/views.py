@@ -2703,11 +2703,14 @@ class PeriodComparisonView(APIView):
                 "gross_profit_ratio",
                 "net_profit_ratio",
                 # Fund Structure Ratios
+                "net_own_funds",
                 "own_fund_to_wf",
                 "deposits_to_wf",
                 "borrowings_to_wf",
                 "loans_to_wf",
                 "investments_to_wf",
+                "earning_assets_to_wf",
+                "interest_tagged_funds_to_wf",
                 # Yield & Cost Ratios
                 "cost_of_deposits",
                 "yield_on_loans",
@@ -2715,12 +2718,21 @@ class PeriodComparisonView(APIView):
                 "credit_deposit_ratio",
                 "avg_cost_of_wf",
                 "avg_yield_on_wf",
+                "misc_income_to_wf",
+                "interest_exp_to_interest_income",
                 # Margin Ratios
                 "gross_fin_margin",
                 "operating_cost_to_wf",
                 "net_fin_margin",
                 "risk_cost_to_wf",
                 "net_margin",
+                # Capital Efficiency Ratios
+                "capital_turnover_ratio",
+                # Productivity Ratios
+                "per_employee_deposit",
+                "per_employee_loan",
+                "per_employee_contribution",
+                "per_employee_operating_cost",
                 # Working Fund
                 "working_fund",
             ]

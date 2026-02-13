@@ -15,11 +15,14 @@ const RATIO_CATEGORIES = {
     "net_profit_ratio",
   ],
   "Fund Structure": [
+    "net_own_funds",
     "own_fund_to_wf",
     "deposits_to_wf",
     "borrowings_to_wf",
     "loans_to_wf",
     "investments_to_wf",
+    "earning_assets_to_wf",
+    "interest_tagged_funds_to_wf",
   ],
   "Yield & Cost": [
     "cost_of_deposits",
@@ -28,6 +31,8 @@ const RATIO_CATEGORIES = {
     "credit_deposit_ratio",
     "avg_cost_of_wf",
     "avg_yield_on_wf",
+    "misc_income_to_wf",
+    "interest_exp_to_interest_income",
   ],
   "Margin Analysis": [
     "gross_fin_margin",
@@ -35,6 +40,15 @@ const RATIO_CATEGORIES = {
     "net_fin_margin",
     "risk_cost_to_wf",
     "net_margin",
+  ],
+  "Capital Efficiency": [
+    "capital_turnover_ratio",
+  ],
+  "Productivity Analysis": [
+    "per_employee_deposit",
+    "per_employee_loan",
+    "per_employee_contribution",
+    "per_employee_operating_cost",
   ],
 };
 
@@ -222,21 +236,19 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => setChartType("line")}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-                  chartType === "line"
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "line"
                     ? "bg-blue-500 text-white"
                     : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
-                }`}
+                  }`}
               >
                 Line
               </button>
               <button
                 onClick={() => setChartType("bar")}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-                  chartType === "bar"
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "bar"
                     ? "bg-blue-500 text-white"
                     : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
-                }`}
+                  }`}
               >
                 Bar
               </button>
@@ -257,9 +269,8 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                   {selectedRatios.length} ratio{selectedRatios.length !== 1 ? "s" : ""} selected
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    expandedDropdown ? "rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 transition-transform ${expandedDropdown ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
@@ -397,9 +408,8 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Change:</span>
                     <span
-                      className={`font-semibold ${
-                        change >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
+                      className={`font-semibold ${change >= 0 ? "text-green-600" : "text-red-600"
+                        }`}
                     >
                       {change >= 0 ? "+" : ""}{change.toFixed(2)} ({percentChange.toFixed(1)}%)
                     </span>
