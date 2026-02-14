@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
-import { getCompanies, getCompanyPeriodsList, getCompanyRatioTrends, RatioCategory, CompanyData, PeriodListData } from "./api";
+import { getCompanies, getCompanyPeriodsList, getCompanyRatioTrends, RatioCategory, CompanyData, PeriodWithRatiosData } from "./api";
 import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
 import { ArrowLeft, Download, TrendingUp } from "lucide-react";
@@ -15,8 +15,8 @@ import TrendAnalysisChart from "./TrendAnalysisChart";
 const CompanyRatioAnalysis: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<CompanyData | null>(null);
-  const [periods, setPeriods] = useState<PeriodListData[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodListData | null>(null);
+  const [periods, setPeriods] = useState<PeriodWithRatiosData[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodWithRatiosData | null>(null);
   const [ratios, setRatios] = useState<RatioResultData | null>(null);
   const [ratioTrends, setRatioTrends] = useState<any[]>([]);
   const [showTrendAnalysis, setShowTrendAnalysis] = useState(false);
@@ -56,11 +56,14 @@ const CompanyRatioAnalysis: React.FC = () => {
       console.log(`Fetching periods for company: ${company.id} (${company.name})`);
       const periodsData = await getCompanyPeriodsList(company.id);
       console.log("Periods fetched:", periodsData);
+      console.log(`Periods with ratio data: ${periodsData.filter(p => p.ratios != null).length} / ${periodsData.length}`);
 
       setPeriods(periodsData);
 
       if (periodsData.length === 0) {
         toast.info("No financial periods found for this company");
+      } else if (periodsData.filter(p => p.ratios != null).length === 0) {
+        toast.warning("Periods found but ratio data is not available yet. Please calculate ratios first.");
       }
     } catch (error: any) {
       console.error("Error loading periods:", error);
@@ -78,11 +81,35 @@ const CompanyRatioAnalysis: React.FC = () => {
       return;
     }
 
+    // Validate we have enough periods with ratio data
+    if (periods.length < 2) {
+      toast.error("At least 2 periods are required for trend analysis");
+      return;
+    }
+
+    const periodsWithRatios = periods.filter(p => p.ratios != null);
+    console.log(`Trend analysis validation: ${periodsWithRatios.length} periods with ratios out of ${periods.length} total`);
+    console.log("Periods with ratios:", periodsWithRatios);
+    
+    if (periodsWithRatios.length < 2) {
+      toast.error("At least 2 periods with ratio data are required for trend analysis");
+      return;
+    }
+
     try {
       setLoadingTrends(true);
       setShowTrendAnalysis(true);
-      // Call API with optional category filter (for future optimization)
+      // Call API with optional category filter
       const trendsData = await getCompanyRatioTrends(selectedCompany.id, category);
+      console.log("Trend data received from API:", trendsData);
+      
+      if (!trendsData || trendsData.length < 2) {
+        console.warn("Insufficient trend data received:", trendsData);
+        toast.warning("Insufficient data to display trends. Please ensure multiple periods are available.");
+        setShowTrendAnalysis(false);
+        return;
+      }
+      
       setRatioTrends(trendsData);
     } catch (error) {
       console.error("Error loading trends:", error);
@@ -93,13 +120,21 @@ const CompanyRatioAnalysis: React.FC = () => {
     }
   };
 
-  const handleSelectPeriod = async (period: PeriodListData) => {
+  const handleSelectPeriod = async (period: PeriodWithRatiosData) => {
     try {
       setSelectedPeriod(period);
       setLoadingRatios(true);
 
-      const ratioData = await getRatioResults(period.id);
-      setRatios(ratioData);
+      // Ratios are already loaded with the period data from the optimized dashboard API
+      // No additional API call needed - significant performance improvement!
+      if (period.ratios) {
+        setRatios(period.ratios);
+      } else {
+        // Fallback to old API in case ratios are missing (backward compatibility)
+        console.warn("Ratios not found in period data, falling back to separate API call");
+        const ratioData = await getRatioResults(period.id);
+        setRatios(ratioData);
+      }
     } catch (error) {
       console.error("Error loading ratio data:", error);
       toast.error("Failed to load ratio data");
@@ -229,11 +264,12 @@ const CompanyRatioAnalysis: React.FC = () => {
                 <ArrowLeft className="w-5 h-5" />
                 Back to Companies
               </button>
-              {periods.length > 1 && (
+              {periods.length > 1 && periods.filter(p => p.ratios != null).length >= 2 && (
                 <button
                   onClick={() => handleViewTrendAnalysis()}
                   disabled={loadingTrends}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Compare ratio metrics across multiple periods"
                 >
                   <TrendingUp className="w-4 h-4" />
                   {loadingTrends ? "Loading..." : "View Trend Analysis"}
@@ -246,6 +282,11 @@ const CompanyRatioAnalysis: React.FC = () => {
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               Select a period to view ratio analysis
+              {periods.length > 0 && (
+                <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded inline-block">
+                  {periods.filter(p => p.ratios != null).length}/{periods.length} with ratios
+                </span>
+              )}
             </p>
 
             {loadingPeriods ? (
@@ -464,11 +505,22 @@ const CompanyRatioAnalysis: React.FC = () => {
               <div className="flex items-center justify-center h-64">
                 <BeatLoader color="#3b82f6" />
               </div>
-            ) : ratioTrends.length < 2 ? (
-              <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <p className="text-yellow-800 dark:text-yellow-200">
+            ) : !ratioTrends || ratioTrends.length < 2 ? (
+              <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <p className="text-yellow-800 dark:text-yellow-200 font-medium mb-2">
+                  ⚠️ Insufficient Data
+                </p>
+                <p className="text-yellow-700 dark:text-yellow-300 text-sm mb-3">
                   At least 2 periods with ratio data are required for trend analysis.
                 </p>
+                <div className="bg-yellow-100 dark:bg-yellow-900/40 p-3 rounded text-xs text-yellow-700 dark:text-yellow-300">
+                  <p><strong>Available periods:</strong> {ratioTrends?.length || 0} of {periods.length}</p>
+                  <p className="mt-2">
+                    {periods.filter(p => p.ratios != null).length < 2 
+                      ? "Periods found but ratios not calculated. Select periods above and calculate ratios first." 
+                      : "Ensure selected periods have completed ratio calculations."}
+                  </p>
+                </div>
               </div>
             ) : (
               <TrendAnalysisChart

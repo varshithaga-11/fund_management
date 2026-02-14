@@ -90,12 +90,72 @@ const PeriodComparison: React.FC = () => {
     try {
       setLoadingComparison(true);
       // Use period IDs instead of labels for faster API calls
-      const data = await comparePeriodsById(
+      const rawData = await comparePeriodsById(
         selectedPeriod1.id,
         selectedPeriod2.id
       );
-      setComparisonData(data);
-      toast.success("Comparison loaded successfully");
+      
+      console.log("Raw API response:", rawData);
+      
+      // Transform API response to match component expectations
+      if (rawData.data && rawData.data.period_1 && rawData.data.period_2 && rawData.data.difference) {
+        const period1 = rawData.data.period_1;
+        const period2 = rawData.data.period_2;
+        const difference = rawData.data.difference;
+        
+        // List of all ratio fields to compare - ONLY fields that exist in RatioResult model
+        const ratioFields = [
+          // Trading Ratios (3)
+          'stock_turnover', 'gross_profit_ratio', 'net_profit_ratio',
+          // Fund Structure Ratios (8)
+          'net_own_funds', 'own_fund_to_wf', 'deposits_to_wf', 'borrowings_to_wf',
+          'loans_to_wf', 'investments_to_wf', 'earning_assets_to_wf', 'interest_tagged_funds_to_wf',
+          // Yield & Cost Ratios (8)
+          'cost_of_deposits', 'yield_on_loans', 'yield_on_investments', 'credit_deposit_ratio',
+          'avg_cost_of_wf', 'avg_yield_on_wf', 'misc_income_to_wf', 'interest_exp_to_interest_income',
+          // Margin Ratios (5)
+          'gross_fin_margin', 'operating_cost_to_wf', 'net_fin_margin', 'risk_cost_to_wf', 'net_margin',
+          // Capital Efficiency (1)
+          'capital_turnover_ratio',
+          // Productivity Ratios (4)
+          'per_employee_deposit', 'per_employee_loan', 'per_employee_contribution', 'per_employee_operating_cost',
+          // Working Fund (1)
+          'working_fund'
+        ];
+        
+        // Build ratios object for component
+        const ratios: any = {};
+        ratioFields.forEach((field) => {
+          const p1Value = period1[field] !== undefined ? period1[field] : null;
+          const p2Value = period2[field] !== undefined ? period2[field] : null;
+          const diff = difference[field];
+          
+          ratios[field] = {
+            period1: p1Value,
+            period2: p2Value,
+            difference: diff ? diff.value : null,
+            percentage_change: diff ? diff.percentage_change : null
+          };
+        });
+        
+        // Transform to component format
+        const transformedData: PeriodComparisonResponse = {
+          status: rawData.status,
+          response_code: rawData.response_code,
+          data: {
+            period1: selectedPeriod1.label,
+            period2: selectedPeriod2.label,
+            company: selectedCompany.name,
+            ratios
+          }
+        };
+        
+        console.log("Transformed comparison data:", transformedData);
+        setComparisonData(transformedData);
+        toast.success("Comparison loaded successfully");
+      } else {
+        throw new Error("Invalid response structure from API");
+      }
     } catch (error: any) {
       console.error("Error comparing periods:", error);
       const errorMessage =

@@ -35,6 +35,13 @@ export interface PeriodListData {
   created_at: string;
 }
 
+// Extended period data with ratio information from dashboard
+export interface PeriodWithRatiosData extends PeriodListData {
+  net_revenue: number;
+  net_profit: number;
+  ratios: any; // Full RatioResultData structure
+}
+
 // Fetch all companies
 export const getCompanies = async (): Promise<CompanyData[]> => {
   try {
@@ -70,15 +77,45 @@ export const getCompanyPeriods = async (companyId: number): Promise<FinancialPer
   }
 };
 
-// Fetch lightweight period list for a specific company (minimal fields only - no financial data)
-export const getCompanyPeriodsList = async (companyId: number): Promise<PeriodListData[]> => {
+// NEW: Fetch periods with ratio data for a company using optimized dashboard endpoint
+export const getCompanyPeriodsWithRatios = async (companyId: number): Promise<PeriodWithRatiosData[]> => {
   try {
-    const fields = "id,label,period_type,company,start_date,end_date,is_finalized,uploaded_file,file_type,created_at";
-    const url = createApiUrl(`api/financial-periods/?company=${companyId}&fields=${fields}`);
+    const url = createApiUrl(`api/dashboard/?company=${companyId}&period=all&include_ratios=true`);
+    console.log(`Fetching periods with ratios from: ${url}`);
     const response = await axios.get(url, {
       headers: await getAuthHeaders(),
     });
-    return response.data;
+    
+    console.log("Dashboard API response:", response.data);
+    
+    // Extract periods from company_data response
+    if (response.data?.data?.company_data && response.data.data.company_data.length > 0) {
+      const periods = response.data.data.company_data[0]?.periods || [];
+      console.log(`Extracted ${periods.length} periods from dashboard API`);
+      periods.forEach((p: any, idx: number) => {
+        console.log(`Period ${idx}:`, { label: p.label, has_ratios: !!p.ratios, ratios_keys: p.ratios ? Object.keys(p.ratios) : [] });
+      });
+      return periods;
+    }
+    console.warn("No company_data found in dashboard response");
+    return [];
+  } catch (error: any) {
+    console.error(`Error fetching periods with ratios for company ${companyId}:`, error);
+    console.error("Error response data:", error?.response?.data);
+    throw error;
+  }
+};
+
+// Fetch lightweight period list for a specific company (minimal fields only - no financial data)
+// NOTE: This now returns periods WITH ratio data loaded from the optimized dashboard endpoint
+export const getCompanyPeriodsList = async (companyId: number): Promise<PeriodWithRatiosData[]> => {
+  try {
+    // Use the optimized dashboard endpoint with include_ratios to get all needed data in one call
+    const periodsWithRatios = await getCompanyPeriodsWithRatios(companyId);
+    
+    // Return the periods with ratios already loaded
+    // This eliminates the need for a second API call when a period is selected
+    return periodsWithRatios;
   } catch (error: any) {
     console.error(`Error fetching period list for company ${companyId}:`, error);
     throw error;
@@ -101,19 +138,47 @@ export const getCompanyRatioTrends = async (
   category?: RatioCategory
 ): Promise<any[]> => {
   try {
-    let url = createApiUrl(`api/ratio-results/?period__company=${companyId}`);
-    
-    // Add category filter if provided
+    // Use dashboard endpoint to get detailed ratio data across all periods
+    // Pass category parameter for filtering if provided
+    let url = createApiUrl(`api/dashboard/?company=${companyId}&period=all&include_ratios=true`);
     if (category) {
       url += `&category=${encodeURIComponent(category)}`;
     }
     
+    console.log(`Fetching trend data from: ${url}`);
     const response = await axios.get(url, {
       headers: await getAuthHeaders(),
     });
-    return response.data;
-  } catch (error) {
+    
+    console.log("Trend data API response:", response.data);
+    
+    // Extract periods from company_data response
+    if (response.data?.data?.company_data && response.data.data.company_data.length > 0) {
+      const periods = response.data.data.company_data[0]?.periods || [];
+      console.log(`Trend data: Extracted ${periods.length} periods`);
+      
+      // Filter periods with ratio data AND transform to flat structure
+      // Chart expects: { period: id, stock_turnover: value, ... }
+      // Not: { id, label, ratios: { stock_turnover: value, ... } }
+      const trendData = periods
+        .filter((p: any) => p.ratios != null)
+        .map((p: any) => ({
+          period: p.id,
+          period_label: p.label,
+          ...p.ratios  // Flatten ratio fields into root object
+        }));
+      
+      console.log(`Trend data: Flattened to ${trendData.length} periods for chart`);
+      console.log("Transformed trend data:", trendData);
+      
+      return trendData;
+    }
+    
+    console.warn("No company_data found in trend data response");
+    return [];
+  } catch (error: any) {
     console.error("Error fetching ratio trends:", error);
+    console.error("Error response data:", error?.response?.data);
     throw error;
   }
 };

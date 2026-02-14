@@ -2789,6 +2789,622 @@ class PeriodComparisonView(APIView):
 
 
 
+class DashboardView(APIView):
+    """
+    Dashboard endpoint for aggregated financial metrics.
+    
+    Query Parameters:
+        - company: 'all' (all companies) or company_id (specific company)
+        - period: 'all' (all periods) or MONTHLY/QUARTERLY/YEARLY (specific period type)
+        - include_ratios: 'true' to include full RatioResult data for each period (default: false)
+    
+    Returns:
+        Default (aggregated metrics):
+        {
+            "total_revenue": 90000,
+            "avg_profit_margin": 66,
+            "growth_rate": 77,
+            "company_data": [
+                {
+                    "company_id": 3,
+                    "company_name": "Canara Bank",
+                    "periods": {
+                        "2023-23": {
+                            "net_revenue": 4500,
+                            "net_profit": 1200,
+                            "period_type": "YEARLY",
+                            "is_finalized": true,
+                            "created_at": "2026-02-15T10:30:00Z"
+                        },
+                        "2024-25": {
+                            "net_revenue": 5000,
+                            "net_profit": 1500,
+                            "period_type": "YEARLY",
+                            "is_finalized": true,
+                            "created_at": "2026-02-14T09:15:00Z"
+                        }
+                    }
+                }
+            ]
+        }
+        
+        With include_ratios=true (detailed ratio analysis):
+        {
+            "company_data": [
+                {
+                    "company_id": 3,
+                    "company_name": "Canara Bank",
+                    "periods": [
+                        {
+                            "id": 5,
+                            "company": 3,
+                            "label": "2023-23",
+                            "period_type": "YEARLY",
+                            "start_date": "2023-04-01",
+                            "end_date": "2024-03-31",
+                            "is_finalized": true,
+                            "uploaded_file": "media/company_financials/...",
+                            "file_type": "excel",
+                            "created_at": "2026-02-15T10:30:00Z",
+                            "net_revenue": 4500,
+                            "net_profit": 1200,
+                            "ratios": { ... full RatioResult data ... }
+                        }
+                    ]
+                }
+            ]
+        }
+    """
+    permission_classes = [IsAuthenticated]
+    
+    # Define category to fields mapping
+    CATEGORY_FIELDS = {
+        "Trading Ratios": [
+            "stock_turnover", "gross_profit_ratio", "net_profit_ratio"
+        ],
+        "Capital Ratios": [
+            "own_fund_to_wf"
+        ],
+        "Fund Structure": [
+            "net_own_funds", "deposits_to_wf", "borrowings_to_wf", "loans_to_wf",
+            "investments_to_wf", "earning_assets_to_wf", "interest_tagged_funds_to_wf"
+        ],
+        "Yield & Cost": [
+            "cost_of_deposits", "yield_on_loans", "yield_on_investments", "credit_deposit_ratio",
+            "avg_cost_of_wf", "avg_yield_on_wf", "misc_income_to_wf", "interest_exp_to_interest_income"
+        ],
+        "Margin Analysis": [
+            "gross_fin_margin", "operating_cost_to_wf", "net_fin_margin", "risk_cost_to_wf", "net_margin"
+        ],
+        "Capital Efficiency": [
+            "capital_turnover_ratio"
+        ],
+        "Productivity Analysis": [
+            "per_employee_deposit", "per_employee_loan", "per_employee_contribution", "per_employee_operating_cost"
+        ]
+    }
+    
+    def _get_filtered_ratios(self, ratio_result, category=None):
+        """Filter ratio fields by category if specified"""
+        ratios = {
+            "id": ratio_result.id,
+            "working_fund": float(ratio_result.working_fund or 0),
+            "stock_turnover": float(ratio_result.stock_turnover or 0),
+            "gross_profit_ratio": float(ratio_result.gross_profit_ratio or 0),
+            "net_profit_ratio": float(ratio_result.net_profit_ratio or 0),
+            "net_own_funds": float(ratio_result.net_own_funds or 0),
+            "own_fund_to_wf": float(ratio_result.own_fund_to_wf or 0),
+            "deposits_to_wf": float(ratio_result.deposits_to_wf or 0),
+            "borrowings_to_wf": float(ratio_result.borrowings_to_wf or 0),
+            "loans_to_wf": float(ratio_result.loans_to_wf or 0),
+            "investments_to_wf": float(ratio_result.investments_to_wf or 0),
+            "cost_of_deposits": float(ratio_result.cost_of_deposits or 0),
+            "yield_on_loans": float(ratio_result.yield_on_loans or 0),
+            "yield_on_investments": float(ratio_result.yield_on_investments or 0),
+            "credit_deposit_ratio": float(ratio_result.credit_deposit_ratio or 0),
+            "avg_cost_of_wf": float(ratio_result.avg_cost_of_wf or 0),
+            "avg_yield_on_wf": float(ratio_result.avg_yield_on_wf or 0),
+            "gross_fin_margin": float(ratio_result.gross_fin_margin or 0),
+            "operating_cost_to_wf": float(ratio_result.operating_cost_to_wf or 0),
+            "net_fin_margin": float(ratio_result.net_fin_margin or 0),
+            "risk_cost_to_wf": float(ratio_result.risk_cost_to_wf or 0),
+            "net_margin": float(ratio_result.net_margin or 0),
+            "capital_turnover_ratio": float(ratio_result.capital_turnover_ratio or 0),
+            "earning_assets_to_wf": float(ratio_result.earning_assets_to_wf or 0),
+            "interest_tagged_funds_to_wf": float(ratio_result.interest_tagged_funds_to_wf or 0),
+            "misc_income_to_wf": float(ratio_result.misc_income_to_wf or 0),
+            "interest_exp_to_interest_income": float(ratio_result.interest_exp_to_interest_income or 0),
+            "per_employee_deposit": float(ratio_result.per_employee_deposit or 0),
+            "per_employee_loan": float(ratio_result.per_employee_loan or 0),
+            "per_employee_contribution": float(ratio_result.per_employee_contribution or 0),
+            "per_employee_operating_cost": float(ratio_result.per_employee_operating_cost or 0),
+            "all_ratios": ratio_result.all_ratios or {},
+            "traffic_light_status": ratio_result.traffic_light_status or {},
+            "calculated_at": ratio_result.calculated_at.isoformat() if ratio_result.calculated_at else None
+        }
+        
+        # If category is specified, filter to only include fields for that category
+        if category and category in self.CATEGORY_FIELDS:
+            filtered_ratios = {
+                "id": ratios["id"], 
+                "working_fund": ratios["working_fund"], 
+                "all_ratios": ratios["all_ratios"], 
+                "traffic_light_status": ratios["traffic_light_status"], 
+                "calculated_at": ratios["calculated_at"]
+            }
+            for field in self.CATEGORY_FIELDS[category]:
+                if field in ratios:
+                    filtered_ratios[field] = ratios[field]
+            return filtered_ratios
+        
+        return ratios
+    
+    def get(self, request):
+        try:
+            # Get query parameters
+            company_param = request.query_params.get('company', 'all')  # 'all' or company_id
+            period_param = request.query_params.get('period', 'all')   # 'all' or period_type
+            include_ratios = request.query_params.get('include_ratios', 'false').lower() == 'true'
+            category = request.query_params.get('category', None)  # Optional category filter
+            
+            # Validate category if provided
+            if category and category not in self.CATEGORY_FIELDS:
+                return Response({
+                    "status": "failed",
+                    "response_code": status.HTTP_400_BAD_REQUEST,
+                    "message": f"Invalid category. Valid categories are: {', '.join(self.CATEGORY_FIELDS.keys())}"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Filter periods based on company and period parameters
+            periods_queryset = FinancialPeriod.objects.all()
+            
+            if company_param != 'all':
+                try:
+                    company_id = int(company_param)
+                    periods_queryset = periods_queryset.filter(company_id=company_id)
+                except (ValueError, TypeError):
+                    return Response({
+                        "status": "failed",
+                        "response_code": status.HTTP_400_BAD_REQUEST,
+                        "message": "Invalid company parameter. Use 'all' or company ID"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if period_param != 'all':
+                # Filter by period type (MONTHLY, QUARTERLY, YEARLY, etc.)
+                periods_queryset = periods_queryset.filter(period_type=period_param)
+            
+            # Get ratio data for all matching periods
+            ratio_results = RatioResult.objects.filter(
+                period__in=periods_queryset
+            ).select_related('period', 'period__company')
+            
+            if not ratio_results.exists():
+                # No data found for the given filters
+                if include_ratios:
+                    return Response({
+                        "status": "success",
+                        "response_code": status.HTTP_200_OK,
+                        "data": {
+                            "company_data": []
+                        }
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        "status": "success",
+                        "response_code": status.HTTP_200_OK,
+                        "data": {
+                            "total_revenue": 0,
+                            "avg_profit_margin": 0,
+                            "growth_rate": 0,
+                            "company_data": []
+                        }
+                    }, status=status.HTTP_200_OK)
+            
+            # Organize data by company
+            company_data_dict = {}  # company_id -> {company_name, periods_list or periods_dict}
+            all_revenues = []  # For total revenue calculation (only used when not include_ratios)
+            all_profit_margins = []  # For average profit margin calculation (only used when not include_ratios)
+            
+            for ratio_result in ratio_results:
+                period = ratio_result.period
+                company = period.company
+                company_id = company.id
+                company_name = company.name
+                
+                # Extract net revenue and net profit from trading account
+                trading_account = None
+                profit_loss = None
+                
+                try:
+                    trading_account = TradingAccount.objects.get(period=period)
+                    profit_loss = ProfitAndLoss.objects.get(period=period)
+                except (TradingAccount.DoesNotExist, ProfitAndLoss.DoesNotExist):
+                    continue
+                
+                # Calculate net revenue (Sales - Cost of Goods Sold)
+                # From Trading Account: Sales - (Opening Stock + Purchases + Trade Charges - Closing Stock)
+                opening_stock = trading_account.opening_stock or Decimal('0')
+                purchases = trading_account.purchases or Decimal('0')
+                trade_charges = trading_account.trade_charges or Decimal('0')
+                sales = trading_account.sales or Decimal('0')
+                closing_stock = trading_account.closing_stock or Decimal('0')
+                
+                # COGS = Opening Stock + Purchases + Trade Charges - Closing Stock
+                cogs = opening_stock + purchases + trade_charges - closing_stock
+                # Net Revenue = Sales - COGS
+                net_revenue = sales - cogs
+                
+                # Extract net profit from P&L
+                net_profit = profit_loss.net_profit or Decimal('0')
+                
+                # Initialize company entry if not exists
+                if company_id not in company_data_dict:
+                    if include_ratios:
+                        company_data_dict[company_id] = {
+                            "company_id": company_id,
+                            "company_name": company_name,
+                            "periods": []  # Use list for detailed ratio data
+                        }
+                    else:
+                        company_data_dict[company_id] = {
+                            "company_id": company_id,
+                            "company_name": company_name,
+                            "periods": {}  # Use dict for aggregated data
+                        }
+                
+                if include_ratios:
+                    # Return detailed ratio data with period info
+                    # Safely serialize uploaded_file to handle encoding issues
+                    try:
+                        uploaded_file = str(period.uploaded_file) if period.uploaded_file else None
+                    except Exception:
+                        uploaded_file = None
+                    
+                    period_data = {
+                        "id": period.id,
+                        "company": period.company_id,
+                        "label": period.label,
+                        "period_type": period.period_type,
+                        "start_date": period.start_date.isoformat() if period.start_date else None,
+                        "end_date": period.end_date.isoformat() if period.end_date else None,
+                        "is_finalized": period.is_finalized,
+                        "uploaded_file": uploaded_file,
+                        "file_type": period.file_type or None,
+                        "created_at": period.created_at.isoformat() if period.created_at else None,
+                        "net_revenue": float(net_revenue),
+                        "net_profit": float(net_profit),
+                        "ratios": self._get_filtered_ratios(ratio_result, category)
+                    }
+                    company_data_dict[company_id]["periods"].append(period_data)
+                else:
+                    # Return aggregated data with minimal period info
+                    period_key = period.label
+                    company_data_dict[company_id]["periods"][period_key] = {
+                        "net_revenue": float(net_revenue),
+                        "net_profit": float(net_profit),
+                        "period_type": period.period_type,
+                        "is_finalized": period.is_finalized,
+                        "created_at": period.created_at.isoformat() if period.created_at else None
+                    }
+                    
+                    # Collect for aggregation calculations
+                    if net_revenue > 0:
+                        all_revenues.append(net_revenue)
+                    
+                    # Calculate profit margin for this period
+                    if net_revenue != 0:
+                        profit_margin = (net_profit / net_revenue) * 100
+                        all_profit_margins.append(profit_margin)
+            
+            # Build response
+            company_list = list(company_data_dict.values())
+            
+            if include_ratios:
+                # Return detailed ratio data without aggregation
+                return Response({
+                    "status": "success",
+                    "response_code": status.HTTP_200_OK,
+                    "data": {
+                        "company_data": company_list
+                    }
+                }, status=status.HTTP_200_OK)
+            else:
+                # Return aggregated metrics
+                total_revenue = sum(all_revenues) if all_revenues else Decimal('0')
+                avg_profit_margin = sum(all_profit_margins) / len(all_profit_margins) if all_profit_margins else Decimal('0')
+                
+                # Calculate growth rate (percentage change from first to last period)
+                growth_rate = Decimal('0')
+                if len(all_revenues) > 1 and all_revenues[0] != 0:
+                    growth_rate = ((all_revenues[-1] - all_revenues[0]) / all_revenues[0]) * 100
+                
+                return Response({
+                    "status": "success",
+                    "response_code": status.HTTP_200_OK,
+                    "data": {
+                        "total_revenue": float(total_revenue),
+                        "avg_profit_margin": float(round(avg_profit_margin, 2)),
+                        "growth_rate": float(round(growth_rate, 2)),
+                        "company_data": company_list
+                    }
+                }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.exception(f"Error in DashboardView: {str(e)}")
+            return Response({
+                "status": "failed",
+                "response_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": f"Error fetching dashboard data: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class CompanyAllPeriodsView(APIView):
+    """Simple endpoint to fetch all periods for a company."""
+    def get(self, request):
+        try:
+            company_id = request.query_params.get('company_id')
+            
+            if not company_id:
+                return Response({
+                    "status": "failed",
+                    "response_code": 400,
+                    "message": "company_id is required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                company_id = int(company_id)
+            except (ValueError, TypeError):
+                return Response({
+                    "status": "failed",
+                    "response_code": 400,
+                    "message": "Invalid company_id. Must be a number"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "response_code": 404,
+                    "message": f"Company with ID {company_id} not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            periods = FinancialPeriod.objects.filter(company_id=company_id).order_by('start_date')
+            
+            if not periods.exists():
+                return Response({
+                    "status": "success",
+                    "response_code": 200,
+                    "data": []
+                }, status=status.HTTP_200_OK)
+            
+            periods_data = [
+                {
+                    "id": period.id,
+                    "label": period.label,
+                    "start_date": period.start_date.isoformat(),
+                    "end_date": period.end_date.isoformat(),
+                    "period_type": period.period_type
+                }
+                for period in periods
+            ]
+            
+            return Response({
+                "status": "success",
+                "response_code": 200,
+                "data": periods_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.exception(f'Error in CompanyAllPeriodsView: {str(e)}')
+            return Response({
+                "status": "failed",
+                "response_code": 500,
+                "message": f'Error fetching periods: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class PeriodComparisonByIdView(APIView):
+    """
+    Compare financial ratios between two periods by their IDs.
+    
+    Query Parameters:
+        - period_id1: ID of the first period
+        - period_id2: ID of the second period
+    
+    Returns:
+        {
+            "status": "success",
+            "response_code": 200,
+            "data": {
+                "period_1": {
+                    "id": 1,
+                    "label": "Jan_2025",
+                    "start_date": "2025-01-01",
+                    "end_date": "2025-01-31",
+                    "period_type": "MONTHLY",
+                    "stock_turnover": 12.5,
+                    "gross_profit_ratio": 5.2,
+                    ...all ratio fields...
+                },
+                "period_2": {
+                    "id": 2,
+                    "label": "May_2025",
+                    ...
+                },
+                "difference": {
+                    "stock_turnover": { "value": 2.1, "change": 16.8% },
+                    "gross_profit_ratio": { "value": 0.5, "change": 9.6% },
+                    ...
+                }
+            }
+        }
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def _convert_decimal(self, value):
+        """Safely convert Decimal to float."""
+        if value is None:
+            return None
+        if isinstance(value, Decimal):
+            return float(value)
+        return value
+    
+    def get(self, request):
+        try:
+            period_id1 = request.query_params.get('period_id1')
+            period_id2 = request.query_params.get('period_id2')
+            
+            if not period_id1 or not period_id2:
+                return Response({
+                    "status": "failed",
+                    "response_code": 400,
+                    "message": "Both period_id1 and period_id2 are required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                period_id1 = int(period_id1)
+                period_id2 = int(period_id2)
+            except (ValueError, TypeError):
+                return Response({
+                    "status": "failed",
+                    "response_code": 400,
+                    "message": "Period IDs must be integers"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Fetch periods
+            period1 = None
+            period2 = None
+            
+            try:
+                period1 = FinancialPeriod.objects.get(id=period_id1)
+            except FinancialPeriod.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "response_code": 404,
+                    "message": f"Period with ID {period_id1} not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            try:
+                period2 = FinancialPeriod.objects.get(id=period_id2)
+            except FinancialPeriod.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "response_code": 404,
+                    "message": f"Period with ID {period_id2} not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Fetch ratio results
+            try:
+                ratios1 = RatioResult.objects.get(period=period1)
+            except RatioResult.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "response_code": 404,
+                    "message": f"Ratio data not found for period {period1.label}"
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            try:
+                ratios2 = RatioResult.objects.get(period=period2)
+            except RatioResult.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "response_code": 404,
+                    "message": f"Ratio data not found for period {period2.label}"
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # All ratio fields to compare
+            ratio_fields = [
+                "stock_turnover", "gross_profit_ratio", "net_profit_ratio",
+                "net_own_funds", "own_fund_to_wf", "deposits_to_wf", "borrowings_to_wf",
+                "loans_to_wf", "investments_to_wf", "earning_assets_to_wf",
+                "interest_tagged_funds_to_wf", "cost_of_deposits", "yield_on_loans",
+                "yield_on_investments", "credit_deposit_ratio", "avg_cost_of_wf",
+                "avg_yield_on_wf", "misc_income_to_wf", "interest_exp_to_interest_income",
+                "gross_fin_margin", "operating_cost_to_wf", "net_fin_margin",
+                "risk_cost_to_wf", "net_margin", "capital_turnover_ratio",
+                "per_employee_deposit", "per_employee_loan", "per_employee_contribution",
+                "per_employee_operating_cost", "working_fund"
+            ]
+            
+            # Build period 1 data
+            period_1_data = {
+                "id": period1.id,
+                "label": period1.label,
+                "start_date": period1.start_date.isoformat(),
+                "end_date": period1.end_date.isoformat(),
+                "period_type": period1.period_type
+            }
+            
+            # Add all ratio fields to period 1
+            for field in ratio_fields:
+                value = getattr(ratios1, field, None)
+                period_1_data[field] = self._convert_decimal(value)
+            
+            # Build period 2 data
+            period_2_data = {
+                "id": period2.id,
+                "label": period2.label,
+                "start_date": period2.start_date.isoformat(),
+                "end_date": period2.end_date.isoformat(),
+                "period_type": period2.period_type
+            }
+            
+            # Add all ratio fields to period 2
+            for field in ratio_fields:
+                value = getattr(ratios2, field, None)
+                period_2_data[field] = self._convert_decimal(value)
+            
+            # Calculate differences
+            differences = {}
+            for field in ratio_fields:
+                val1 = getattr(ratios1, field, None)
+                val2 = getattr(ratios2, field, None)
+                
+                if val1 is not None and val2 is not None:
+                    try:
+                        val1_float = float(val1)
+                        val2_float = float(val2)
+                        difference = val2_float - val1_float
+                        
+                        # Calculate percentage change
+                        if val1_float != 0:
+                            percentage_change = (difference / val1_float) * 100
+                        else:
+                            percentage_change = None if val2_float == 0 else None
+                        
+                        # Check for infinity or NaN values and convert to None
+                        if percentage_change is not None and (percentage_change == float('inf') or percentage_change == float('-inf') or percentage_change != percentage_change):
+                            percentage_change = None
+                        
+                        differences[field] = {
+                            "value": round(difference, 2),
+                            "percentage_change": round(percentage_change, 2) if percentage_change is not None else None
+                        }
+                    except:
+                        pass
+            
+            return Response({
+                "status": "success",
+                "response_code": 200,
+                "data": {
+                    "period_1": period_1_data,
+                    "period_2": period_2_data,
+                    "difference": differences
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.exception(f"Error in PeriodComparisonByIdView: {str(e)}")
+            return Response({
+                "status": "failed",
+                "response_code": 500,
+                "message": f"Error comparing periods: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class UserManagementViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer    
     permission_classes = [IsAuthenticated]

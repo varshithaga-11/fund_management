@@ -1,4 +1,3 @@
-import { LucideOmega } from "lucide-react";
 import { createApiUrl, getAuthHeaders } from "../../access/access.ts";
 import axios from "axios";
 
@@ -110,7 +109,7 @@ export interface RatioResultData {
   all_ratios: Record<string, any>;
   traffic_light_status: Record<string, "green" | "yellow" | "red">;
   calculated_at: string;
-  interpretation: string;
+  interpretation?: string;
 }
 
 export interface FinancialPeriodFormData {
@@ -477,10 +476,10 @@ export const uploadExcelData = async (formData: FormData): Promise<{ period_id: 
     const url = createApiUrl("api/upload-excel/");
     const headers = await getAuthHeaders();
     // Remove Content-Type header for FormData (browser will set it with boundary)
-    delete headers['Content-Type'];
+    const { 'Content-Type': _, ...headersWithoutContentType } = headers;
 
     const response = await axios.post(url, formData, {
-      headers,
+      headers: headersWithoutContentType,
     });
     return response.data;
   } catch (error) {

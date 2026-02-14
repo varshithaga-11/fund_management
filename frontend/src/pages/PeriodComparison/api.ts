@@ -22,17 +22,18 @@ export interface FinancialPeriodData {
 }
 
 // Lightweight period data for listing (minimal fields - no financial data)
+// Note: When using the new CompanyAllPeriodsView endpoint, only id, label, start_date, end_date, period_type are returned
 export interface PeriodListData {
   id: number;
-  company: number;
+  company?: number;
   period_type: "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY";
   label: string;
   start_date: string;
   end_date: string;
-  is_finalized: boolean;
+  is_finalized?: boolean;
   uploaded_file?: string;
   file_type?: "excel" | "docx" | "pdf";
-  created_at: string;
+  created_at?: string;
 }
 
 export interface RatioComparison {
@@ -40,6 +41,16 @@ export interface RatioComparison {
   period2: number | null;
   difference: number | null;
   percentage_change: number | null;
+}
+
+export interface RawPeriodComparisonResponse {
+  status: string;
+  response_code: number;
+  data: {
+    period_1: Record<string, any>;
+    period_2: Record<string, any>;
+    difference: Record<string, { value: number; percentage_change: number | null }>;
+  };
 }
 
 export interface PeriodComparisonResponse {
@@ -82,14 +93,27 @@ export const getCompanyPeriods = async (companyId: number): Promise<FinancialPer
 };
 
 // Fetch lightweight period list for a specific company (minimal fields only - no financial data)
+// Uses the optimized CompanyAllPeriodsView endpoint
 export const getCompanyPeriodsList = async (companyId: number): Promise<PeriodListData[]> => {
   try {
-    const fields = "id,label,period_type,company,start_date,end_date,is_finalized,uploaded_file,file_type,created_at";
-    const url = createApiUrl(`api/financial-periods/?company=${companyId}&fields=${fields}`);
+    const url = createApiUrl(`api/companies/all-periods/?company_id=${companyId}`);
+    console.log(`Fetching periods from: ${url}`);
     const response = await axios.get(url, {
       headers: await getAuthHeaders(),
     });
-    return response.data;
+    console.log("Periods response:", response.data);
+    
+    // Extract data array from response
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    
+    // Fallback: if response.data is directly an array
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    throw new Error("Invalid response structure");
   } catch (error: any) {
     console.error(`Error fetching period list for company ${companyId}:`, error);
     throw error;
@@ -100,14 +124,17 @@ export const getCompanyPeriodsList = async (companyId: number): Promise<PeriodLi
 export const comparePeriodsById = async (
   period1Id: number,
   period2Id: number
-): Promise<PeriodComparisonResponse> => {
+): Promise<RawPeriodComparisonResponse> => {
   try {
+    // Use the optimized period-comparison-by-id endpoint
     const url = createApiUrl(
-      `api/period-comparison/?period1_id=${period1Id}&period2_id=${period2Id}`
+      `api/period-comparison-by-id/?period_id1=${period1Id}&period_id2=${period2Id}`
     );
+    console.log(`Comparing periods: ${url}`);
     const response = await axios.get(url, {
       headers: await getAuthHeaders(),
     });
+    console.log("Period comparison response:", response.data);
     return response.data;
   } catch (error: any) {
     console.error("Error comparing periods:", error);

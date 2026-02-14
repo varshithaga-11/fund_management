@@ -22,6 +22,7 @@ router.register(r'usermanagement', UserManagementViewSet, basename='usermanageme
 
 urlpatterns = [
     path('companies/bulk_import/', BulkImportCompaniesView.as_view(), name='bulk-import-companies'),
+    path('companies/all-periods/', CompanyAllPeriodsView.as_view(), name='company-all-periods'),
     path('', include(router.urls)),
     path('register/', UserRegisterView.as_view(), name='register'),
     # path('userlist/', UserListView.as_view(), name='user_list'),
@@ -32,6 +33,8 @@ urlpatterns = [
     path('upload-excel/', UploadExcelView.as_view(), name='upload-excel'),
     path('ratio-benchmarks/', RatioBenchmarksView.as_view(), name='ratio-benchmarks'),
     path('period-comparison/', PeriodComparisonView.as_view(), name='period-comparison'),
+    path('period-comparison-by-id/', PeriodComparisonByIdView.as_view(), name='period-comparison-by-id'),
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('download-excel-template/', DownloadExcelTemplateView.as_view(), name='download-excel-template'),
     path('download-word-template/', DownloadWordTemplateView.as_view(), name='download-word-template'),
     # path('sendotp/', SendOtpView.as_view(),name='sendotp'),

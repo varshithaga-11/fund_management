@@ -26,6 +26,7 @@ import autoTable from 'jspdf-autotable';
 const MasterDashboard = () => {
     const [companies, setCompanies] = useState<CompanyData[]>([]);
     const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
+    const [dashboardData, setDashboardData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
@@ -46,29 +47,87 @@ const MasterDashboard = () => {
     const [filterType, setFilterType] = useState<string>("");
     const [filterLoading, setFilterLoading] = useState(false);
 
-    // Fetch data when filters change
+    // Fetch aggregated dashboard data and periods
     const fetchFilteredData = async (companyId?: string, periodType?: string) => {
         try {
             setFilterLoading(true);
             
-            // Build params based on filters (empty string means no filter for that field)
+            // Build params for dashboard API
             const params: any = {};
-            if (companyId) params.company = parseInt(companyId);
-            if (periodType) params.period_type = periodType;
             
-            // Only fetch required fields for dashboard (lightweight payload)
-            const fields = "id,company,label,period_type,is_finalized,start_date,end_date,created_at,trading_account,profit_loss";
-            params.fields = fields;
+            // company parameter: 'all' or specific company ID
+            if (companyId) {
+                params.company = companyId;  // Pass as is (backend expects 'all' or id)
+            } else {
+                params.company = 'all';
+            }
             
-            // Fetch periods with filters applied (empty params = fetch all)
-            const url = createApiUrl("api/financial-periods/");
-            const periodsData = await axios.get(url, {
+            // period parameter: 'all' or specific period type
+            if (periodType) {
+                params.period = periodType;
+            } else {
+                params.period = 'all';
+            }
+            
+            // Fetch aggregated dashboard data from the new endpoint
+            const url = createApiUrl("api/dashboard/");
+            const response = await axios.get(url, {
                 headers: await getAuthHeaders(),
                 params,
             });
-            setPeriods(periodsData.data);
+            
+            const dashData = response.data.data;
+            setDashboardData(dashData);
+            
+            // Extract periods from nested company_data structure for display in timeline/charts
+            const extractedPeriods: FinancialPeriodData[] = [];
+            let periodIdCounter = 1;
+            if (dashData?.company_data) {
+                for (const company of dashData.company_data) {
+                    for (const [periodLabel, periodData] of Object.entries(company.periods)) {
+                        extractedPeriods.push({
+                            id: periodIdCounter++,
+                            company: company.company_id,
+                            label: periodLabel,
+                            period_type: (periodData as any).period_type || 'YEARLY',
+                            is_finalized: (periodData as any).is_finalized ?? true,
+                            start_date: '',
+                            end_date: '',
+                            created_at: (periodData as any).created_at || new Date().toISOString(),
+                            trading_account: {
+                                id: 0,
+                                period: periodIdCounter - 1,
+                                opening_stock: 0,
+                                purchases: 0,
+                                trade_charges: 0,
+                                sales: (periodData as any).net_revenue || 0,
+                                closing_stock: 0,
+                                gross_profit: 0,
+                            },
+                            profit_loss: {
+                                id: 0,
+                                period: periodIdCounter - 1,
+                                interest_on_loans: 0,
+                                interest_on_bank_ac: 0,
+                                return_on_investment: 0,
+                                miscellaneous_income: 0,
+                                interest_on_deposits: 0,
+                                interest_on_borrowings: 0,
+                                establishment_contingencies: 0,
+                                provisions: 0,
+                                net_profit: (periodData as any).net_profit || 0,
+                                total_interest_income: 0,
+                                total_interest_expense: 0,
+                            }
+                        });
+                    }
+                }
+            }
+            
+            setPeriods(extractedPeriods);
         } catch (error) {
             console.error("Error loading filtered data:", error);
+            setDashboardData(null);
         } finally {
             setFilterLoading(false);
         }
@@ -109,7 +168,8 @@ const MasterDashboard = () => {
     // Apply filters - API already filters, but we use this for reference
     const filteredPeriods = periods; // Already filtered from API
 
-    const totalCompanies = companies.length;
+    // Total companies should reflect filtered data, not all companies in system
+    const totalCompanies = dashboardData?.company_data?.length || 0;
     // Note: Calculations use filteredPeriods not periods for the dashboard stats
     // Wait, my Step 299 code used filteredPeriods for revenue, profit etc.
     // But Activity Timeline uses ALL periods (slice 0,5).
@@ -119,55 +179,27 @@ const MasterDashboard = () => {
     const finalizedPeriods = filteredPeriods.filter((p) => p.is_finalized).length;
 
     // Calculate total revenue across filters
-    const totalRevenue = filteredPeriods.reduce((sum, p) => {
-        const sales = p.trading_account?.sales;
-        const salesNum = typeof sales === 'string' ? parseFloat(sales) : sales;
-        return sum + (typeof salesNum === 'number' && !isNaN(salesNum) ? salesNum : 0);
-    }, 0);
+    const totalRevenue = dashboardData?.total_revenue || 0;
 
-    // Calculate total profit across filters
+    // Calculate total profit across filters (sum from extracted periods)
     const totalProfit = filteredPeriods.reduce((sum, p) => {
         const profit = p.profit_loss?.net_profit;
         const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
         return sum + (typeof profitNum === 'number' && !isNaN(profitNum) ? profitNum : 0);
     }, 0);
 
-    // Calculate average profit margin
-    const avgProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    // Calculate average profit margin (use backend pre-calculated value)
+    const avgProfitMargin = dashboardData?.avg_profit_margin || 0;
 
-    // Calculate growth rate (comparing recent vs older periods)
+    // Calculate growth rate (use backend pre-calculated value)
+    const growthRate = dashboardData?.growth_rate || 0;
+
+    // For backward compatibility with chart calculations
     const periodsWithProfit = filteredPeriods.filter((p) => {
         const profit = p.profit_loss?.net_profit;
         const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
         return typeof profitNum === 'number' && !isNaN(profitNum);
     });
-
-    const sortedByDate = [...periodsWithProfit].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-
-    const halfPoint = Math.floor(sortedByDate.length / 2);
-    const olderPeriods = sortedByDate.slice(0, halfPoint);
-    const recentPeriodsForGrowth = sortedByDate.slice(halfPoint);
-
-    const olderAvgProfit = olderPeriods.length > 0
-        ? olderPeriods.reduce((sum, p) => {
-            const profit = p.profit_loss?.net_profit;
-            const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
-            return sum + (profitNum || 0);
-        }, 0) / olderPeriods.length
-        : 0;
-    const recentAvgProfit = recentPeriodsForGrowth.length > 0
-        ? recentPeriodsForGrowth.reduce((sum, p) => {
-            const profit = p.profit_loss?.net_profit;
-            const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
-            return sum + (profitNum || 0);
-        }, 0) / recentPeriodsForGrowth.length
-        : 0;
-
-    const growthRate = olderAvgProfit > 0
-        ? ((recentAvgProfit - olderAvgProfit) / olderAvgProfit) * 100
-        : 0;
 
     // Helper function to format currency
     const formatCurrency = (value: number) => {
