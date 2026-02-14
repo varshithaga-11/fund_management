@@ -278,21 +278,6 @@ class FinancialPeriodSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
     
-    def __init__(self, *args, **kwargs):
-        # Extract the fields parameter if provided
-        fields = kwargs.pop('fields', None)
-        super().__init__(*args, **kwargs)
-        
-        # If specific fields are requested, remove all others
-        if fields:
-            # fields is a list of field names to keep
-            allowed_fields = set(fields)
-            existing_fields = set(self.fields.keys())
-            
-            # Remove fields that are not in the allowed list
-            for field_name in existing_fields - allowed_fields:
-                self.fields.pop(field_name)
-    
     def get_ratios(self, obj):
         if hasattr(obj, 'ratios'):
             return RatioResultSerializer(obj.ratios).data
