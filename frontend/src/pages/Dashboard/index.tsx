@@ -1,4 +1,6 @@
 import { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import { createApiUrl, getAuthHeaders } from "../../access/access.ts";
 import ReactApexChart from "react-apexcharts";
 import {
     LucideBuilding2,
@@ -16,10 +18,7 @@ import {
     LucidePlus
 } from "lucide-react";
 import { CompanyData, getCompanyList } from "../Companies/api";
-import {
-    FinancialPeriodData,
-    getFinancialPeriods,
-} from "../FinancialStatements/api";
+import { FinancialPeriodData } from "../FinancialStatements/api";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -43,25 +42,55 @@ const MasterDashboard = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // --- Filter States ---
     const [filterCompany, setFilterCompany] = useState<string>("");
     const [filterType, setFilterType] = useState<string>("");
-    // filterStatus removed by user in Step 303.
-    const [, setFilterStatus] = useState<string>("");
+    const [filterLoading, setFilterLoading] = useState(false);
+
+    // Fetch data when filters change
+    const fetchFilteredData = async (companyId?: string, periodType?: string) => {
+        try {
+            setFilterLoading(true);
+            
+            // Build params based on filters (empty string means no filter for that field)
+            const params: any = {};
+            if (companyId) params.company = parseInt(companyId);
+            if (periodType) params.period_type = periodType;
+            
+            // Only fetch required fields for dashboard (lightweight payload)
+            const fields = "id,company,label,period_type,is_finalized,start_date,end_date,created_at,trading_account,profit_loss";
+            params.fields = fields;
+            
+            // Fetch periods with filters applied (empty params = fetch all)
+            const url = createApiUrl("api/financial-periods/");
+            const periodsData = await axios.get(url, {
+                headers: await getAuthHeaders(),
+                params,
+            });
+            setPeriods(periodsData.data);
+        } catch (error) {
+            console.error("Error loading filtered data:", error);
+        } finally {
+            setFilterLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchData();
     }, []);
 
+    // Fetch periods whenever filters change (including "all" which means no specific filter)
+    useEffect(() => {
+        // Always fetch when filters change - even if both are empty (meaning "all")
+        fetchFilteredData(filterCompany, filterType);
+    }, [filterCompany, filterType]);
+
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [companiesData, periodsData] = await Promise.all([
-                getCompanyList(),
-                getFinancialPeriods(),
-            ]);
+            // Only fetch companies initially - NOT all periods
+            const companiesData = await getCompanyList();
             setCompanies(companiesData);
-            setPeriods(periodsData);
+            setPeriods([]); // Start with no periods
         } catch (error) {
             console.error("Error loading dashboard data:", error);
         } finally {
@@ -77,12 +106,8 @@ const MasterDashboard = () => {
 
     // --- Calculations with Filtering ---
 
-    // Apply filters
-    const filteredPeriods = periods.filter(p => {
-        const matchCompany = filterCompany ? p.company.toString() === filterCompany : true;
-        const matchType = filterType ? p.period_type === filterType : true;
-        return matchCompany && matchType;
-    });
+    // Apply filters - API already filters, but we use this for reference
+    const filteredPeriods = periods; // Already filtered from API
 
     const totalCompanies = companies.length;
     // Note: Calculations use filteredPeriods not periods for the dashboard stats
@@ -546,7 +571,8 @@ const MasterDashboard = () => {
                         <select
                             value={filterCompany}
                             onChange={(e) => setFilterCompany(e.target.value)}
-                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            disabled={filterLoading}
+                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">All Companies</option>
                             {companies.map(company => (
@@ -556,7 +582,8 @@ const MasterDashboard = () => {
                         <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
-                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            disabled={filterLoading}
+                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">All Periods</option>
                             <option value="MONTHLY">Monthly</option>
@@ -564,6 +591,12 @@ const MasterDashboard = () => {
                             <option value="HALF_YEARLY">Half Yearly</option>
                             <option value="YEARLY">Yearly</option>
                         </select>
+                        {filterLoading && (
+                            <div className="flex items-center gap-2 px-3 py-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-500"></div>
+                                <span className="text-sm text-brand-600 dark:text-brand-400">Loading...</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -582,7 +615,7 @@ const MasterDashboard = () => {
                                 <button onClick={() => setFilterType("")} className="ml-1 hover:text-brand-700">×</button>
                             </span>
                         )}
-                        <button onClick={() => { setFilterCompany(""); setFilterType(""); setFilterStatus(""); }} className="text-xs text-gray-500 hover:text-black hover:underline px-2">Clear all</button>
+                        <button onClick={() => { setFilterCompany(""); setFilterType(""); }} className="text-xs text-gray-500 hover:text-black hover:underline px-2" disabled={filterLoading}>Clear all</button>
                     </div>
                 )}
             </div>

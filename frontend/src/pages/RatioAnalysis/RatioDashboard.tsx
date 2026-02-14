@@ -80,6 +80,9 @@ const RatioDashboard: React.FC = () => {
       unit: "%",
       status: ratios.traffic_light_status?.net_profit_ratio,
     },
+  ];
+
+  const capitalEfficiencyRatios = [
     {
       name: "Capital Turnover Ratio",
       value: ratios.capital_turnover_ratio || 0,
@@ -316,6 +319,18 @@ const RatioDashboard: React.FC = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {tradingRatios.map((ratio) => (
+            <RatioCard key={ratio.name} {...ratio} />
+          ))}
+        </div>
+      </div>
+
+      {/* Capital Efficiency Ratios */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          Capital Efficiency
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {capitalEfficiencyRatios.map((ratio) => (
             <RatioCard key={ratio.name} {...ratio} />
           ))}
         </div>

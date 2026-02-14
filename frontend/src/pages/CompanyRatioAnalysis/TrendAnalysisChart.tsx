@@ -14,9 +14,11 @@ const RATIO_CATEGORIES = {
     "gross_profit_ratio",
     "net_profit_ratio",
   ],
+  "Capital Ratios": [
+    "own_fund_to_wf",
+  ],
   "Fund Structure": [
     "net_own_funds",
-    "own_fund_to_wf",
     "deposits_to_wf",
     "borrowings_to_wf",
     "loans_to_wf",

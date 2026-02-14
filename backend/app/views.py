@@ -119,7 +119,25 @@ class FinancialPeriodViewSet(viewsets.ModelViewSet):
         company_id = self.request.query_params.get('company', None)
         if company_id:
             queryset = queryset.filter(company_id=company_id)
+        
+        # Filter by period type if provided
+        period_type = self.request.query_params.get('period_type', None)
+        if period_type:
+            queryset = queryset.filter(period_type=period_type)
+        
         return queryset.order_by("-created_at")
+    
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs.setdefault('context', self.get_serializer_context())
+        
+        # Support dynamic field filtering via ?fields=field1,field2,...
+        fields = self.request.query_params.get('fields', None)
+        if fields:
+            # Pass the fields parameter to the serializer
+            kwargs['fields'] = fields.split(',')
+        
+        return serializer_class(*args, **kwargs)
 
 
 class TradingAccountViewSet(viewsets.ModelViewSet):
@@ -179,11 +197,66 @@ class RatioResultViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RatioResultSerializer
     permission_classes = [IsAuthenticated]
     
+    # Mapping of ratio categories to their corresponding fields
+    RATIO_CATEGORIES = {
+        "Trading Ratios": [
+            "stock_turnover",
+            "gross_profit_ratio",
+            "net_profit_ratio",
+        ],
+        "Capital Ratios": [
+            "own_fund_to_wf",
+        ],
+        "Fund Structure": [
+            "net_own_funds",
+            "deposits_to_wf",
+            "borrowings_to_wf",
+            "loans_to_wf",
+            "investments_to_wf",
+            "earning_assets_to_wf",
+            "interest_tagged_funds_to_wf",
+        ],
+        "Yield & Cost": [
+            "cost_of_deposits",
+            "yield_on_loans",
+            "yield_on_investments",
+            "credit_deposit_ratio",
+            "avg_cost_of_wf",
+            "avg_yield_on_wf",
+            "misc_income_to_wf",
+            "interest_exp_to_interest_income",
+        ],
+        "Margin Analysis": [
+            "gross_fin_margin",
+            "operating_cost_to_wf",
+            "net_fin_margin",
+            "risk_cost_to_wf",
+            "net_margin",
+        ],
+        "Capital Efficiency": [
+            "capital_turnover_ratio",
+        ],
+        "Productivity Analysis": [
+            "per_employee_deposit",
+            "per_employee_loan",
+            "per_employee_contribution",
+            "per_employee_operating_cost",
+        ],
+    }
+    
     def get_queryset(self):
         queryset = RatioResult.objects.all()
         period_id = self.request.query_params.get('period', None)
         if period_id:
             queryset = queryset.filter(period_id=period_id)
+        
+        # Optional: category-based filtering (for Frontend optimization)
+        # When a category is specified, the frontend can filter specific ratio fields
+        category = self.request.query_params.get('category', None)
+        if category:
+            # Log the selected category for debugging
+            logger.info(f"Filtering ratio results by category: {category}")
+        
         return queryset
 
 
@@ -2609,67 +2682,94 @@ class PeriodComparisonView(APIView):
         }
     
     def get(self, request):
-        """Fetch and compare ratios between two periods."""
+        """Fetch and compare ratios between two periods.
+        
+        Supports two query parameter modes:
+        1. By Period IDs (faster): period1_id=1&period2_id=2
+        2. By Period Labels (legacy): company_id=1&period1=FY_2023_24&period2=FY_2024_25
+        """
         try:
-            # Get query parameters
-            company_id = request.query_params.get("company_id")
-            period1_label = request.query_params.get("period1")
-            period2_label = request.query_params.get("period2")
+            # Try to get period IDs first (optimized approach)
+            period1_id = request.query_params.get("period1_id")
+            period2_id = request.query_params.get("period2_id")
             
-            # Validate required parameters
-            if not all([company_id, period1_label, period2_label]):
-                return Response(
-                    {
-                        "status": "failed",
-                        "response_code": status.HTTP_400_BAD_REQUEST,
-                        "message": "Missing required parameters: company_id, period1, period2"
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # If period IDs are provided, use them directly (faster)
+            if period1_id and period2_id:
+                try:
+                    period1 = FinancialPeriod.objects.get(id=period1_id)
+                    period2 = FinancialPeriod.objects.get(id=period2_id)
+                except FinancialPeriod.DoesNotExist as e:
+                    return Response(
+                        {
+                            "status": "failed",
+                            "response_code": status.HTTP_404_NOT_FOUND,
+                            "message": f"One or both period IDs not found: {str(e)}"
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            else:
+                # Fall back to label-based approach (legacy)
+                company_id = request.query_params.get("company_id")
+                period1_label = request.query_params.get("period1")
+                period2_label = request.query_params.get("period2")
+                
+                # Validate required parameters
+                if not all([company_id, period1_label, period2_label]):
+                    return Response(
+                        {
+                            "status": "failed",
+                            "response_code": status.HTTP_400_BAD_REQUEST,
+                            "message": "Missing required parameters: either (period1_id, period2_id) or (company_id, period1, period2)"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Validate company exists
+                try:
+                    company = Company.objects.get(id=company_id)
+                except Company.DoesNotExist:
+                    return Response(
+                        {
+                            "status": "failed",
+                            "response_code": status.HTTP_404_NOT_FOUND,
+                            "message": f"Company with ID {company_id} not found"
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                # Fetch periods by label
+                try:
+                    period1 = FinancialPeriod.objects.get(
+                        company=company,
+                        label=period1_label
+                    )
+                except FinancialPeriod.DoesNotExist:
+                    return Response(
+                        {
+                            "status": "failed",
+                            "response_code": status.HTTP_404_NOT_FOUND,
+                            "message": f"Period '{period1_label}' not found for company '{company.name}'"
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                try:
+                    period2 = FinancialPeriod.objects.get(
+                        company=company,
+                        label=period2_label
+                    )
+                except FinancialPeriod.DoesNotExist:
+                    return Response(
+                        {
+                            "status": "failed",
+                            "response_code": status.HTTP_404_NOT_FOUND,
+                            "message": f"Period '{period2_label}' not found for company '{company.name}'"
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
             
-            # Validate company exists
-            try:
-                company = Company.objects.get(id=company_id)
-            except Company.DoesNotExist:
-                return Response(
-                    {
-                        "status": "failed",
-                        "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"Company with ID {company_id} not found"
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Fetch periods
-            try:
-                period1 = FinancialPeriod.objects.get(
-                    company=company,
-                    label=period1_label
-                )
-            except FinancialPeriod.DoesNotExist:
-                return Response(
-                    {
-                        "status": "failed",
-                        "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"Period '{period1_label}' not found for company '{company.name}'"
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            try:
-                period2 = FinancialPeriod.objects.get(
-                    company=company,
-                    label=period2_label
-                )
-            except FinancialPeriod.DoesNotExist:
-                return Response(
-                    {
-                        "status": "failed",
-                        "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"Period '{period2_label}' not found for company '{company.name}'"
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
+            # Get company info
+            company = period1.company
             
             # Fetch ratio results for both periods
             try:
@@ -2679,7 +2779,7 @@ class PeriodComparisonView(APIView):
                     {
                         "status": "failed",
                         "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"No ratio data found for period '{period1_label}'"
+                        "message": f"No ratio data found for period '{period1.label}'"
                     },
                     status=status.HTTP_404_NOT_FOUND
                 )
@@ -2691,7 +2791,7 @@ class PeriodComparisonView(APIView):
                     {
                         "status": "failed",
                         "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"No ratio data found for period '{period2_label}'"
+                        "message": f"No ratio data found for period '{period2.label}'"
                     },
                     status=status.HTTP_404_NOT_FOUND
                 )
@@ -2768,8 +2868,8 @@ class PeriodComparisonView(APIView):
                     "response_code": status.HTTP_200_OK,
                     "data": {
                         "company": company.name,
-                        "period1": period1_label,
-                        "period2": period2_label,
+                        "period1": period1.label,
+                        "period2": period2.label,
                         "ratios": ratios_comparison
                     }
                 },

@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
-import { getCompanies, getCompanyPeriods, getCompanyRatioTrends, CompanyData, FinancialPeriodData } from "./api";
+import { getCompanies, getCompanyPeriodsList, getCompanyRatioTrends, RatioCategory, CompanyData, PeriodListData } from "./api";
 import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
 import { ArrowLeft, Download, TrendingUp } from "lucide-react";
@@ -15,8 +15,8 @@ import TrendAnalysisChart from "./TrendAnalysisChart";
 const CompanyRatioAnalysis: React.FC = () => {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<CompanyData | null>(null);
-  const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<FinancialPeriodData | null>(null);
+  const [periods, setPeriods] = useState<PeriodListData[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodListData | null>(null);
   const [ratios, setRatios] = useState<RatioResultData | null>(null);
   const [ratioTrends, setRatioTrends] = useState<any[]>([]);
   const [showTrendAnalysis, setShowTrendAnalysis] = useState(false);
@@ -54,22 +54,10 @@ const CompanyRatioAnalysis: React.FC = () => {
       setLoadingPeriods(true);
 
       console.log(`Fetching periods for company: ${company.id} (${company.name})`);
-      const periodsData = await getCompanyPeriods(company.id);
+      const periodsData = await getCompanyPeriodsList(company.id);
       console.log("Periods fetched:", periodsData);
 
       setPeriods(periodsData);
-
-      // Fetch ratio trends for the company
-      try {
-        setLoadingTrends(true);
-        const trendsData = await getCompanyRatioTrends(company.id);
-        setRatioTrends(trendsData);
-      } catch (error) {
-        console.error("Error loading trends:", error);
-        // Don't show error toast for trends as it's optional
-      } finally {
-        setLoadingTrends(false);
-      }
 
       if (periodsData.length === 0) {
         toast.info("No financial periods found for this company");
@@ -83,7 +71,29 @@ const CompanyRatioAnalysis: React.FC = () => {
     }
   };
 
-  const handleSelectPeriod = async (period: FinancialPeriodData) => {
+  // Fetch ratio trends only when "View Trend Analysis" is clicked
+  const handleViewTrendAnalysis = async (category?: RatioCategory) => {
+    if (!selectedCompany) {
+      toast.warning("Please select a company first");
+      return;
+    }
+
+    try {
+      setLoadingTrends(true);
+      setShowTrendAnalysis(true);
+      // Call API with optional category filter (for future optimization)
+      const trendsData = await getCompanyRatioTrends(selectedCompany.id, category);
+      setRatioTrends(trendsData);
+    } catch (error) {
+      console.error("Error loading trends:", error);
+      toast.error("Failed to load trend data");
+      setShowTrendAnalysis(false);
+    } finally {
+      setLoadingTrends(false);
+    }
+  };
+
+  const handleSelectPeriod = async (period: PeriodListData) => {
     try {
       setSelectedPeriod(period);
       setLoadingRatios(true);
@@ -219,13 +229,14 @@ const CompanyRatioAnalysis: React.FC = () => {
                 <ArrowLeft className="w-5 h-5" />
                 Back to Companies
               </button>
-              {ratioTrends.length > 1 && (
+              {periods.length > 1 && (
                 <button
-                  onClick={() => setShowTrendAnalysis(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  onClick={() => handleViewTrendAnalysis()}
+                  disabled={loadingTrends}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp className="w-4 h-4" />
-                  View Trend Analysis
+                  {loadingTrends ? "Loading..." : "View Trend Analysis"}
                 </button>
               )}
             </div>
@@ -500,19 +511,22 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
     },
   ];
 
+  const capitalRatios = [
+    {
+      name: "Capital Ratio",
+      value: ratios.own_fund_to_wf || 0,
+      unit: "%",
+      idealValue: 8.0,
+      status: ratios.traffic_light_status?.own_fund_to_wf,
+    },
+  ];
+
   const fundStructureRatios = [
     {
       name: "Net Own Funds",
       value: ratios.net_own_funds || 0,
       unit: "₹",
       status: ratios.traffic_light_status?.net_own_funds,
-    },
-    {
-      name: "Own Fund to Working Fund",
-      value: ratios.own_fund_to_wf || 0,
-      unit: "%",
-      idealValue: 8.0,
-      status: ratios.traffic_light_status?.own_fund_to_wf,
     },
     {
       name: "Deposits to Working Fund",
@@ -716,6 +730,18 @@ const RatioAnalysisDisplay: React.FC<{ ratios: RatioResultData }> = ({
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tradingRatios.map((ratio, idx) => (
+            <RatioCard key={idx} {...ratio} />
+          ))}
+        </div>
+      </div>
+
+      {/* Capital Ratios */}
+      <div>
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+          Capital Ratios
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {capitalRatios.map((ratio, idx) => (
             <RatioCard key={idx} {...ratio} />
           ))}
         </div>
