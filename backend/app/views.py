@@ -3182,3 +3182,98 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # ✅ Return all users (no role restriction)
         return UserRegister.objects.all()
+    
+
+
+class SendOtpView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"})
+
+        otp = str(random.randint(100000, 999999))
+
+        otp_obj, created = EmailOTP.objects.get_or_create(email=email)
+        otp_obj.otp = otp
+        otp_obj.created_at = timezone.now()  
+        otp_obj.save()
+
+        subject = "Your OTP for Password Reset"
+        message = f"""
+        Hello,
+
+        You have requested to reset your password for your account.
+
+        Your One-Time Password (OTP) is: {otp}
+
+        This OTP is valid for the next 5 minutes. Please do not share this code with anyone for security reasons.
+
+        If you did not request this, please ignore this email or contact support immediately.
+
+        Thank you,  
+        Team VShips
+        """
+        from_email = settings.EMAIL_HOST_USER
+
+        try:
+            send_mail(subject, message, from_email, [email])
+            return Response({"message": "OTP sent successfully"})
+        except Exception as e:
+            return Response({"error": f"Failed to send email: {str(e)}"})
+
+
+class VerifyOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        otp_input = request.data.get('otp')
+
+        try:
+            otp_obj = EmailOTP.objects.get(email=email)
+
+            if otp_obj.is_expired():
+                return Response({'error': 'OTP expired'})
+
+            if otp_obj.otp == otp_input:
+                otp_obj.verified = True  
+                otp_obj.save()
+                return Response({'message': 'OTP verified successfully'})
+            else:
+                return Response({'error': 'Invalid OTP'})
+
+        except EmailOTP.DoesNotExist:
+            return Response({'error': 'OTP not found'})
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        new_password = request.data.get("new_password")
+        confirm_password = request.data.get("confirm_password")
+
+        if not all([email, new_password, confirm_password]):
+            return Response({"error": "All fields are required."})
+
+        if new_password != confirm_password:
+            return Response({"error": "Passwords do not match."})
+
+        try:
+            otp_obj = EmailOTP.objects.get(email=email)
+            if not otp_obj.verified:
+                return Response({"error": "OTP not verified for this email."})
+        except EmailOTP.DoesNotExist:
+            return Response({"error": "OTP not found. Please verify OTP first."})
+
+        try:
+            user = UserRegister.objects.get(email=email)
+            user.password = make_password(new_password)
+            user.save()
+            otp_obj.verified = False
+            otp_obj.save()
+            return Response({"message": "Password reset successful."})
+        except UserRegister.DoesNotExist:
+            return Response({"error": "User not found."})

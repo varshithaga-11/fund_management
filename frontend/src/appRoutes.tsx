@@ -33,6 +33,7 @@ const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/Productivi
 const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
 const RatioBenchmarksPage = lazy(() => import("./pages/RatioAnalysis/RatioBenchmarksPage"));
 const PeriodComparison = lazy(() => import("./pages/PeriodComparison"));
+import ForgotPassword from "./pages/AuthPages/ForgotPassword";
 
 
 import UserManagementPage from "./pages/UserManagement";
@@ -126,6 +127,8 @@ export function appRoutes() {
         {/* Auth Routes */}
         <Route path="/" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/resetpassword" element={<ForgotPassword />} />
+
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />

@@ -36,8 +36,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('download-excel-template/', DownloadExcelTemplateView.as_view(), name='download-excel-template'),
     path('download-word-template/', DownloadWordTemplateView.as_view(), name='download-word-template'),
-    # path('sendotp/', SendOtpView.as_view(),name='sendotp'),
-    # path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
-    # path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
-    # path('updateuser/', UpdateUserView.as_view(), name='updateuser'),
+    path('sendotp/', SendOtpView.as_view(),name='sendotp'),
+    path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
+    path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
 ]

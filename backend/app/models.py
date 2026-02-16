@@ -342,6 +342,19 @@ class StatementColumnConfig(models.Model):
 
 
 
+
+
+class EmailOTP(models.Model):
+    email = models.EmailField(unique=True)
+    otp = models.CharField(max_length=6)
+    verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=5)  
+    
+
+    
 # def get_statement_columns(company, statement_type):
 #     # 1. Company-specific
 #     cols = StatementColumnConfig.objects.filter(
