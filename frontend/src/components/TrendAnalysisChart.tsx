@@ -70,7 +70,7 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
     const [selectedRatios, setSelectedRatios] = useState<string[]>(
         RATIO_CATEGORIES["Trading Ratios"] || []
     );
-    const [chartType, setChartType] = useState<"line" | "bar">("line");
+    const [chartType, setChartType] = useState<"line" | "bar" | "area">("line");
     const [expandedDropdown, setExpandedDropdown] = useState(false);
     const [selectedPeriods, setSelectedPeriods] = useState<number[]>(
         periods.map((p: any) => p.id)
@@ -119,9 +119,9 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
             name: formatRatioName(ratioName),
             data: sortedData.map((data: any) => {
                 const value = data[ratioName];
-                if (value === null || value === undefined) return 0;
+                if (value === null || value === undefined || value === "") return null;
                 const numValue = typeof value === 'number' ? value : parseFloat(value);
-                return !isNaN(numValue) ? parseFloat(numValue.toFixed(2)) : 0;
+                return !isNaN(numValue) ? parseFloat(numValue.toFixed(2)) : null;
             }),
         }));
 
@@ -157,7 +157,8 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
         },
         stroke: {
             curve: "smooth",
-            width: chartType === "line" ? 2 : 0,
+            width: (chartType === "line" || chartType === "area") ? 2 : 0,
+            colors: undefined,
         },
         xaxis: {
             categories: chartData.categories,
@@ -181,7 +182,7 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                 ? "dark"
                 : "light",
             y: {
-                formatter: (value) => value?.toFixed(2) || "0.00",
+                formatter: (value) => (value !== null && value !== undefined) ? value.toFixed(2) : "N/A",
             },
         },
         legend: {
@@ -248,6 +249,15 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                                     }`}
                             >
                                 Line
+                            </button>
+                            <button
+                                onClick={() => setChartType("area")}
+                                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "area"
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    }`}
+                            >
+                                Area
                             </button>
                             <button
                                 onClick={() => setChartType("bar")}
