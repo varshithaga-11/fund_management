@@ -81,8 +81,8 @@ const MasterDashboard = () => {
                 // Based on previous backend edit: "periods" is a list.
                 extractedPeriods.push(...dashData.periods.map((p: any) => ({
                     ...p,
-                    trading_account: p.trading_account || { sales: 0 }, // Ensure minimal structure
-                    profit_loss: p.profit_loss || { net_profit: 0 }
+                    trading_account: p.trading_account || { sales: p.net_revenue || 0 }, // Ensure minimal structure with sales
+                    profit_loss: p.profit_loss || { net_profit: p.net_profit || 0 }
                 })));
             }
 
