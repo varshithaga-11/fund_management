@@ -1,24 +1,24 @@
 import { useState, useEffect } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
-import { Link } from "react-router-dom";
-import { axiosInstance } from "../../pages/Dashboard/api";
-import {getUserProfile} from "../../pages/profile/api";
+import { Link, useNavigate } from "react-router-dom";
+import { getUserProfile } from "../../pages/profile/api";
 
 interface UserProfile {
   username: string;
   email: string;
-  first_name:string;
-  last_name:string;
+  first_name: string;
+  last_name: string;
 }
+
 export default function MasterUserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-
+  const navigate = useNavigate();
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
     username: '',
     email: '',
-    first_name:'',
-    last_name:''
+    first_name: '',
+    last_name: ''
   });
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function MasterUserDropdown() {
           first_name: latestProfile.first_name || '',
           username: latestProfile.username || 'User',
           email: latestProfile.email || '',
-          last_name:latestProfile.last_name || '',
+          last_name: latestProfile.last_name || '',
         });
       } catch (error) {
         console.error('Failed to load user profile:', error);
@@ -41,6 +41,13 @@ export default function MasterUserDropdown() {
 
   function toggleDropdown() { setIsOpen(!isOpen); }
   function closeDropdown() { setIsOpen(false); }
+
+  const handleLogout = () => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("userRole");
+    navigate("/");
+  };
 
   return (
     <div className="relative">
@@ -83,9 +90,23 @@ export default function MasterUserDropdown() {
             {userProfile.email}
           </span>
         </div>
+
+        {/* Profile Link */}
         <Link
-          to="/signin"
+          to="/profile"
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+          onClick={closeDropdown}
+        >
+          <svg className="fill-gray-500 group-hover:fill-gray-700 dark:group-hover:fill-gray-300" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" clipRule="evenodd" d="M11.9997 2.19336C12.3392 2.19336 12.6644 2.32742 12.9038 2.56608C13.1432 2.80475 13.2792 3.12901 13.2792 3.46743V4.92211C13.2792 5.06824 13.3102 5.21295 13.3703 5.34795C13.4305 5.48294 13.5186 5.60557 13.6297 5.70881C13.7408 5.81204 13.8726 5.89387 14.0177 5.94958C14.1627 6.0053 14.3181 6.03376 14.475 6.03334H17.7289C18.6655 6.03917 19.5636 6.41627 20.2259 7.08182C20.8883 7.74737 21.2604 8.64654 21.2604 9.58162V17.7618C21.2604 18.6969 20.8883 19.596 20.2259 20.2616C19.5636 20.9272 18.6655 21.3042 17.7289 21.3101H6.27042C5.33385 21.3042 4.43573 20.9272 3.77341 20.2616C3.11109 19.596 2.73902 18.6969 2.73902 17.7618V9.58162C2.73902 8.64654 3.11109 7.74737 3.77341 7.08182C4.43573 6.41627 5.33385 6.03917 6.27042 6.03334H9.52433C9.68121 6.03376 9.83656 6.0053 9.98166 5.94958C10.1268 5.89387 10.2585 5.81204 10.3696 5.70881C10.4807 5.60557 10.5689 5.48294 10.629 5.34795C10.6892 5.21295 10.7201 5.06824 10.7201 4.92211V3.46743C10.7201 3.12901 10.8561 2.80475 11.0956 2.56608C11.335 2.32742 11.6601 2.19336 11.9997 2.19336ZM16.3262 12.0163C16.3262 14.8021 14.3809 17.0607 11.9813 17.0607C9.58166 17.0607 7.63636 14.8021 7.63636 12.0163L16.3262 12.0163ZM14.8778 12.0165H9.08472C9.08472 9.83785 10.3813 8.07185 11.9813 8.07185C13.5812 8.07185 14.8778 9.83785 14.8778 12.0165Z" fill="" />
+          </svg>
+          My Profile
+        </Link>
+
+        {/* Sign Out Button */}
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300 transition-colors text-left"
         >
           <svg
             className="fill-gray-500 group-hover:fill-gray-700 dark:group-hover:fill-gray-300"
@@ -102,8 +123,8 @@ export default function MasterUserDropdown() {
               fill=""
             />
           </svg>
-          Sign outtt
-        </Link>
+          Sign Out
+        </button>
       </Dropdown>
     </div>
   );
