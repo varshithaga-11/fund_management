@@ -251,13 +251,13 @@ const PeriodComparison: React.FC = () => {
 
       <div className="p-6">
         <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-          <button
+          {/* <button
             onClick={handleBack}
             className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
-          </button>
+          </button> */}
 
           <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
             {comparisonData ? `Comparison Results` : `Compare Periods`}
