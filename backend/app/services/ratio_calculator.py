@@ -218,9 +218,6 @@ class RatioCalculator:
         else:
             ratios['risk_cost_to_wf'] = 0.0
         
-        # Net Margin = Net Financial Margin - Risk Cost %
-        ratios['net_margin'] = ratios['net_fin_margin'] - ratios['risk_cost_to_wf']
-        
         ratios['net_margin'] = ratios['net_fin_margin'] - ratios['risk_cost_to_wf']
         
         return ratios
@@ -309,6 +306,45 @@ class RatioCalculator:
             if calculated_value >= ideal:
                 return 'green'
             elif calculated_value >= ideal * 0.5:
+                return 'yellow'
+            else:
+                return 'red'
+        
+        elif ratio_name == 'net_profit_ratio':
+            # Ideal is at least 1/2 of GP ratio
+            target = ideal_value # GP Ratio passed from get_traffic_light_statuses
+            if target is None:
+                 return 'yellow'
+            ideal = target * 0.5
+            if calculated_value >= ideal:
+                return 'green'
+            elif calculated_value >= ideal * 0.7:
+                return 'yellow'
+            else:
+                return 'red'
+
+        elif ratio_name == 'cost_of_deposits':
+            # Ideal is 4% less than average yield on loans
+            target = ideal_value # Yield on Loans passed from get_traffic_light_statuses
+            if target is None:
+                return 'yellow'
+            ideal = target - 4.0
+            if calculated_value <= ideal:
+                return 'green'
+            elif calculated_value <= ideal + 1.0:
+                return 'yellow'
+            else:
+                return 'red'
+
+        elif ratio_name == 'yield_on_loans':
+            # Ideal is 4% more than average cost of deposits
+            target = ideal_value # Cost of Deposits passed from get_traffic_light_statuses
+            if target is None:
+                return 'yellow'
+            ideal = target + 4.0
+            if calculated_value >= ideal:
+                return 'green'
+            elif calculated_value >= ideal - 1.0:
                 return 'yellow'
             else:
                 return 'red'
@@ -679,6 +715,9 @@ class RatioCalculator:
         earning_assets_ratio = all_ratios.get('earning_assets_to_wf', 0)
         op_cost = all_ratios.get('per_employee_operating_cost', 0)
         contribution = all_ratios.get('per_employee_contribution', 0)
+        gp_ratio = all_ratios.get('gross_profit_ratio', 0)
+        yield_on_loans = all_ratios.get('yield_on_loans', 0)
+        cost_of_deposits = all_ratios.get('cost_of_deposits', 0)
         
         for ratio_name, value in all_ratios.items():
             if isinstance(value, (int, float)) and ratio_name not in ['working_fund', 'own_funds', 'average_stock', 'cogs']:
@@ -691,6 +730,12 @@ class RatioCalculator:
                     ideal = op_cost
                 elif ratio_name == 'per_employee_operating_cost':
                     ideal = contribution
+                elif ratio_name == 'net_profit_ratio':
+                    ideal = gp_ratio
+                elif ratio_name == 'cost_of_deposits':
+                    ideal = yield_on_loans
+                elif ratio_name == 'yield_on_loans':
+                    ideal = cost_of_deposits
                 
                 statuses[ratio_name] = self.get_traffic_light_status(ratio_name, value, ideal_value=ideal)
         

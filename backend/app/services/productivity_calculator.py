@@ -31,8 +31,8 @@ class ProductivityCalculator:
     
     def calculate_per_employee_business(self):
         """
-        Calculate per employee business
-        Formula: (Average Deposit + Average Loan) / Staff Count
+        Calculate per employee business (in Lakhs)
+        Formula: (Average Deposit + Average Loan) / Staff Count / 100000
         
         Note: Using current period values as average (can be enhanced with historical data)
         """
@@ -42,13 +42,13 @@ class ProductivityCalculator:
         if ops.staff_count > 0:
             avg_deposit = bs.deposits  # Using current period value
             avg_loan = bs.loans_advances  # Using current period value
-            return float((avg_deposit + avg_loan) / Decimal(str(ops.staff_count)))
+            return float((avg_deposit + avg_loan) / Decimal(str(ops.staff_count)) / Decimal('100000.0'))
         return 0.0
     
     def calculate_per_employee_contribution(self):
         """
-        Calculate per employee contribution
-        Formula: (Total Income - Interest Expenses) / Staff Count
+        Calculate per employee contribution (in Lakhs)
+        Formula: (Total Income - Interest Expenses) / Staff Count / 100000
         """
         pl = self.period.profit_loss
         ops = self.period.operational_metrics
@@ -61,19 +61,19 @@ class ProductivityCalculator:
                 pl.miscellaneous_income
             )
             contribution = total_income - pl.total_interest_expense
-            return float(contribution / Decimal(str(ops.staff_count)))
+            return float(contribution / Decimal(str(ops.staff_count)) / Decimal('100000.0'))
         return 0.0
     
     def calculate_per_employee_operating_cost(self):
         """
-        Calculate per employee operating cost
-        Formula: Establishment & Contingencies / Staff Count
+        Calculate per employee operating cost (in Lakhs)
+        Formula: Establishment & Contingencies / Staff Count / 100000
         """
         pl = self.period.profit_loss
         ops = self.period.operational_metrics
         
         if ops.staff_count > 0:
-            return float(pl.establishment_contingencies / Decimal(str(ops.staff_count)))
+            return float(pl.establishment_contingencies / Decimal(str(ops.staff_count)) / Decimal('100000.0'))
         return 0.0
     
     def is_efficient(self):
