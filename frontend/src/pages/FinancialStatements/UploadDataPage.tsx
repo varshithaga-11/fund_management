@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCompanyList, CompanyData } from "../Companies/api";
+
 import Button from "../../components/ui/button/Button";
-import Select from "../../components/form/Select";
 import Label from "../../components/form/Label";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -11,25 +10,13 @@ import { Download } from "lucide-react";
 
 const UploadDataPage: React.FC = () => {
   const navigate = useNavigate();
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
+
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCompanies();
   }, []);
-
-  const loadCompanies = async () => {
-    try {
-      const data = await getCompanyList();
-      setCompanies(data);
-    } catch (error) {
-      console.error("Error loading companies:", error);
-      toast.error("Failed to load companies");
-    }
-  };
 
   const ACCEPTED_EXTENSIONS = [".xlsx", ".xls", ".docx", ".pdf"];
   const isAcceptedFile = (name: string) =>
@@ -46,9 +33,7 @@ const UploadDataPage: React.FC = () => {
     }
   };
 
-  const handleCompanyChange = (value: string) => {
-    setSelectedCompany(parseInt(value));
-  };
+
 
   const handleDownloadExcelTemplate = async () => {
     try {
@@ -82,21 +67,17 @@ const UploadDataPage: React.FC = () => {
       return;
     }
 
-    if (!selectedCompany) {
-      toast.error("Please select a company");
-      return;
-    }
+
 
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("company_id", selectedCompany.toString());
 
       const result = await uploadExcelData(formData);
-      
+
       toast.success("Data uploaded successfully!");
-      
+
       // Navigate to the financial period page
       if (result.period_id) {
         setTimeout(() => {
@@ -118,15 +99,12 @@ const UploadDataPage: React.FC = () => {
     }
   };
 
-  const companyOptions = companies.map((company) => ({
-    value: company.id.toString(),
-    label: company.name,
-  }));
+
 
   return (
     <div className="p-6 space-y-6">
       <ToastContainer position="bottom-right" autoClose={3000} />
-      
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Upload Financial Data
@@ -134,7 +112,7 @@ const UploadDataPage: React.FC = () => {
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
           Upload an Excel file (.xlsx, .xls), Word document (.docx), or PDF for financial data or statements
         </p>
-        
+
         {/* Download Template Buttons */}
         <div className="mt-4 flex gap-3">
           <button
@@ -188,17 +166,7 @@ const UploadDataPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Company Selection */}
-        <div>
-          <Label htmlFor="company">Select Company *</Label>
-          <Select
-            options={companyOptions}
-            placeholder="Select a company"
-            onChange={handleCompanyChange}
-            className="mt-2 dark:bg-dark-900"
-            disabled={uploading}
-          />
-        </div>
+
 
         {/* Period label – India FY (Apr–Mar) */}
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
@@ -234,7 +202,7 @@ const UploadDataPage: React.FC = () => {
         <div className="flex justify-end">
           <Button
             onClick={handleUpload}
-            disabled={!file || !selectedCompany || uploading}
+            disabled={!file || uploading}
           >
             {uploading ? "Uploading..." : "Upload & Process"}
           </Button>

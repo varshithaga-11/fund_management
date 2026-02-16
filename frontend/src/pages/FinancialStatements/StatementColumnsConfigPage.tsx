@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getCompanyList, CompanyData } from "../Companies/api";
+
 import { createApiUrl, getAuthHeaders } from "../../access/access";
 import Label from "../../components/form/Label";
 import Input from "../../components/form/input/InputField";
@@ -19,8 +19,7 @@ type StatementType = "TRADING" | "PL" | "BALANCE_SHEET" | "OPERATIONAL";
 
 interface StatementColumnConfig {
   id: number;
-  company: number | null;
-  company_name?: string | null;
+
   statement_type: StatementType;
   canonical_field: string;
   display_name: string;
@@ -68,8 +67,6 @@ const CANONICAL_FIELDS_BY_STATEMENT: Record<StatementType, string[]> = {
 };
 
 const StatementColumnsConfigPage: React.FC = () => {
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("global");
   const [statementType, setStatementType] =
     useState<StatementType>("TRADING");
   const [rows, setRows] = useState<StatementColumnConfig[]>([]);
@@ -91,33 +88,21 @@ const StatementColumnsConfigPage: React.FC = () => {
     typeof window !== "undefined" ? localStorage.getItem("userRole") || "" : "";
   const canUpdate = userRole === "master";
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
+
 
   useEffect(() => {
     if (statementType) {
       loadConfigs();
     }
-  }, [statementType, selectedCompanyId]);
+  }, [statementType]);
 
-  const loadCompanies = async () => {
-    try {
-      const data = await getCompanyList();
-      setCompanies(data);
-    } catch (e) {
-      console.error("Failed to load companies", e);
-    }
-  };
+
 
   const loadConfigs = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       params.append("statement_type", statementType);
-      if (selectedCompanyId) {
-        params.append("company", selectedCompanyId);
-      }
       const url = `${createApiUrl("api/statement-columns/")}?${params.toString()}`;
       const headers = await getAuthHeaders();
       const res = await fetch(url, { headers });
@@ -143,19 +128,19 @@ const StatementColumnsConfigPage: React.FC = () => {
       prev.map((row) =>
         row.id === id
           ? {
-              ...row,
-              [field]:
-                field === "is_required"
-                  ? Boolean(value)
-                  : field === "aliases"
+            ...row,
+            [field]:
+              field === "is_required"
+                ? Boolean(value)
+                : field === "aliases"
                   ? Array.isArray(value)
                     ? value
                     : String(value)
-                        .split(",")
-                        .map((s) => s.trim().replace(/\s+/g, "_"))
-                        .filter(Boolean)
+                      .split(",")
+                      .map((s) => s.trim().replace(/\s+/g, "_"))
+                      .filter(Boolean)
                   : value,
-            }
+          }
           : row
       )
     );
@@ -181,7 +166,6 @@ const StatementColumnsConfigPage: React.FC = () => {
     try {
       const headers = await getAuthHeaders();
       const body = {
-        company: selectedCompanyId === "global" ? null : parseInt(selectedCompanyId, 10),
         statement_type: statementType,
         canonical_field: newConfig.canonical_field.trim(),
         display_name: newConfig.display_name.trim() || newConfig.canonical_field,
@@ -280,7 +264,7 @@ const StatementColumnsConfigPage: React.FC = () => {
             Statement Column Mapping
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Choose a statement type and (optionally) a company to manage
+            Choose a statement type to manage
             display names and ordering of financial statement fields.
           </p>
         </div>
@@ -320,22 +304,7 @@ const StatementColumnsConfigPage: React.FC = () => {
             ))}
           </select>
         </div>
-        <div>
-          <Label htmlFor="company">Company (optional)</Label>
-          <select
-            id="company"
-            value={selectedCompanyId}
-            onChange={(e) => setSelectedCompanyId(e.target.value)}
-            className="h-11 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-900 dark:text-white"
-          >
-            <option value="global">Global (all companies)</option>
-            {companies.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+
       </div>
 
       {loading ? (

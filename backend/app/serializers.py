@@ -156,16 +156,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 
-class CompanySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Company
-        fields = [
-            "id",
-            "name",
-            "registration_no",
-            "created_at",
-        ]
-        read_only_fields = ["id", "created_at"]
+
 
 
 class TradingAccountSerializer(serializers.ModelSerializer):
@@ -261,7 +252,6 @@ class FinancialPeriodSerializer(serializers.ModelSerializer):
         model = FinancialPeriod
         fields = [
             'id',
-            'company',
             'period_type',
             'start_date',
             'end_date',
@@ -349,8 +339,6 @@ class StatementColumnConfigSerializer(serializers.ModelSerializer):
         model = StatementColumnConfig
         fields = [
             "id",
-            "company",
-            "company_name",
             "statement_type",
             "canonical_field",
             "display_name",

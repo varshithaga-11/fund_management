@@ -5,7 +5,7 @@ import axios from "axios";
 
 export interface FinancialPeriodData {
   id: number;
-  company: number;
+
   period_type: "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY";
   start_date: string;
   end_date: string;
@@ -113,7 +113,7 @@ export interface RatioResultData {
 }
 
 export interface FinancialPeriodFormData {
-  company: number;
+
   period_type: "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY";
   start_date: string;
   end_date: string;
@@ -124,13 +124,11 @@ export interface FinancialPeriodFormData {
 // -------------------- API Calls --------------------
 
 // Financial Periods
-export const getFinancialPeriods = async (companyId?: number): Promise<FinancialPeriodData[]> => {
+export const getFinancialPeriods = async (): Promise<FinancialPeriodData[]> => {
   try {
     const url = createApiUrl("api/financial-periods/");
-    const params = companyId ? { company: companyId } : {};
     const response = await axios.get(url, {
       headers: await getAuthHeaders(),
-      params,
     });
     return response.data;
   } catch (error) {

@@ -12,34 +12,24 @@ import OperationalMetricsForm from "./OperationalMetricsForm";
 import Button from "../../components/ui/button/Button";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { getCompanyList as getCompanies, CompanyData } from "../Companies/api";
+
 
 const FinancialPeriodPage: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
   const navigate = useNavigate();
   const [period, setPeriod] = useState<FinancialPeriodData | null>(null);
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [activeTab, setActiveTab] = useState("trading");
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
 
   // All data is read-only - no updates allowed
-
   useEffect(() => {
     if (periodId) {
       loadPeriod();
     }
-    loadCompanies();
   }, [periodId]);
 
-  const loadCompanies = async () => {
-    try {
-      const data = await getCompanies();
-      setCompanies(data);
-    } catch (error) {
-      console.error("Error loading companies:", error);
-    }
-  };
+
 
   const loadPeriod = async () => {
     if (!periodId) return;
@@ -137,8 +127,6 @@ const FinancialPeriodPage: React.FC = () => {
             {period.label}
           </h1>
           <p className="text-lg font-bold text-gray-800 dark:text-gray-200 mt-1">
-            {companies.find((c) => c.id === period.company)?.name || ""}
-            <span className="mx-2 text-gray-400">|</span>
             <span className="uppercase tracking-wider">{period.period_type}</span>
           </p>
         </div>
@@ -159,8 +147,8 @@ const FinancialPeriodPage: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 px-1 border-b-2 font-bold text-base transition-colors ${activeTab === tab.id
-                  ? "border-brand-600 text-brand-700 dark:text-brand-400"
-                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                ? "border-brand-600 text-brand-700 dark:text-brand-400"
+                : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
             >
               {tab.label}
@@ -213,8 +201,8 @@ const FinancialPeriodPage: React.FC = () => {
           <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
               className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.trading_account
-                  ? "bg-green-600"
-                  : "bg-gray-300 dark:bg-gray-600"
+                ? "bg-green-600"
+                : "bg-gray-300 dark:bg-gray-600"
                 }`}
             />
             <span className="font-bold text-gray-800 dark:text-gray-200">
@@ -224,8 +212,8 @@ const FinancialPeriodPage: React.FC = () => {
           <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
               className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.profit_loss
-                  ? "bg-green-600"
-                  : "bg-gray-300 dark:bg-gray-600"
+                ? "bg-green-600"
+                : "bg-gray-300 dark:bg-gray-600"
                 }`}
             />
             <span className="font-bold text-gray-800 dark:text-gray-200">
@@ -235,8 +223,8 @@ const FinancialPeriodPage: React.FC = () => {
           <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
               className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.balance_sheet
-                  ? "bg-green-600"
-                  : "bg-gray-300 dark:bg-gray-600"
+                ? "bg-green-600"
+                : "bg-gray-300 dark:bg-gray-600"
                 }`}
             />
             <span className="font-bold text-gray-800 dark:text-gray-200">
@@ -246,8 +234,8 @@ const FinancialPeriodPage: React.FC = () => {
           <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
             <div
               className={`w-4 h-4 rounded-full mr-3 shadow-sm ${period.operational_metrics
-                  ? "bg-green-600"
-                  : "bg-gray-300 dark:bg-gray-600"
+                ? "bg-green-600"
+                : "bg-gray-300 dark:bg-gray-600"
                 }`}
             />
             <span className="font-bold text-gray-800 dark:text-gray-200">

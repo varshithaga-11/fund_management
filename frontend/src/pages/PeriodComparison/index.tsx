@@ -6,18 +6,14 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
 import {
-  getCompanies,
-  getCompanyPeriodsList,
+  getPeriodsList,
   comparePeriodsById,
-  CompanyData,
   PeriodListData,
   PeriodComparisonResponse,
 } from "./api";
 import { ArrowLeft, Search, ChevronDown } from "lucide-react";
 
 const PeriodComparison: React.FC = () => {
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<CompanyData | null>(null);
   const [periods, setPeriods] = useState<PeriodListData[]>([]);
   const [selectedPeriod1, setSelectedPeriod1] = useState<PeriodListData | null>(null);
   const [selectedPeriod2, setSelectedPeriod2] = useState<PeriodListData | null>(null);
@@ -28,25 +24,24 @@ const PeriodComparison: React.FC = () => {
   const [openDropdown2, setOpenDropdown2] = useState(false);
 
   const [loading, setLoading] = useState(true);
-  const [loadingPeriods, setLoadingPeriods] = useState(false);
   const [loadingComparison, setLoadingComparison] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTableView, setShowTableView] = useState(true);
 
   useEffect(() => {
-    loadCompanies();
+    loadPeriods();
   }, []);
 
-  const loadCompanies = async () => {
+  const loadPeriods = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getCompanies();
-      console.log("Companies loaded:", data);
-      setCompanies(data);
+      const data = await getPeriodsList();
+      console.log("Periods loaded:", data);
+      setPeriods(data);
     } catch (error: any) {
-      console.error("Error loading companies:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to load companies";
+      console.error("Error loading periods:", error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to load periods";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -54,30 +49,8 @@ const PeriodComparison: React.FC = () => {
     }
   };
 
-  const handleSelectCompany = async (company: CompanyData) => {
-    try {
-      setSelectedCompany(company);
-      setSelectedPeriod1(null);
-      setSelectedPeriod2(null);
-      setComparisonData(null);
-      setLoadingPeriods(true);
-
-      const periodsData = await getCompanyPeriodsList(company.id);
-      setPeriods(periodsData);
-
-      if (periodsData.length === 0) {
-        toast.info("No financial periods found for this company");
-      }
-    } catch (error: any) {
-      console.error("Error loading periods:", error);
-      toast.error("Failed to load periods");
-    } finally {
-      setLoadingPeriods(false);
-    }
-  };
-
   const handleCompare = async () => {
-    if (!selectedCompany || !selectedPeriod1 || !selectedPeriod2) {
+    if (!selectedPeriod1 || !selectedPeriod2) {
       toast.warning("Please select both periods");
       return;
     }
@@ -94,15 +67,15 @@ const PeriodComparison: React.FC = () => {
         selectedPeriod1.id,
         selectedPeriod2.id
       );
-      
+
       console.log("Raw API response:", rawData);
-      
+
       // Transform API response to match component expectations
       if (rawData.data && rawData.data.period_1 && rawData.data.period_2 && rawData.data.difference) {
         const period1 = rawData.data.period_1;
         const period2 = rawData.data.period_2;
         const difference = rawData.data.difference;
-        
+
         // List of all ratio fields to compare - ONLY fields that exist in RatioResult model
         const ratioFields = [
           // Trading Ratios (3)
@@ -122,14 +95,14 @@ const PeriodComparison: React.FC = () => {
           // Working Fund (1)
           'working_fund'
         ];
-        
+
         // Build ratios object for component
         const ratios: any = {};
         ratioFields.forEach((field) => {
           const p1Value = period1[field] !== undefined ? period1[field] : null;
           const p2Value = period2[field] !== undefined ? period2[field] : null;
           const diff = difference[field];
-          
+
           ratios[field] = {
             period1: p1Value,
             period2: p2Value,
@@ -137,7 +110,7 @@ const PeriodComparison: React.FC = () => {
             percentage_change: diff ? diff.percentage_change : null
           };
         });
-        
+
         // Transform to component format
         const transformedData: PeriodComparisonResponse = {
           status: rawData.status,
@@ -145,11 +118,10 @@ const PeriodComparison: React.FC = () => {
           data: {
             period1: selectedPeriod1.label,
             period2: selectedPeriod2.label,
-            company: selectedCompany.name,
             ratios
           }
         };
-        
+
         console.log("Transformed comparison data:", transformedData);
         setComparisonData(transformedData);
         toast.success("Comparison loaded successfully");
@@ -169,7 +141,6 @@ const PeriodComparison: React.FC = () => {
   };
 
   const handleBack = () => {
-    setSelectedCompany(null);
     setSelectedPeriod1(null);
     setSelectedPeriod2(null);
     setComparisonData(null);
@@ -243,7 +214,7 @@ const PeriodComparison: React.FC = () => {
             <button
               onClick={() => {
                 setError(null);
-                loadCompanies();
+                loadPeriods();
               }}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
             >
@@ -255,60 +226,7 @@ const PeriodComparison: React.FC = () => {
     );
   }
 
-  // Step 1: Show companies
-  if (!selectedCompany) {
-    return (
-      <>
-        <PageMeta title="Period Comparison" description="Compare financial periods for companies" />
-        <PageBreadcrumb pageTitle="Period Comparison" />
 
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
-
-        <div className="p-6">
-          <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-            <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
-              Select Company
-            </h3>
-
-            {companies.length === 0 ? (
-              <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <p className="text-yellow-800 dark:text-yellow-200">
-                  No companies found. Please add a company first.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {companies.map((company) => (
-                  <button
-                    key={company.id}
-                    onClick={() => handleSelectCompany(company)}
-                    className="p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:border-gray-600 dark:hover:bg-gray-700 transition text-left"
-                  >
-                    <h4 className="font-semibold text-gray-900 dark:text-white">
-                      {company.name}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Reg: {company.registration_no}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </>
-    );
-  }
 
   // Step 2: Show period selection (with results below if available)
   return (
@@ -342,10 +260,10 @@ const PeriodComparison: React.FC = () => {
           </button>
 
           <h3 className="mb-6 text-xl font-semibold text-black dark:text-white">
-            {comparisonData ? comparisonData.data.company : `Compare Periods for ${selectedCompany.name}`}
+            {comparisonData ? `Comparison Results` : `Compare Periods`}
           </h3>
 
-          {loadingPeriods ? (
+          {loading ? (
             <div className="flex items-center justify-center h-96">
               <BeatLoader color="#3b82f6" />
             </div>
@@ -407,8 +325,8 @@ const PeriodComparison: React.FC = () => {
                                 setSearchPeriod1("");
                               }}
                               className={`w-full p-3 text-left border-b border-gray-200 dark:border-gray-700 transition ${selectedPeriod1?.id === period.id
-                                  ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
-                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
                                 }`}
                             >
                               <p className="font-medium">{period.label}</p>
@@ -478,8 +396,8 @@ const PeriodComparison: React.FC = () => {
                                 setSearchPeriod2("");
                               }}
                               className={`w-full p-3 text-left border-b border-gray-200 dark:border-gray-700 transition ${selectedPeriod2?.id === period.id
-                                  ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
-                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
                                 }`}
                             >
                               <p className="font-medium">{period.label}</p>
@@ -510,7 +428,7 @@ const PeriodComparison: React.FC = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{selectedPeriod1.period_type}</p>
                       </div>
                     )}
-                    
+
                     {selectedPeriod1 && selectedPeriod2 && (
                       <button
                         onClick={() => {
@@ -527,7 +445,7 @@ const PeriodComparison: React.FC = () => {
                         </svg>
                       </button>
                     )}
-                    
+
                     {selectedPeriod2 && (
                       <div className="text-center">
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide font-semibold">Period 2</p>
@@ -608,21 +526,19 @@ const PeriodComparison: React.FC = () => {
                         <div className="mb-6 flex gap-2 border-b border-gray-300 dark:border-gray-600">
                           <button
                             onClick={() => setShowTableView(true)}
-                            className={`px-4 py-3 font-semibold transition-colors ${
-                              showTableView
-                                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                            }`}
+                            className={`px-4 py-3 font-semibold transition-colors ${showTableView
+                              ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
+                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                              }`}
                           >
                             📊 Table View
                           </button>
                           <button
                             onClick={() => setShowTableView(false)}
-                            className={`px-4 py-3 font-semibold transition-colors ${
-                              !showTableView
-                                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                            }`}
+                            className={`px-4 py-3 font-semibold transition-colors ${!showTableView
+                              ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
+                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                              }`}
                           >
                             🎴 Card View
                           </button>
@@ -683,17 +599,16 @@ const PeriodComparison: React.FC = () => {
                               const changePercentage = ratioData.percentage_change || 0;
                               const isPositive = changePercentage > 0;
                               const isNeutral = changePercentage === 0;
-                              
+
                               return (
                                 <div
                                   key={ratioName}
-                                  className={`p-5 rounded-xl border-2 transition-all hover:shadow-lg ${
-                                    isPositive
-                                      ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800"
-                                      : isNeutral
+                                  className={`p-5 rounded-xl border-2 transition-all hover:shadow-lg ${isPositive
+                                    ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800"
+                                    : isNeutral
                                       ? "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 border-gray-200 dark:border-gray-700"
                                       : "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800"
-                                  }`}
+                                    }`}
                                 >
                                   <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-3 uppercase tracking-wide">
                                     {formatRatioName(ratioName)}

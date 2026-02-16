@@ -8,7 +8,7 @@ from .views import *  # noqa: F401 F403
 router = DefaultRouter()
 
 router.register(r'profile', ProfileView, basename='profile')
-router.register(r"companies", CompanyViewSet, basename="company")
+
 router.register(r"financial-periods", FinancialPeriodViewSet, basename="financial-period")
 router.register(r"trading-accounts", TradingAccountViewSet, basename="trading-account")
 router.register(r"profit-loss", ProfitAndLossViewSet, basename="profit-loss")
@@ -21,8 +21,7 @@ router.register(r'usermanagement', UserManagementViewSet, basename='usermanageme
 
 
 urlpatterns = [
-    path('companies/bulk_import/', BulkImportCompaniesView.as_view(), name='bulk-import-companies'),
-    path('companies/all-periods/', CompanyAllPeriodsView.as_view(), name='company-all-periods'),
+
     path('', include(router.urls)),
     path('register/', UserRegisterView.as_view(), name='register'),
     # path('userlist/', UserListView.as_view(), name='user_list'),

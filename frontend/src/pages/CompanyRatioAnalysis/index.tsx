@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
-import { getCompanies, getCompanyPeriodsList, getCompanyRatioTrends, RatioCategory, CompanyData, PeriodWithRatiosData } from "./api";
+import { getPeriodsList, getRatioTrends, RatioCategory, PeriodWithRatiosData } from "./api";
 import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
 import { ArrowLeft, Download, TrendingUp } from "lucide-react";
@@ -13,73 +13,49 @@ import PeriodDataEditForm from "./PeriodDataEditForm";
 import TrendAnalysisChart from "./TrendAnalysisChart";
 
 const CompanyRatioAnalysis: React.FC = () => {
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<CompanyData | null>(null);
+
   const [periods, setPeriods] = useState<PeriodWithRatiosData[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodWithRatiosData | null>(null);
   const [ratios, setRatios] = useState<RatioResultData | null>(null);
   const [ratioTrends, setRatioTrends] = useState<any[]>([]);
   const [showTrendAnalysis, setShowTrendAnalysis] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [loadingPeriods, setLoadingPeriods] = useState(false);
+  const [loading, setLoading] = useState(true); // Used for initial load of periods now
+
   const [loadingRatios, setLoadingRatios] = useState(false);
   const [loadingTrends, setLoadingTrends] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Load companies on component mount
+  // Load periods on component mount
   useEffect(() => {
-    loadCompanies();
+    loadPeriods();
   }, []);
 
-  const loadCompanies = async () => {
+  const loadPeriods = async () => {
     try {
       setLoading(true);
-      const data = await getCompanies();
-      setCompanies(data);
+      const data = await getPeriodsList();
+      setPeriods(data);
+
+      if (data.length === 0) {
+        toast.info("No financial periods found.");
+      } else if (data.filter(p => p.ratios != null).length === 0) {
+        toast.warning("Periods found but ratio data is not available yet. Please calculate ratios first.");
+      }
+
     } catch (error) {
-      console.error("Error loading companies:", error);
-      toast.error("Failed to load companies");
+      console.error("Error loading periods:", error);
+      toast.error("Failed to load periods");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectCompany = async (company: CompanyData) => {
-    try {
-      setSelectedCompany(company);
-      setSelectedPeriod(null);
-      setRatios(null);
-      setShowTrendAnalysis(false);
-      setLoadingPeriods(true);
 
-      console.log(`Fetching periods for company: ${company.id} (${company.name})`);
-      const periodsData = await getCompanyPeriodsList(company.id);
-      console.log("Periods fetched:", periodsData);
-      console.log(`Periods with ratio data: ${periodsData.filter(p => p.ratios != null).length} / ${periodsData.length}`);
-
-      setPeriods(periodsData);
-
-      if (periodsData.length === 0) {
-        toast.info("No financial periods found for this company");
-      } else if (periodsData.filter(p => p.ratios != null).length === 0) {
-        toast.warning("Periods found but ratio data is not available yet. Please calculate ratios first.");
-      }
-    } catch (error: any) {
-      console.error("Error loading periods:", error);
-      console.error("Error details:", error?.response?.data || error?.message);
-      toast.error("Failed to load periods: " + (error?.response?.data?.message || error?.message || "Unknown error"));
-    } finally {
-      setLoadingPeriods(false);
-    }
-  };
 
   // Fetch ratio trends only when "View Trend Analysis" is clicked
   const handleViewTrendAnalysis = async (category?: RatioCategory) => {
-    if (!selectedCompany) {
-      toast.warning("Please select a company first");
-      return;
-    }
+
 
     // Validate we have enough periods with ratio data
     if (periods.length < 2) {
@@ -90,7 +66,7 @@ const CompanyRatioAnalysis: React.FC = () => {
     const periodsWithRatios = periods.filter(p => p.ratios != null);
     console.log(`Trend analysis validation: ${periodsWithRatios.length} periods with ratios out of ${periods.length} total`);
     console.log("Periods with ratios:", periodsWithRatios);
-    
+
     if (periodsWithRatios.length < 2) {
       toast.error("At least 2 periods with ratio data are required for trend analysis");
       return;
@@ -100,16 +76,16 @@ const CompanyRatioAnalysis: React.FC = () => {
       setLoadingTrends(true);
       setShowTrendAnalysis(true);
       // Call API with optional category filter
-      const trendsData = await getCompanyRatioTrends(selectedCompany.id, category);
+      const trendsData = await getRatioTrends(category);
       console.log("Trend data received from API:", trendsData);
-      
+
       if (!trendsData || trendsData.length < 2) {
         console.warn("Insufficient trend data received:", trendsData);
         toast.warning("Insufficient data to display trends. Please ensure multiple periods are available.");
         setShowTrendAnalysis(false);
         return;
       }
-      
+
       setRatioTrends(trendsData);
     } catch (error) {
       console.error("Error loading trends:", error);
@@ -143,14 +119,7 @@ const CompanyRatioAnalysis: React.FC = () => {
     }
   };
 
-  const handleBackToCompanies = () => {
-    setSelectedCompany(null);
-    setSelectedPeriod(null);
-    setRatios(null);
-    setPeriods([]);
-    setRatioTrends([]);
-    setShowTrendAnalysis(false);
-  };
+
 
   const handleBackToPeriods = () => {
     setSelectedPeriod(null);
@@ -158,7 +127,7 @@ const CompanyRatioAnalysis: React.FC = () => {
   };
 
   const handleExportToExcel = async () => {
-    if (!ratios || !selectedCompany || !selectedPeriod) {
+    if (!ratios || !selectedPeriod) {
       toast.warning("No ratio data to export");
       return;
     }
@@ -167,7 +136,7 @@ const CompanyRatioAnalysis: React.FC = () => {
       setIsExporting(true);
       exportRatioAnalysisToExcel(
         ratios,
-        selectedCompany.name,
+        "Financial Ratio Analysis",
         selectedPeriod.label,
         "Ratio_Analysis"
       );
@@ -180,7 +149,7 @@ const CompanyRatioAnalysis: React.FC = () => {
   };
 
   const handleExportToPDF = async () => {
-    if (!ratios || !selectedCompany || !selectedPeriod) {
+    if (!ratios || !selectedPeriod) {
       toast.warning("No ratio data to export");
       return;
     }
@@ -189,7 +158,7 @@ const CompanyRatioAnalysis: React.FC = () => {
       setIsExporting(true);
       exportRatioAnalysisToPDF(
         ratios,
-        selectedCompany.name,
+        "Financial Ratio Analysis",
         selectedPeriod.label,
         "Ratio_Analysis"
       );
@@ -204,66 +173,18 @@ const CompanyRatioAnalysis: React.FC = () => {
   return (
     <>
       <PageMeta
-        title="Company Ratio Analysis"
-        description="Analyze financial ratios for companies by period"
+        title="Ratio Analysis"
+        description="Analyze financial ratios by period"
       />
-      <PageBreadcrumb pageTitle="Company Ratio Analysis" />
+      <PageBreadcrumb pageTitle="Ratio Analysis" />
 
       <div className="p-6">
         <ToastContainer position="top-right" autoClose={3000} />
 
-        {/* Companies Selection Screen */}
-        {!selectedCompany && (
+        {/* Periods Selection Screen - Default View */}
+        {!selectedPeriod && !showTrendAnalysis && (
           <div>
-            <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-              Select Company
-            </h1>
-
-            {loading ? (
-              <div className="flex items-center justify-center h-64">
-                <BeatLoader color="#3b82f6" />
-              </div>
-            ) : companies.length === 0 ? (
-              <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <p className="text-yellow-800 dark:text-yellow-200">
-                  No companies found. Please add a company first.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {companies.map((company) => (
-                  <div
-                    key={company.id}
-                    onClick={() => handleSelectCompany(company)}
-                    className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-lg hover:scale-105 transition-all"
-                  >
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
-                      {company.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      Reg No: {company.registration_no}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                      {new Date(company.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Periods Selection Screen */}
-        {selectedCompany && !selectedPeriod && !showTrendAnalysis && (
-          <div>
-            <div className="flex items-center justify-between gap-3 mb-6">
-              <button
-                onClick={handleBackToCompanies}
-                className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                Back to Companies
-              </button>
+            <div className="flex items-center justify-end gap-3 mb-6">
               {periods.length > 1 && periods.filter(p => p.ratios != null).length >= 2 && (
                 <button
                   onClick={() => handleViewTrendAnalysis()}
@@ -278,7 +199,7 @@ const CompanyRatioAnalysis: React.FC = () => {
             </div>
 
             <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-              {selectedCompany.name}
+              Financial Periods
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               Select a period to view ratio analysis
@@ -289,14 +210,14 @@ const CompanyRatioAnalysis: React.FC = () => {
               )}
             </p>
 
-            {loadingPeriods ? (
+            {loading ? (
               <div className="flex items-center justify-center h-64">
                 <BeatLoader color="#3b82f6" />
               </div>
             ) : periods.length === 0 ? (
               <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                 <p className="text-yellow-800 dark:text-yellow-200">
-                  No financial periods found for this company.
+                  No financial periods found.
                 </p>
               </div>
             ) : (
@@ -342,7 +263,7 @@ const CompanyRatioAnalysis: React.FC = () => {
         )}
 
         {/* Ratio Analysis Screen */}
-        {selectedCompany && selectedPeriod && (
+        {selectedPeriod && (
           <div>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -399,7 +320,7 @@ const CompanyRatioAnalysis: React.FC = () => {
 
             <div className="mb-6">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {selectedCompany.name}
+                Ratio Analysis
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 {selectedPeriod.label} ({selectedPeriod.period_type})
@@ -489,7 +410,7 @@ const CompanyRatioAnalysis: React.FC = () => {
         )}
 
         {/* Trend Analysis Screen */}
-        {selectedCompany && showTrendAnalysis && (
+        {showTrendAnalysis && (
           <div>
             <div className="flex items-center gap-3 mb-6">
               <button
@@ -516,15 +437,14 @@ const CompanyRatioAnalysis: React.FC = () => {
                 <div className="bg-yellow-100 dark:bg-yellow-900/40 p-3 rounded text-xs text-yellow-700 dark:text-yellow-300">
                   <p><strong>Available periods:</strong> {ratioTrends?.length || 0} of {periods.length}</p>
                   <p className="mt-2">
-                    {periods.filter(p => p.ratios != null).length < 2 
-                      ? "Periods found but ratios not calculated. Select periods above and calculate ratios first." 
+                    {periods.filter(p => p.ratios != null).length < 2
+                      ? "Periods found but ratios not calculated. Select periods above and calculate ratios first."
                       : "Ensure selected periods have completed ratio calculations."}
                   </p>
                 </div>
               </div>
             ) : (
               <TrendAnalysisChart
-                companyName={selectedCompany.name}
                 ratioData={ratioTrends}
                 periods={periods}
               />

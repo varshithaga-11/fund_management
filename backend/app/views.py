@@ -103,10 +103,7 @@ class ProfileView(viewsets.ModelViewSet):
 
 
 
-class CompanyViewSet(viewsets.ModelViewSet):
-    queryset = Company.objects.all().order_by("-created_at")
-    serializer_class = CompanySerializer
-    permission_classes = [IsAuthenticated]
+
 
 
 class FinancialPeriodViewSet(viewsets.ModelViewSet):
@@ -116,9 +113,6 @@ class FinancialPeriodViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = FinancialPeriod.objects.all()
-        company_id = self.request.query_params.get('company', None)
-        if company_id:
-            queryset = queryset.filter(company_id=company_id)
         return queryset.order_by("-created_at")
 
 
@@ -198,12 +192,8 @@ class StatementColumnConfigViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = StatementColumnConfig.objects.all()
-        company_id = self.request.query_params.get("company")
         statement_type = self.request.query_params.get("statement_type")
-        if company_id == "global":
-            qs = qs.filter(company__isnull=True)
-        elif company_id:
-            qs = qs.filter(company_id=company_id)
+        
         # if no company param: return all (caller can filter client-side)
         if statement_type:
             qs = qs.filter(statement_type=statement_type)
@@ -380,25 +370,7 @@ class UploadExcelView(APIView):
                     "message": "No file provided"
                 })
             
-            company_id = request.data.get('company_id')
-            if not company_id:
-                logger.warning("DEBUG: company_id is required")
-                return Response({
-                    "status": "failed",
-                    "response_code": status.HTTP_400_BAD_REQUEST,
-                    "message": "company_id is required"
-                })
-            
-            try:
-                company = Company.objects.get(id=company_id)
-                logger.info(f"DEBUG: Found company - {company.name}")
-            except Company.DoesNotExist:
-                logger.warning(f"DEBUG: Company not found - ID: {company_id}")
-                return Response({
-                    "status": "failed",
-                    "response_code": status.HTTP_404_NOT_FOUND,
-                    "message": "Company not found"
-                })
+
             
             uploaded_file = request.FILES['file']
             logger.info(f"DEBUG: File received - {uploaded_file.name}")
@@ -416,7 +388,7 @@ class UploadExcelView(APIView):
             # Handle .docx or .pdf: store file and create period with default empty data
             if ext == 'docx':
                 period = self._create_period_from_document(
-                    request, company, uploaded_file, period_info, file_type='docx'
+                    request, uploaded_file, period_info, file_type='docx'
                 )
                 return Response({
                     "status": "success",
@@ -427,7 +399,7 @@ class UploadExcelView(APIView):
                 })
             if ext == 'pdf':
                 period = self._create_period_from_document(
-                    request, company, uploaded_file, period_info, file_type='pdf'
+                    request, uploaded_file, period_info, file_type='pdf'
                 )
                 return Response({
                     "status": "success",
@@ -460,11 +432,11 @@ class UploadExcelView(APIView):
             if format_a:
                 logger.info("DEBUG: Parsing Format A sheets...")
                 financial_statement_data = self._parse_financial_statement_sheet(workbook[sheet_mapping['Financial_Statement']])
-                liabilities_data = self._parse_balance_sheet_liabilities(workbook[sheet_mapping['Balance_Sheet_Liabilities']], company)
-                assets_data = self._parse_balance_sheet_assets(workbook[sheet_mapping['Balance_Sheet_Assets']], company)
+                liabilities_data = self._parse_balance_sheet_liabilities(workbook[sheet_mapping['Balance_Sheet_Liabilities']])
+                assets_data = self._parse_balance_sheet_assets(workbook[sheet_mapping['Balance_Sheet_Assets']])
                 balance_sheet_data = self._default_balance_sheet({**liabilities_data, **assets_data})
-                profit_loss_data = self._default_profit_loss(self._parse_profit_loss_rows(workbook[sheet_mapping['Profit_Loss']], company))
-                trading_account_data = self._default_trading_account(self._parse_trading_account_rows(workbook[sheet_mapping['Trading_Account']], company))
+                profit_loss_data = self._default_profit_loss(self._parse_profit_loss_rows(workbook[sheet_mapping['Profit_Loss']]))
+                trading_account_data = self._default_trading_account(self._parse_trading_account_rows(workbook[sheet_mapping['Trading_Account']]))
                 staff_count = financial_statement_data.get('staff_count')
                 if staff_count is not None:
                     operational_metrics_data = {'staff_count': int(float(staff_count))}
@@ -476,10 +448,10 @@ class UploadExcelView(APIView):
                     period_info['end_date'] = fiscal_end
             elif format_b:
                 logger.info("DEBUG: Parsing Format B sheets...")
-                balance_sheet_data = self._default_balance_sheet(self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']], company))
-                profit_loss_data = self._default_profit_loss(self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']], company))
-                trading_account_data = self._default_trading_account(self._parse_trading_account(workbook[sheet_mapping['Trading Account']], company))
-                operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']], company)
+                balance_sheet_data = self._default_balance_sheet(self._parse_balance_sheet(workbook[sheet_mapping['Balance Sheet']]))
+                profit_loss_data = self._default_profit_loss(self._parse_profit_loss(workbook[sheet_mapping['Profit and Loss']]))
+                trading_account_data = self._default_trading_account(self._parse_trading_account(workbook[sheet_mapping['Trading Account']]))
+                operational_metrics_data = self._parse_operational_metrics(workbook[sheet_mapping['Operational Metrics']])
                 logger.info("DEBUG: Format B sheets parsed successfully")
             elif len(available) == 1 and available[0] == 'Sheet':
                 # Format C: Single generic "Sheet" - try to auto-detect and parse as balance sheet
@@ -493,7 +465,7 @@ class UploadExcelView(APIView):
                 
                 if has_liabilities and has_assets:
                     logger.info("DEBUG: Detected balance sheet format - parsing as Format B (single sheet)")
-                    balance_sheet_data = self._parse_balance_sheet(single_sheet, company)
+                    balance_sheet_data = self._parse_balance_sheet(single_sheet)
                     # Set default/empty data for other required sheets
                     profit_loss_data = self._default_profit_loss({})
                     trading_account_data = self._default_trading_account({})
@@ -519,12 +491,11 @@ class UploadExcelView(APIView):
             end_date = request.data.get('end_date') or period_info.get('end_date') or f"{datetime.now().year + 1}-03-31"
             period_type = request.data.get('period_type') or period_info.get('period_type') or ('MONTHLY' if period_info else 'YEARLY')
             
-            logger.info(f"DEBUG: Creating/updating period - Company: {company.name}, Label: {period_label}")
+            logger.info(f"DEBUG: Creating/updating period - Label: {period_label}")
             
             # Use transaction to ensure all data is saved together
             with transaction.atomic():
                 period, created = FinancialPeriod.objects.get_or_create(
-                    company=company,
                     label=period_label,
                     defaults={
                         'period_type': period_type,
@@ -658,7 +629,8 @@ class UploadExcelView(APIView):
                 "message": f"Error processing Excel file: {str(e)}"
             })
     
-    def _parse_balance_sheet(self, sheet, company=None):
+    
+    def _parse_balance_sheet(self, sheet):
         """Parse Balance Sheet sheet - handles both column format (Liabilities/Amount, Assets/Amount) and row format"""
         logger.info(f"=== PARSING BALANCE SHEET ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -715,7 +687,7 @@ class UploadExcelView(APIView):
                         amount = row_values[liabilities_amount_col] if liabilities_amount_col < len(row_values) else None
                         logger.info(f"Row {row_idx} - Liability: item='{item}', amount='{amount}'")
                         if item and amount is not None:
-                            field_name = self._map_balance_sheet_field(str(item), company)
+                            field_name = self._map_balance_sheet_field(str(item))
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
                                 logger.info(f"✓ Row {row_idx}: Mapped liability '{item}' -> {field_name} = {amount}")
@@ -727,7 +699,7 @@ class UploadExcelView(APIView):
                         amount = row_values[assets_amount_col] if assets_amount_col < len(row_values) else None
                         logger.info(f"Row {row_idx} - Asset: item='{item}', amount='{amount}'")
                         if item and amount is not None:
-                            field_name = self._map_balance_sheet_field(str(item), company)
+                            field_name = self._map_balance_sheet_field(str(item))
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
                                 logger.info(f"✓ Row {row_idx}: Mapped asset '{item}' -> {field_name} = {amount}")
@@ -761,7 +733,7 @@ class UploadExcelView(APIView):
                         value = data_row[col_idx]
                         logger.info(f"Balance Sheet - Header: '{header}', Column: {col_idx}, Value: '{value}'")
                         if value is not None:
-                            field_name = self._map_balance_sheet_field(header, company)
+                            field_name = self._map_balance_sheet_field(header)
                             if field_name:
                                 data[field_name] = self._parse_decimal(value)
                                 logger.info(f"✓ Mapped '{header}' -> {field_name} = {value}")
@@ -772,13 +744,13 @@ class UploadExcelView(APIView):
         logger.info(f"Extracted data: {data}")
         return data
     
-    def _map_balance_sheet_field(self, item_str, company=None):
-        """Map balance sheet item string to model field name. Uses StatementColumnConfig (checks company-specific first, then global, including aliases)."""
-        # Check StatementColumnConfig (checks company-specific first, then global, including aliases)
+    def _map_balance_sheet_field(self, item_str):
+        """Map balance sheet item string to model field name. Uses StatementColumnConfig (checks global, including aliases)."""
+        # Check StatementColumnConfig (checks global, including aliases)
         normalized = StatementColumnConfig._normalize_for_match(item_str)
-        logger.debug(f"Mapping Balance Sheet field: '{item_str}' (normalized: '{normalized}') for company: {company.name if company else 'None'}")
+        logger.debug(f"Mapping Balance Sheet field: '{item_str}' (normalized: '{normalized}')")
         
-        canonical = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", item_str)
+        canonical = StatementColumnConfig.resolve_canonical_field("BALANCE_SHEET", item_str)
         if canonical:
             logger.debug(f"✓ Found mapping: '{item_str}' -> {canonical}")
             return canonical
@@ -831,7 +803,7 @@ class UploadExcelView(APIView):
         logger.warning(f"✗ No mapping found in StatementColumnConfig for Balance Sheet field: '{item_str}' (normalized: '{normalized}')")
         return None
     
-    def _parse_profit_loss(self, sheet, company=None):
+    def _parse_profit_loss(self, sheet):
         """Parse Profit and Loss sheet - handles Expenses/Amount and Income/Amount column format"""
         logger.info(f"=== PARSING PROFIT & LOSS SHEET ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -887,7 +859,7 @@ class UploadExcelView(APIView):
                         logger.info(f"Row {row_idx} - Expense: item='{item}', amount='{amount}'")
                         if item and amount is not None:
                             item_str = str(item).strip()
-                            field_name = self._map_profit_loss_field(item_str, is_income=False, company=company)
+                            field_name = self._map_profit_loss_field(item_str, is_income=False)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
                                 logger.info(f"✓ Row {row_idx}: Mapped expense '{item_str}' -> {field_name} = {amount}")
@@ -901,7 +873,7 @@ class UploadExcelView(APIView):
                         logger.info(f"Row {row_idx} - Income: item='{item}', amount='{amount}'")
                         if item and amount is not None:
                             item_str = str(item).strip()
-                            field_name = self._map_profit_loss_field(item_str, is_income=True, company=company)
+                            field_name = self._map_profit_loss_field(item_str, is_income=True)
                             if field_name:
                                 data[field_name] = self._parse_decimal(amount)
                                 logger.info(f"✓ Row {row_idx}: Mapped income '{item_str}' -> {field_name} = {amount}")
@@ -941,7 +913,7 @@ class UploadExcelView(APIView):
                             value = income_row[col_idx]
                             logger.info(f"Income - Header: '{header}', Column: {col_idx}, Value: '{value}'")
                             if value is not None:
-                                field_name = self._map_profit_loss_field(header, is_income=True, company=company)
+                                field_name = self._map_profit_loss_field(header, is_income=True)
                                 if field_name:
                                     data[field_name] = self._parse_decimal(value)
                                     logger.info(f"✓ Mapped income '{header}' -> {field_name} = {value}")
@@ -956,7 +928,7 @@ class UploadExcelView(APIView):
                             value = expense_row[col_idx]
                             logger.info(f"Expense - Header: '{header}', Column: {col_idx}, Value: '{value}'")
                             if value is not None:
-                                field_name = self._map_profit_loss_field(header, is_income=False, company=company)
+                                field_name = self._map_profit_loss_field(header, is_income=False)
                                 if field_name:
                                     data[field_name] = self._parse_decimal(value)
                                     logger.info(f"✓ Mapped expense '{header}' -> {field_name} = {value}")
@@ -967,13 +939,13 @@ class UploadExcelView(APIView):
         logger.info(f"Extracted data: {data}")
         return data
     
-    def _map_profit_loss_field(self, item_str, is_income=False, company=None):
-        """Map profit & loss item string to model field name. Uses StatementColumnConfig (checks company-specific first, then global, including aliases)."""
-        # Check StatementColumnConfig (checks company-specific first, then global, including aliases)
+    def _map_profit_loss_field(self, item_str, is_income=False):
+        """Map profit & loss item string to model field name. Uses StatementColumnConfig (checks global, including aliases)."""
+        # Check StatementColumnConfig (checks global, including aliases)
         normalized = StatementColumnConfig._normalize_for_match(item_str)
-        logger.debug(f"Mapping Profit & Loss field: '{item_str}' (normalized: '{normalized}', is_income={is_income}) for company: {company.name if company else 'None'}")
+        logger.debug(f"Mapping Profit & Loss field: '{item_str}' (normalized: '{normalized}', is_income={is_income})")
         
-        canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item_str)
+        canonical = StatementColumnConfig.resolve_canonical_field("PL", item_str)
         if canonical:
             logger.debug(f"✓ Found mapping: '{item_str}' -> {canonical}")
             return canonical
@@ -1016,7 +988,7 @@ class UploadExcelView(APIView):
         logger.warning(f"✗ No mapping found in StatementColumnConfig for Profit & Loss field: '{item_str}' (normalized: '{normalized}')")
         return None
     
-    def _parse_trading_account(self, sheet, company=None):
+    def _parse_trading_account(self, sheet):
         """Parse Trading Account sheet. Uses StatementColumnConfig (display_name, aliases) for column name matching first."""
         logger.info(f"=== PARSING TRADING ACCOUNT SHEET ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -1057,7 +1029,7 @@ class UploadExcelView(APIView):
                 logger.info(f"Row {row_idx} - Trading Account: item='{item}', amount='{amount}'")
                 if item and amount is not None:
                     item_str = str(item).strip()
-                    field_name = self._map_trading_account_field(item_str, company)
+                    field_name = self._map_trading_account_field(item_str)
                     if field_name:
                         data[field_name] = self._parse_decimal(amount)
                         logger.info(f"✓ Row {row_idx}: Mapped '{item_str}' -> {field_name} = {amount}")
@@ -1068,13 +1040,13 @@ class UploadExcelView(APIView):
         logger.info(f"Extracted data: {data}")
         return data
     
-    def _map_trading_account_field(self, item_str, company=None):
-        """Map trading account item string to canonical field. Uses StatementColumnConfig (checks company-specific first, then global, including aliases)."""
-        # Check StatementColumnConfig (checks company-specific first, then global, including aliases)
+    def _map_trading_account_field(self, item_str):
+        """Map trading account item string to canonical field. Uses StatementColumnConfig (checks global, including aliases)."""
+        # Check StatementColumnConfig (checks global, including aliases)
         normalized = StatementColumnConfig._normalize_for_match(item_str)
-        logger.debug(f"Mapping Trading Account field: '{item_str}' (normalized: '{normalized}') for company: {company.name if company else 'None'}")
+        logger.debug(f"Mapping Trading Account field: '{item_str}' (normalized: '{normalized}')")
         
-        canonical = StatementColumnConfig.resolve_canonical_field(company, "TRADING", item_str)
+        canonical = StatementColumnConfig.resolve_canonical_field("TRADING", item_str)
         if canonical:
             logger.debug(f"✓ Found mapping: '{item_str}' -> {canonical}")
             return canonical
@@ -1109,7 +1081,7 @@ class UploadExcelView(APIView):
         logger.warning(f"✗ No mapping found in StatementColumnConfig for Trading Account field: '{item_str}' (normalized: '{normalized}')")
         return None
     
-    def _parse_operational_metrics(self, sheet, company=None):
+    def _parse_operational_metrics(self, sheet):
         """Parse Operational Metrics sheet. Uses StatementColumnConfig for metric name matching when available."""
         logger.info(f"=== PARSING OPERATIONAL METRICS SHEET ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -1156,9 +1128,8 @@ class UploadExcelView(APIView):
                     if 'staff' in metric_lower and 'count' in metric_lower:
                         field_name = 'staff_count'
                     
-                    # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
-                    if not field_name and company:
-                        canonical = StatementColumnConfig.resolve_canonical_field(company, "OPERATIONAL", metric_str)
+                    if not field_name:
+                        canonical = StatementColumnConfig.resolve_canonical_field("OPERATIONAL", metric_str)
                         if canonical:
                             field_name = canonical
                     
@@ -1218,7 +1189,7 @@ class UploadExcelView(APIView):
                 break
         return data
     
-    def _parse_balance_sheet_liabilities(self, sheet, company=None):
+    def _parse_balance_sheet_liabilities(self, sheet):
         """Parse Balance_Sheet_Liabilities: Liability Type, Amount (one row per liability). Uses StatementColumnConfig first."""
         logger.info(f"=== PARSING BALANCE SHEET LIABILITIES ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -1274,9 +1245,8 @@ class UploadExcelView(APIView):
                         if key in t_lower or t_lower in key:
                             field_name = field
                             break
-                    # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
-                    if not field_name and company:
-                        field_name = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", t)
+                    if not field_name:
+                        field_name = StatementColumnConfig.resolve_canonical_field("BALANCE_SHEET", t)
                     if field_name:
                         data[field_name] = self._parse_decimal(amt)
                         logger.info(f"✓ Row {row_idx}: Mapped liability '{t}' -> {field_name} = {amt}")
@@ -1287,7 +1257,7 @@ class UploadExcelView(APIView):
         logger.info(f"Extracted data: {data}")
         return data
     
-    def _parse_balance_sheet_assets(self, sheet, company=None):
+    def _parse_balance_sheet_assets(self, sheet):
         """Parse Balance_Sheet_Assets: Asset Type, Amount (one row per asset). Uses StatementColumnConfig first."""
         logger.info(f"=== PARSING BALANCE SHEET ASSETS ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -1340,9 +1310,8 @@ class UploadExcelView(APIView):
                         if key in t_lower or t_lower in key:
                             field_name = field
                             break
-                    # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
-                    if not field_name and company:
-                        field_name = StatementColumnConfig.resolve_canonical_field(company, "BALANCE_SHEET", t)
+                    if not field_name:
+                        field_name = StatementColumnConfig.resolve_canonical_field("BALANCE_SHEET", t)
                     if field_name:
                         data[field_name] = self._parse_decimal(amt)
                         logger.info(f"✓ Row {row_idx}: Mapped asset '{t}' -> {field_name} = {amt}")
@@ -1353,7 +1322,7 @@ class UploadExcelView(APIView):
         logger.info(f"Extracted data: {data}")
         return data
     
-    def _parse_profit_loss_rows(self, sheet, company=None):
+    def _parse_profit_loss_rows(self, sheet):
         """Parse Profit_Loss sheet: Category, Item, Amount. Uses StatementColumnConfig for item name matching first."""
         logger.info(f"=== PARSING PROFIT & LOSS ROWS (Format A) ===")
         logger.info(f"Sheet name: {sheet.title}")
@@ -1422,8 +1391,8 @@ class UploadExcelView(APIView):
                     field_name = 'net_profit'
                 
                 # Second: Fallback to StatementColumnConfig (for custom/company-specific mappings)
-                if not field_name and company:
-                    canonical = StatementColumnConfig.resolve_canonical_field(company, "PL", item)
+                if not field_name:
+                    canonical = StatementColumnConfig.resolve_canonical_field("PL", item)
                     if canonical:
                         field_name = canonical
                 
@@ -1624,14 +1593,14 @@ class UploadExcelView(APIView):
                                 
                                 # Map liability
                                 if liability_name and liability_amount:
-                                    bs_field = self._map_balance_sheet_field(liability_name.lower(), company)
+                                    bs_field = self._map_balance_sheet_field(liability_name.lower())
                                     if bs_field:
                                         balance_sheet_data[bs_field] = self._parse_decimal(liability_amount)
                                         logger.info(f"DEBUG: BS Liability '{liability_name}' -> {bs_field} = {liability_amount}")
                                 
                                 # Map asset
                                 if asset_name and asset_amount:
-                                    bs_field = self._map_balance_sheet_field(asset_name.lower(), company)
+                                    bs_field = self._map_balance_sheet_field(asset_name.lower())
                                     if bs_field:
                                         balance_sheet_data[bs_field] = self._parse_decimal(asset_amount)
                                         logger.info(f"DEBUG: BS Asset '{asset_name}' -> {bs_field} = {asset_amount}")
@@ -1656,7 +1625,7 @@ class UploadExcelView(APIView):
                                     elif 'net profit' in expense_lower:
                                         profit_loss_data['net_profit'] = self._parse_decimal(expense_amount)
                                     else:
-                                        pl_field = self._map_profit_loss_field(expense_lower, is_income=False, company=company)
+                                        pl_field = self._map_profit_loss_field(expense_lower, is_income=False)
                                         if pl_field:
                                             profit_loss_data[pl_field] = self._parse_decimal(expense_amount)
                                             logger.info(f"DEBUG: PL Expense '{expense_name}' -> {pl_field} = {expense_amount}")
@@ -1664,7 +1633,7 @@ class UploadExcelView(APIView):
                                 # Map income
                                 if income_name and income_amount:
                                     income_lower = income_name.lower()
-                                    pl_field = self._map_profit_loss_field(income_lower, is_income=True, company=company)
+                                    pl_field = self._map_profit_loss_field(income_lower, is_income=True)
                                     if pl_field:
                                         profit_loss_data[pl_field] = self._parse_decimal(income_amount)
                                         logger.info(f"DEBUG: PL Income '{income_name}' -> {pl_field} = {income_amount}")
@@ -1689,7 +1658,7 @@ class UploadExcelView(APIView):
                                 item_amount = row.cells[1].text.strip()
                                 
                                 if item_name and item_amount:
-                                    ta_field = self._map_trading_account_field(item_name.lower(), company)
+                                    ta_field = self._map_trading_account_field(item_name.lower())
                                     if ta_field:
                                         trading_account_data[ta_field] = self._parse_decimal(item_amount)
                                         logger.info(f"DEBUG: TA '{item_name}' -> {ta_field} = {item_amount}")
@@ -1726,7 +1695,7 @@ class UploadExcelView(APIView):
             # Return defaults instead of empty dicts to avoid null constraint violations
             return self._default_balance_sheet({}), self._default_profit_loss({}), self._default_trading_account({}), {'staff_count': 1}
 
-    def _parse_pdf_table(self, uploaded_file, company):
+    def _parse_pdf_table(self, uploaded_file):
         """Parse PDF file with table format: Field | Value columns. Returns dicts for balance_sheet, profit_loss, trading_account, operational_metrics."""
         try:
             # Reset file pointer
@@ -1930,14 +1899,14 @@ class UploadExcelView(APIView):
                     continue
                 
                 # Balance Sheet fields (check before P&L to avoid conflicts)
-                bs_field = self._map_balance_sheet_field(field_lower, company)
+                bs_field = self._map_balance_sheet_field(field_lower)
                 if bs_field:
                     balance_sheet_data[bs_field] = self._parse_decimal(value_str)
                     logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> BalanceSheet.{bs_field} = {value_str}")
                     continue
                 
                 # Trading Account fields (check before P&L since Gross Profit is in Trading Account)
-                ta_field = self._map_trading_account_field(field_lower, company)
+                ta_field = self._map_trading_account_field(field_lower)
                 if ta_field:
                     trading_account_data[ta_field] = self._parse_decimal(value_str)
                     logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> TradingAccount.{ta_field} = {value_str}")
@@ -1981,7 +1950,7 @@ class UploadExcelView(APIView):
                     logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> ProfitLoss.net_profit = {value_str}")
                     continue
                 
-                pl_field = self._map_profit_loss_field(field_lower, is_income=is_income, company=company)
+                pl_field = self._map_profit_loss_field(field_lower, is_income=is_income)
                 if pl_field:
                     profit_loss_data[pl_field] = self._parse_decimal(value_str)
                     logger.info(f"DEBUG: ✓ Mapped '{field_lower}' -> ProfitLoss.{pl_field} = {value_str} (is_income={is_income})")
@@ -2035,7 +2004,7 @@ class UploadExcelView(APIView):
             # Return defaults instead of empty dicts to avoid null constraint violations
             return self._default_balance_sheet({}), self._default_profit_loss({}), self._default_trading_account({}), {'staff_count': 1}
 
-    def _create_period_from_document(self, request, company, uploaded_file, period_info, file_type):
+    def _create_period_from_document(self, request, uploaded_file, period_info, file_type):
         """Create a financial period for .docx or .pdf upload; store file and create/update records."""
         period_label = request.data.get('period_label') or period_info.get('label') or f"FY-{datetime.now().year}-{datetime.now().year + 1}"
         start_date = request.data.get('start_date') or period_info.get('start_date') or f"{datetime.now().year}-04-01"
@@ -2044,7 +2013,6 @@ class UploadExcelView(APIView):
 
         with transaction.atomic():
             period, created = FinancialPeriod.objects.get_or_create(
-                company=company,
                 label=period_label,
                 defaults={
                     'period_type': period_type,
@@ -2057,7 +2025,7 @@ class UploadExcelView(APIView):
             # Parse .docx file if it's a docx upload
             if file_type == 'docx':
                 # Parse the .docx table and extract data BEFORE saving (to avoid file pointer issues)
-                balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_docx_table(uploaded_file, company)
+                balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_docx_table(uploaded_file)
                 
                 # Ensure defaults are applied before saving (safety check)
                 trading_account_data = self._default_trading_account(trading_account_data)
@@ -2118,7 +2086,7 @@ class UploadExcelView(APIView):
             else:
                 # PDF: parse file and extract data
                 # Parse the PDF table and extract data BEFORE saving (to avoid file pointer issues)
-                balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_pdf_table(uploaded_file, company)
+                balance_sheet_data, profit_loss_data, trading_account_data, operational_metrics_data = self._parse_pdf_table(uploaded_file)
                 
                 # Ensure defaults are applied before saving (safety check)
                 trading_account_data = self._default_trading_account(trading_account_data)
@@ -2291,70 +2259,7 @@ class RatioBenchmarksView(APIView):
                 "message": str(e),
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class BulkImportCompaniesView(APIView):
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        """
-        Bulk import companies
-        POST /api/companies/bulk_import/
-        """
-        try:
-            companies_data = request.data.get('companies', [])
-            if not companies_data:
-                return Response({
-                    "status": "failed",
-                    "response_code": status.HTTP_400_BAD_REQUEST,
-                    "message": "No companies provided"
-                })
-
-            success_count = 0
-            failed_count = 0
-            errors = []
-
-            for company_data in companies_data:
-                try:
-                    name = company_data.get('name')
-                    registration_no = company_data.get('registration_no')
-
-                    if not name or not registration_no:
-                        failed_count += 1
-                        errors.append(f"Missing name or registration number for data: {company_data}")
-                        continue
-
-                    # Check if company with registration number already exists
-                    if Company.objects.filter(registration_no=registration_no).exists():
-                        failed_count += 1
-                        errors.append(f"Company with registration no {registration_no} already exists")
-                        continue
-
-                    # Create company
-                    Company.objects.create(
-                        name=name,
-                        registration_no=registration_no
-                    )
-                    success_count += 1
-
-                except Exception as e:
-                    failed_count += 1
-                    errors.append(f"Error creating company {company_data.get('name', 'Unknown')}: {str(e)}")
-
-            return Response({
-                "status": "success",
-                "response_code": status.HTTP_200_OK,
-                "success": success_count,
-                "failed": failed_count,
-                "errors": errors,
-                "message": f"Successfully imported {success_count} companies. {failed_count} failed."
-            })
-
-        except Exception as e:
-            logger.exception(f"Error in BulkImportCompaniesView: {str(e)}")
-            return Response({
-                "status": "failed",
-                "response_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "message": str(e)
-            })
 
 
 class DownloadExcelTemplateView(APIView):
@@ -2612,38 +2517,20 @@ class PeriodComparisonView(APIView):
         """Fetch and compare ratios between two periods."""
         try:
             # Get query parameters
-            company_id = request.query_params.get("company_id")
-            period1_label = request.query_params.get("period1")
-            period2_label = request.query_params.get("period2")
-            
             # Validate required parameters
-            if not all([company_id, period1_label, period2_label]):
+            if not all([period1_label, period2_label]):
                 return Response(
                     {
                         "status": "failed",
                         "response_code": status.HTTP_400_BAD_REQUEST,
-                        "message": "Missing required parameters: company_id, period1, period2"
+                        "message": "Missing required parameters: period1, period2"
                     },
                     status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Validate company exists
-            try:
-                company = Company.objects.get(id=company_id)
-            except Company.DoesNotExist:
-                return Response(
-                    {
-                        "status": "failed",
-                        "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"Company with ID {company_id} not found"
-                    },
-                    status=status.HTTP_404_NOT_FOUND
                 )
             
             # Fetch periods
             try:
                 period1 = FinancialPeriod.objects.get(
-                    company=company,
                     label=period1_label
                 )
             except FinancialPeriod.DoesNotExist:
@@ -2651,14 +2538,13 @@ class PeriodComparisonView(APIView):
                     {
                         "status": "failed",
                         "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"Period '{period1_label}' not found for company '{company.name}'"
+                        "message": f"Period '{period1_label}' not found"
                     },
                     status=status.HTTP_404_NOT_FOUND
                 )
             
             try:
                 period2 = FinancialPeriod.objects.get(
-                    company=company,
                     label=period2_label
                 )
             except FinancialPeriod.DoesNotExist:
@@ -2666,7 +2552,7 @@ class PeriodComparisonView(APIView):
                     {
                         "status": "failed",
                         "response_code": status.HTTP_404_NOT_FOUND,
-                        "message": f"Period '{period2_label}' not found for company '{company.name}'"
+                        "message": f"Period '{period2_label}' not found"
                     },
                     status=status.HTTP_404_NOT_FOUND
                 )
@@ -2767,7 +2653,7 @@ class PeriodComparisonView(APIView):
                     "status": "success",
                     "response_code": status.HTTP_200_OK,
                     "data": {
-                        "company": company.name,
+                        "company": "Default",
                         "period1": period1_label,
                         "period2": period2_label,
                         "ratios": ratios_comparison
@@ -2942,7 +2828,6 @@ class DashboardView(APIView):
     def get(self, request):
         try:
             # Get query parameters
-            company_param = request.query_params.get('company', 'all')  # 'all' or company_id
             period_param = request.query_params.get('period', 'all')   # 'all' or period_type
             include_ratios = request.query_params.get('include_ratios', 'false').lower() == 'true'
             category = request.query_params.get('category', None)  # Optional category filter
@@ -2955,19 +2840,8 @@ class DashboardView(APIView):
                     "message": f"Invalid category. Valid categories are: {', '.join(self.CATEGORY_FIELDS.keys())}"
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Filter periods based on company and period parameters
+            # Filter periods based on period parameters
             periods_queryset = FinancialPeriod.objects.all()
-            
-            if company_param != 'all':
-                try:
-                    company_id = int(company_param)
-                    periods_queryset = periods_queryset.filter(company_id=company_id)
-                except (ValueError, TypeError):
-                    return Response({
-                        "status": "failed",
-                        "response_code": status.HTTP_400_BAD_REQUEST,
-                        "message": "Invalid company parameter. Use 'all' or company ID"
-                    }, status=status.HTTP_400_BAD_REQUEST)
             
             if period_param != 'all':
                 # Filter by period type (MONTHLY, QUARTERLY, YEARLY, etc.)
@@ -2985,7 +2859,7 @@ class DashboardView(APIView):
                         "status": "success",
                         "response_code": status.HTTP_200_OK,
                         "data": {
-                            "company_data": []
+                            "periods": []
                         }
                     }, status=status.HTTP_200_OK)
                 else:
@@ -2996,20 +2870,17 @@ class DashboardView(APIView):
                             "total_revenue": 0,
                             "avg_profit_margin": 0,
                             "growth_rate": 0,
-                            "company_data": []
+                            "periods": []
                         }
                     }, status=status.HTTP_200_OK)
             
-            # Organize data by company
-            company_data_dict = {}  # company_id -> {company_name, periods_list or periods_dict}
+            # Organize data
+            periods_list = []
             all_revenues = []  # For total revenue calculation (only used when not include_ratios)
             all_profit_margins = []  # For average profit margin calculation (only used when not include_ratios)
             
             for ratio_result in ratio_results:
                 period = ratio_result.period
-                company = period.company
-                company_id = company.id
-                company_name = company.name
                 
                 # Extract net revenue and net profit from trading account
                 trading_account = None
@@ -3037,21 +2908,6 @@ class DashboardView(APIView):
                 # Extract net profit from P&L
                 net_profit = profit_loss.net_profit or Decimal('0')
                 
-                # Initialize company entry if not exists
-                if company_id not in company_data_dict:
-                    if include_ratios:
-                        company_data_dict[company_id] = {
-                            "company_id": company_id,
-                            "company_name": company_name,
-                            "periods": []  # Use list for detailed ratio data
-                        }
-                    else:
-                        company_data_dict[company_id] = {
-                            "company_id": company_id,
-                            "company_name": company_name,
-                            "periods": {}  # Use dict for aggregated data
-                        }
-                
                 if include_ratios:
                     # Return detailed ratio data with period info
                     # Safely serialize uploaded_file to handle encoding issues
@@ -3062,7 +2918,6 @@ class DashboardView(APIView):
                     
                     period_data = {
                         "id": period.id,
-                        "company": period.company_id,
                         "label": period.label,
                         "period_type": period.period_type,
                         "start_date": period.start_date.isoformat() if period.start_date else None,
@@ -3075,17 +2930,18 @@ class DashboardView(APIView):
                         "net_profit": float(net_profit),
                         "ratios": self._get_filtered_ratios(ratio_result, category)
                     }
-                    company_data_dict[company_id]["periods"].append(period_data)
+                    periods_list.append(period_data)
                 else:
                     # Return aggregated data with minimal period info
-                    period_key = period.label
-                    company_data_dict[company_id]["periods"][period_key] = {
+                    period_data = {
+                        "label": period.label,
                         "net_revenue": float(net_revenue),
                         "net_profit": float(net_profit),
                         "period_type": period.period_type,
                         "is_finalized": period.is_finalized,
                         "created_at": period.created_at.isoformat() if period.created_at else None
                     }
+                    periods_list.append(period_data)
                     
                     # Collect for aggregation calculations
                     if net_revenue > 0:
@@ -3096,16 +2952,13 @@ class DashboardView(APIView):
                         profit_margin = (net_profit / net_revenue) * 100
                         all_profit_margins.append(profit_margin)
             
-            # Build response
-            company_list = list(company_data_dict.values())
-            
             if include_ratios:
                 # Return detailed ratio data without aggregation
                 return Response({
                     "status": "success",
                     "response_code": status.HTTP_200_OK,
                     "data": {
-                        "company_data": company_list
+                        "periods": periods_list
                     }
                 }, status=status.HTTP_200_OK)
             else:
@@ -3125,7 +2978,7 @@ class DashboardView(APIView):
                         "total_revenue": float(total_revenue),
                         "avg_profit_margin": float(round(avg_profit_margin, 2)),
                         "growth_rate": float(round(growth_rate, 2)),
-                        "company_data": company_list
+                        "periods": periods_list
                     }
                 }, status=status.HTTP_200_OK)
         
@@ -3139,70 +2992,7 @@ class DashboardView(APIView):
 
 
 
-class CompanyAllPeriodsView(APIView):
-    """Simple endpoint to fetch all periods for a company."""
-    def get(self, request):
-        try:
-            company_id = request.query_params.get('company_id')
-            
-            if not company_id:
-                return Response({
-                    "status": "failed",
-                    "response_code": 400,
-                    "message": "company_id is required"
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                company_id = int(company_id)
-            except (ValueError, TypeError):
-                return Response({
-                    "status": "failed",
-                    "response_code": 400,
-                    "message": "Invalid company_id. Must be a number"
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                company = Company.objects.get(id=company_id)
-            except Company.DoesNotExist:
-                return Response({
-                    "status": "failed",
-                    "response_code": 404,
-                    "message": f"Company with ID {company_id} not found"
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            periods = FinancialPeriod.objects.filter(company_id=company_id).order_by('start_date')
-            
-            if not periods.exists():
-                return Response({
-                    "status": "success",
-                    "response_code": 200,
-                    "data": []
-                }, status=status.HTTP_200_OK)
-            
-            periods_data = [
-                {
-                    "id": period.id,
-                    "label": period.label,
-                    "start_date": period.start_date.isoformat(),
-                    "end_date": period.end_date.isoformat(),
-                    "period_type": period.period_type
-                }
-                for period in periods
-            ]
-            
-            return Response({
-                "status": "success",
-                "response_code": 200,
-                "data": periods_data
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.exception(f'Error in CompanyAllPeriodsView: {str(e)}')
-            return Response({
-                "status": "failed",
-                "response_code": 500,
-                "message": f'Error fetching periods: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

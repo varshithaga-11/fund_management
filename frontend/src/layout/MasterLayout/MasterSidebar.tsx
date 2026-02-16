@@ -30,11 +30,11 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     path: "/master/master-dashboard",
   },
-  {
-    icon: <Building className="w-5 h-5" />,
-    name: "Company",
-    path: "/companies",
-  },
+  // {
+  //   icon: <Building className="w-5 h-5" />,
+  //   name: "Company",
+  //   path: "/companies",
+  // },
   {
     icon: <FileText className="w-5 h-5" />,
     name: "Upload Data",

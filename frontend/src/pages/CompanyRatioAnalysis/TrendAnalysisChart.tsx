@@ -3,7 +3,7 @@ import Chart from "react-apexcharts";
 import { ChevronDown } from "lucide-react";
 
 interface TrendAnalysisChartProps {
-  companyName: string;
+
   ratioData: any[];
   periods: any[];
 }
@@ -62,7 +62,7 @@ const formatRatioName = (name: string): string => {
 };
 
 const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
-  companyName,
+
   ratioData,
   periods,
 }) => {
@@ -203,7 +203,7 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
       {/* Controls */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Ratio Trend Analysis - {companyName}
+          Ratio Trend Analysis
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -239,8 +239,8 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
               <button
                 onClick={() => setChartType("line")}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "line"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
                   }`}
               >
                 Line
@@ -248,8 +248,8 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
               <button
                 onClick={() => setChartType("bar")}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "bar"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
                   }`}
               >
                 Bar

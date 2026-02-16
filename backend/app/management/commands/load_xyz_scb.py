@@ -6,7 +6,6 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
 from app.models import (
-    Company,
     FinancialPeriod,
     TradingAccount,
     ProfitAndLoss,
@@ -22,19 +21,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Loading XYZ Scb test data...")
 
-        # Create or get company
-        company, created = Company.objects.get_or_create(
-            name="XYZ Scb",
-            defaults={"registration_no": "XYZ-SCB-001"},
-        )
-        if created:
-            self.stdout.write(self.style.SUCCESS(f"Created company: {company.name}"))
-        else:
-            self.stdout.write(f"Using existing company: {company.name}")
-
         # Create financial period
         period, created = FinancialPeriod.objects.get_or_create(
-            company=company,
             label="FY-2012-13",
             defaults={
                 "period_type": "YEARLY",

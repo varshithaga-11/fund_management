@@ -17,16 +17,10 @@ def financial_file_upload_path(instance, filename):
     - Period label (e.g., Apr_2024, Q1_FY_2024_25, FY_2024_25)
     """
     # Handle case where instance might not be fully initialized
-    if not instance.company or not instance.label:
-        # Fallback to date-based path if company/label not available
+    if not instance.label:
+        # Fallback to date-based path if label not available
         from django.utils import timezone
-        return f'company_financials/temp/{timezone.now().strftime("%Y/%m")}/{filename}'
-    
-    # Sanitize company name for filesystem (remove special chars)
-    company_name = "".join(c for c in instance.company.name if c.isalnum() or c in (' ', '-', '_')).strip()
-    company_name = company_name.replace(' ', '_')
-    if not company_name:
-        company_name = 'Unknown_Company'
+        return f'financials/temp/{timezone.now().strftime("%Y/%m")}/{filename}'
     
     # Sanitize period label
     period_label = "".join(c for c in instance.label if c.isalnum() or c in (' ', '-', '_')).strip()
@@ -37,8 +31,8 @@ def financial_file_upload_path(instance, filename):
     # Get period type (default to YEARLY if not set)
     period_type = instance.period_type if instance.period_type else 'YEARLY'
     
-    # Organize by company/period_type/period_label
-    return f'company_financials/{company_name}/{period_type}/{period_label}/{filename}'
+    # Organize by period_type/period_label
+    return f'financials/{period_type}/{period_label}/{filename}'
 
 
 
@@ -55,13 +49,7 @@ class UserRegister(AbstractUser):
         return self.username
     
 
-class Company(models.Model):
-    name = models.CharField(max_length=255)
-    registration_no = models.CharField(max_length=100, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.name
 
 
 class FinancialPeriod(models.Model):
@@ -72,11 +60,7 @@ class FinancialPeriod(models.Model):
         ("YEARLY", "Yearly"),
     ]
 
-    company = models.ForeignKey(
-        Company,
-        on_delete=models.CASCADE,
-        related_name="periods"
-    )
+
     period_type = models.CharField(max_length=20, choices=PERIOD_TYPE_CHOICES)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -92,10 +76,10 @@ class FinancialPeriod(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("company", "label")
+        unique_together = ("label",)
 
     def __str__(self):
-        return f"{self.company.name} - {self.label}"
+        return f"{self.label}"
 
 
 
@@ -288,12 +272,7 @@ class StatementColumnConfig(models.Model):
         ("OPERATIONAL", "Operational"),
     ]
 
-    company = models.ForeignKey(
-        Company,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
-    )
+    company = None # Removed company field
 
     statement_type = models.CharField(
         max_length=20,
@@ -316,7 +295,7 @@ class StatementColumnConfig(models.Model):
     is_required = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ("company", "statement_type", "canonical_field")
+        unique_together = ("statement_type", "canonical_field")
         ordering = ["canonical_field"]
 
     @classmethod
@@ -339,11 +318,9 @@ class StatementColumnConfig(models.Model):
         return None
 
     @classmethod
-    def resolve_canonical_field(cls, company, statement_type, column_name):
+    def resolve_canonical_field(cls, statement_type, column_name):
         """
         Resolve an uploaded column/item name to the canonical field name.
-        For each column: check company-specific configs first; if no match, check global configs.
-        This allows some fields to come from company-specific and others from global.
         Matches after normalizing: strip, lower, spaces -> underscores.
         Returns canonical_field if match found, else None.
         """
@@ -352,14 +329,9 @@ class StatementColumnConfig(models.Model):
         normalized = cls._normalize_for_match(column_name)
         if not normalized:
             return None
-        # 1) Company-specific configs first (if company is set)
-        if company:
-            for config in cls.objects.filter(company=company, statement_type=statement_type):
-                canonical = cls._config_matches_column(config, normalized)
-                if canonical:
-                    return canonical
-        # 2) Fallback: global configs (company is null)
-        for config in cls.objects.filter(company__isnull=True, statement_type=statement_type):
+        
+        # Check global configs
+        for config in cls.objects.filter(statement_type=statement_type):
             canonical = cls._config_matches_column(config, normalized)
             if canonical:
                 return canonical
@@ -388,8 +360,7 @@ class StatementColumnConfig(models.Model):
 
 
 
-# Company
-#  └── FinancialPeriod
+# FinancialPeriod
 #       ├── TradingAccount
 #       ├── ProfitAndLoss
 #       ├── BalanceSheet

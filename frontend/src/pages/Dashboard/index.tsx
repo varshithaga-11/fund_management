@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { createApiUrl, getAuthHeaders } from "../../access/access.ts";
 import ReactApexChart from "react-apexcharts";
 import {
-    LucideBuilding2,
+
     LucideFileText,
     LucideTrendingUp,
     LucideCheckCircle,
@@ -17,14 +18,14 @@ import {
     LucideTrophy,
     LucidePlus
 } from "lucide-react";
-import { CompanyData, getCompanyList } from "../Companies/api";
+
 import { FinancialPeriodData } from "../FinancialStatements/api";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const MasterDashboard = () => {
-    const [companies, setCompanies] = useState<CompanyData[]>([]);
+    const navigate = useNavigate();
     const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -43,87 +44,48 @@ const MasterDashboard = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const [filterCompany, setFilterCompany] = useState<string>("");
     const [filterType, setFilterType] = useState<string>("");
     const [filterLoading, setFilterLoading] = useState(false);
 
     // Fetch aggregated dashboard data and periods
-    const fetchFilteredData = async (companyId?: string, periodType?: string) => {
+    const fetchFilteredData = async (periodType?: string) => {
         try {
             setFilterLoading(true);
-            
+
             // Build params for dashboard API
             const params: any = {};
-            
-            // company parameter: 'all' or specific company ID
-            if (companyId) {
-                params.company = companyId;  // Pass as is (backend expects 'all' or id)
-            } else {
-                params.company = 'all';
-            }
-            
+
             // period parameter: 'all' or specific period type
             if (periodType) {
                 params.period = periodType;
             } else {
                 params.period = 'all';
             }
-            
+
             // Fetch aggregated dashboard data from the new endpoint
             const url = createApiUrl("api/dashboard/");
             const response = await axios.get(url, {
                 headers: await getAuthHeaders(),
                 params,
             });
-            
+
             const dashData = response.data.data;
             setDashboardData(dashData);
-            
-            // Extract periods from nested company_data structure for display in timeline/charts
+
+            // Process periods from dashboard data
             const extractedPeriods: FinancialPeriodData[] = [];
-            let periodIdCounter = 1;
-            if (dashData?.company_data) {
-                for (const company of dashData.company_data) {
-                    for (const [periodLabel, periodData] of Object.entries(company.periods)) {
-                        extractedPeriods.push({
-                            id: periodIdCounter++,
-                            company: company.company_id,
-                            label: periodLabel,
-                            period_type: (periodData as any).period_type || 'YEARLY',
-                            is_finalized: (periodData as any).is_finalized ?? true,
-                            start_date: '',
-                            end_date: '',
-                            created_at: (periodData as any).created_at || new Date().toISOString(),
-                            trading_account: {
-                                id: 0,
-                                period: periodIdCounter - 1,
-                                opening_stock: 0,
-                                purchases: 0,
-                                trade_charges: 0,
-                                sales: (periodData as any).net_revenue || 0,
-                                closing_stock: 0,
-                                gross_profit: 0,
-                            },
-                            profit_loss: {
-                                id: 0,
-                                period: periodIdCounter - 1,
-                                interest_on_loans: 0,
-                                interest_on_bank_ac: 0,
-                                return_on_investment: 0,
-                                miscellaneous_income: 0,
-                                interest_on_deposits: 0,
-                                interest_on_borrowings: 0,
-                                establishment_contingencies: 0,
-                                provisions: 0,
-                                net_profit: (periodData as any).net_profit || 0,
-                                total_interest_income: 0,
-                                total_interest_expense: 0,
-                            }
-                        });
-                    }
-                }
+            if (dashData?.periods) {
+                // Assuming backend returns periods list directly now
+                // We need to map it to FinancialPeriodData structure if needed, or use as is if it matches
+                // The extraction logic depends on exact backend response.
+                // Based on previous backend edit: "periods" is a list.
+                extractedPeriods.push(...dashData.periods.map((p: any) => ({
+                    ...p,
+                    trading_account: p.trading_account || { sales: 0 }, // Ensure minimal structure
+                    profit_loss: p.profit_loss || { net_profit: 0 }
+                })));
             }
-            
+
             setPeriods(extractedPeriods);
         } catch (error) {
             console.error("Error loading filtered data:", error);
@@ -140,15 +102,13 @@ const MasterDashboard = () => {
     // Fetch periods whenever filters change (including "all" which means no specific filter)
     useEffect(() => {
         // Always fetch when filters change - even if both are empty (meaning "all")
-        fetchFilteredData(filterCompany, filterType);
-    }, [filterCompany, filterType]);
+        fetchFilteredData(filterType);
+    }, [filterType]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            // Only fetch companies initially - NOT all periods
-            const companiesData = await getCompanyList();
-            setCompanies(companiesData);
+            // Only fetch periods initially
             setPeriods([]); // Start with no periods
         } catch (error) {
             console.error("Error loading dashboard data:", error);
@@ -168,8 +128,8 @@ const MasterDashboard = () => {
     // Apply filters - API already filters, but we use this for reference
     const filteredPeriods = periods; // Already filtered from API
 
-    // Total companies should reflect filtered data, not all companies in system
-    const totalCompanies = dashboardData?.company_data?.length || 0;
+    // Total companies removed
+    // const totalCompanies = dashboardData?.company_data?.length || 0;
     // Note: Calculations use filteredPeriods not periods for the dashboard stats
     // Wait, my Step 299 code used filteredPeriods for revenue, profit etc.
     // But Activity Timeline uses ALL periods (slice 0,5).
@@ -215,42 +175,22 @@ const MasterDashboard = () => {
         return rounded.toFixed(1);
     };
 
-    // Helper to get company name
-    const getCompanyName = (id: number) => {
-        return companies.find((c) => c.id === id)?.name || "Unknown Company";
-    };
 
-    // Top Performers Logic
-    const companyProfits = companies.map((company) => {
-        const companyPeriods = filteredPeriods.filter((p) => p.company === company.id);
-        const totalCompanyProfit = companyPeriods.reduce((sum, p) => {
-            const profit = p.profit_loss?.net_profit;
-            const profitNum = typeof profit === 'string' ? parseFloat(profit) : profit;
-            return sum + (profitNum || 0);
-        }, 0);
-        const totalCompanyRevenue = companyPeriods.reduce((sum, p) => {
-            const sales = p.trading_account?.sales;
-            const salesNum = typeof sales === 'string' ? parseFloat(sales) : sales;
-            return sum + (salesNum || 0);
-        }, 0);
-        return {
-            ...company,
-            totalProfit: totalCompanyProfit,
-            totalRevenue: totalCompanyRevenue,
-            periodCount: companyPeriods.length,
-        };
-    });
 
-    const topPerformers = [...companyProfits]
-        .filter(c => c.periodCount > 0)
-        .sort((a, b) => b.totalProfit - a.totalProfit)
+    // Top Performers Logic (Removed or updated to Top Periods)
+    const topPeriods = [...filteredPeriods]
+        .sort((a, b) => {
+            const profitA = typeof a.profit_loss?.net_profit === 'number' ? a.profit_loss.net_profit : parseFloat(a.profit_loss?.net_profit || "0");
+            const profitB = typeof b.profit_loss?.net_profit === 'number' ? b.profit_loss.net_profit : parseFloat(b.profit_loss?.net_profit || "0");
+            return profitB - profitA;
+        })
         .slice(0, 5);
 
     // --- Export Functions ---
 
     const getExportData = () => {
         return filteredPeriods.map(p => ({
-            Company: getCompanyName(p.company),
+            Company: "Default", // Or remove entirely
             Label: p.label,
             Type: p.period_type,
             StartDate: p.start_date,
@@ -468,8 +408,7 @@ const MasterDashboard = () => {
         stroke: { show: true, width: 2, colors: ["transparent"] },
         xaxis: {
             categories: last10Periods.map((p) => {
-                const companyName = getCompanyName(p.company);
-                return `${companyName.substring(0, 15)}${companyName.length > 15 ? '...' : ''} (${p.label})`;
+                return `${p.label}`;
             }),
             labels: {
                 rotate: -45,
@@ -601,17 +540,6 @@ const MasterDashboard = () => {
 
                     <div className="flex flex-col gap-3 sm:flex-row">
                         <select
-                            value={filterCompany}
-                            onChange={(e) => setFilterCompany(e.target.value)}
-                            disabled={filterLoading}
-                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <option value="">All Companies</option>
-                            {companies.map(company => (
-                                <option key={company.id} value={company.id}>{company.name}</option>
-                            ))}
-                        </select>
-                        <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
                             disabled={filterLoading}
@@ -632,40 +560,23 @@ const MasterDashboard = () => {
                     </div>
                 </div>
 
-                {(filterCompany || filterType) && (
+                {(filterType) && (
                     <div className="mt-3 flex flex-wrap gap-2 border-t border-stroke pt-3 dark:border-gray-700">
                         <span className="text-xs text-gray-500 py-1">Active:</span>
-                        {filterCompany && (
-                            <span className="flex items-center gap-1 rounded bg-brand-50 px-2 py-1 text-xs font-medium text-brand-500">
-                                Company: {getCompanyName(parseInt(filterCompany))}
-                                <button onClick={() => setFilterCompany("")} className="ml-1 hover:text-brand-700">×</button>
-                            </span>
-                        )}
                         {filterType && (
                             <span className="flex items-center gap-1 rounded bg-brand-50 px-2 py-1 text-xs font-medium text-brand-500">
                                 Type: {filterType}
                                 <button onClick={() => setFilterType("")} className="ml-1 hover:text-brand-700">×</button>
                             </span>
                         )}
-                        <button onClick={() => { setFilterCompany(""); setFilterType(""); }} className="text-xs text-gray-500 hover:text-black hover:underline px-2" disabled={filterLoading}>Clear all</button>
+                        <button onClick={() => { setFilterType(""); }} className="text-xs text-gray-500 hover:text-black hover:underline px-2" disabled={filterLoading}>Clear all</button>
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-                {/* Card 1: Total Companies */}
-                <div className="group relative overflow-hidden rounded-xl border border-stroke bg-white px-7.5 py-6 shadow-lg hover:shadow-xl transition-all duration-300 dark:border-gray-700 dark:bg-gray-800">
-                    <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-blue-400/10 to-blue-600/10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
-                    <div className="relative">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
-                            <LucideBuilding2 className="text-white h-6 w-6" />
-                        </div>
-                        <div className="mt-4">
-                            <h4 className="text-3xl font-bold text-black dark:text-white">{totalCompanies}</h4>
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Companies</span>
-                        </div>
-                    </div>
-                </div>
+                {/* Card 1: Total Companies (Removed, maybe replace with something else or delete) */}
+
 
                 {/* Card 2: Total Revenue */}
                 <div className="group relative overflow-hidden rounded-xl border border-stroke bg-white px-7.5 py-6 shadow-lg hover:shadow-xl transition-all duration-300 dark:border-gray-700 dark:bg-gray-800">
@@ -769,22 +680,26 @@ const MasterDashboard = () => {
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500">
                             <LucideTrophy className="text-white h-5 w-5" />
                         </div>
-                        <h4 className="text-lg font-bold text-black dark:text-white">Top Performers</h4>
+                        <h4 className="text-lg font-bold text-black dark:text-white">Top Periods</h4>
                     </div>
                     <div className="flex flex-col gap-3">
-                        {topPerformers.map((company, index) => (
-                            <div key={company.id} className="flex items-center justify-between rounded-lg border border-stroke dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                        {topPeriods.map((period, index) => (
+                            <div
+                                key={period.id}
+                                onClick={() => navigate(`/financial-statements/${period.id}`)}
+                                className="flex items-center justify-between rounded-lg border border-stroke dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' : 'bg-gradient-to-br from-blue-400 to-blue-600'}`}>
                                         {index + 1}
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-black dark:text-white">{company.name}</p>
-                                        <p className="text-xs text-gray-600 dark:text-gray-400">{company.periodCount} periods</p>
+                                        <p className="font-semibold text-black dark:text-white">{period.label}</p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">{period.period_type}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-bold text-success">₹{(company.totalProfit / 1000000).toFixed(2)}M</p>
+                                    <p className="font-bold text-success">₹{formatCurrency(typeof period.profit_loss?.net_profit === 'number' ? period.profit_loss.net_profit : parseFloat(period.profit_loss?.net_profit || "0"))}M</p>
                                 </div>
                             </div>
                         ))}
@@ -818,11 +733,15 @@ const MasterDashboard = () => {
                             })();
 
                             return (
-                                <div key={period.id} className="group relative flex gap-4 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-default">
+                                <div
+                                    key={period.id}
+                                    onClick={() => navigate(`/financial-statements/${period.id}`)}
+                                    className="group relative flex gap-4 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer"
+                                >
                                     {/* Timeline Dot */}
                                     <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${period.is_finalized
-                                            ? 'bg-gradient-to-br from-green-400 to-green-600'
-                                            : 'bg-gradient-to-br from-blue-400 to-blue-600'
+                                        ? 'bg-gradient-to-br from-green-400 to-green-600'
+                                        : 'bg-gradient-to-br from-blue-400 to-blue-600'
                                         }`}>
                                         {period.is_finalized ? (
                                             <LucideCheckCircle className="text-white h-4 w-4" />
@@ -843,11 +762,11 @@ const MasterDashboard = () => {
                                             </span>
                                         </div>
                                         <p className="text-sm font-semibold text-black dark:text-white leading-tight">
-                                            {getCompanyName(period.company)}
+                                            {period.label}
                                         </p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                             <LucideFileText className="h-3 w-3" />
-                                            {period.label} • <span className="uppercase">{period.period_type.replace('_', ' ')}</span>
+                                            <span className="uppercase">{period.period_type.replace('_', ' ')}</span>
                                         </p>
                                     </div>
                                 </div>
