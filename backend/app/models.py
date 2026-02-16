@@ -43,7 +43,6 @@ class UserRegister(AbstractUser):
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True, unique=True)  # Added phone number field
     
     def __str__(self):
         return self.username
