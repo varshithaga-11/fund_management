@@ -2822,7 +2822,7 @@ class DashboardView(APIView):
             # Get ratio data for all matching periods
             ratio_results = RatioResult.objects.filter(
                 period__in=periods_queryset
-            ).select_related('period')
+            ).select_related('period').order_by('period__start_date')
             
             if not ratio_results.exists():
                 # No data found for the given filters
@@ -2874,8 +2874,8 @@ class DashboardView(APIView):
                 
                 # COGS = Opening Stock + Purchases + Trade Charges - Closing Stock
                 cogs = opening_stock + purchases + trade_charges - closing_stock
-                # Net Revenue = Sales - COGS
-                net_revenue = sales - cogs
+                # Net Revenue = Sales (Revenue is top-line income)
+                net_revenue = sales
                 
                 # Extract net profit from P&L
                 net_profit = profit_loss.net_profit or Decimal('0')
