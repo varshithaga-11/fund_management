@@ -21,17 +21,17 @@ const Calendar = lazy(() => import("./pages/Calendar"));
 const MasterLayout = lazy(() => import("./layout/MasterLayout/MasterLayout"));
 const Blank = lazy(() => import("./pages/Blank"));
 
-import CompanyPage from "./pages/Companies/Company";
 const FinancialPeriodPage = lazy(() => import("./pages/FinancialStatements/FinancialPeriodPage"));
 const UploadDataPage = lazy(() => import("./pages/FinancialStatements/UploadDataPage"));
 const StatementColumnsConfigPage = lazy(
   () => import("./pages/FinancialStatements/StatementColumnsConfigPage")
 );
 const RatioDashboard = lazy(() => import("./pages/RatioAnalysis/RatioDashboard"));
+const RatioAnalysisPage = lazy(() => import("./pages/RatioAnalysis/RatioAnalysisPage"));
+const TrendAnalysisPage = lazy(() => import("./pages/RatioAnalysis/TrendAnalysisPage"));
 const ProductivityAnalysis = lazy(() => import("./pages/RatioAnalysis/ProductivityAnalysis"));
 const InterpretationPanel = lazy(() => import("./pages/RatioAnalysis/InterpretationPanel"));
 const RatioBenchmarksPage = lazy(() => import("./pages/RatioAnalysis/RatioBenchmarksPage"));
-const CompanyRatioAnalysis = lazy(() => import("./pages/CompanyRatioAnalysis"));
 const PeriodComparison = lazy(() => import("./pages/PeriodComparison"));
 
 
@@ -60,19 +60,18 @@ export function appRoutes() {
 
           <Route path="master/master-dashboard" element={<MasterDashboard />} />
 
-          <Route path="companies" element={<CompanyPage />} />
-
           {/* Financial Statements */}
           <Route path="upload-data" element={<UploadDataPage />} />
           <Route path="financial-statements/:periodId" element={<FinancialPeriodPage />} />
           <Route path="statement-columns" element={<StatementColumnsConfigPage />} />
 
           {/* Ratio Analysis */}
-          <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />
+          <Route path="ratio-analysis" element={<RatioAnalysisPage />} />
+          <Route path="ratio-analysis/trends" element={<TrendAnalysisPage />} />
           <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
+          <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />
           <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
           <Route path="interpretation/:periodId" element={<InterpretationPanel />} />
-          <Route path="company-ratio-analysis" element={<CompanyRatioAnalysis />} />
           <Route path="period-comparison" element={<PeriodComparison />} />
           <Route path="user-management" element={<UserManagementPage />} />
 

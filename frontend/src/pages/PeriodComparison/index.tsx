@@ -180,7 +180,7 @@ const PeriodComparison: React.FC = () => {
   if (loading) {
     return (
       <>
-        <PageMeta title="Period Comparison" description="Compare financial periods for companies" />
+        <PageMeta title="Period Comparison" description="Compare financial periods" />
         <PageBreadcrumb pageTitle="Period Comparison" />
         <div className="flex items-center justify-center h-96">
           <BeatLoader color="#3b82f6" />
@@ -192,7 +192,7 @@ const PeriodComparison: React.FC = () => {
   if (error) {
     return (
       <>
-        <PageMeta title="Period Comparison" description="Compare financial periods for companies" />
+        <PageMeta title="Period Comparison" description="Compare financial periods" />
         <PageBreadcrumb pageTitle="Period Comparison" />
         <div className="p-6">
           <ToastContainer
@@ -269,7 +269,7 @@ const PeriodComparison: React.FC = () => {
             </div>
           ) : periods.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400">
-              No financial periods available for this company
+              No financial periods available
             </p>
           ) : (
             <div>

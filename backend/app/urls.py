@@ -8,7 +8,7 @@ from .views import *  # noqa: F401 F403
 router = DefaultRouter()
 
 router.register(r'profile', ProfileView, basename='profile')
-
+router.register(r'periods', FinancialPeriodViewSet, basename='period')
 router.register(r"financial-periods", FinancialPeriodViewSet, basename="financial-period")
 router.register(r"trading-accounts", TradingAccountViewSet, basename="trading-account")
 router.register(r"profit-loss", ProfitAndLossViewSet, basename="profit-loss")

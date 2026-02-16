@@ -184,7 +184,6 @@ class RatioResultViewSet(viewsets.ReadOnlyModelViewSet):
 class StatementColumnConfigViewSet(viewsets.ModelViewSet):
     """
     Manage display names / order for financial statement columns.
-    Supports global configs (company null) and company-specific overrides.
     """
     queryset = StatementColumnConfig.objects.all()
     serializer_class = StatementColumnConfigSerializer
@@ -194,7 +193,6 @@ class StatementColumnConfigViewSet(viewsets.ModelViewSet):
         qs = StatementColumnConfig.objects.all()
         statement_type = self.request.query_params.get("statement_type")
         
-        # if no company param: return all (caller can filter client-side)
         if statement_type:
             qs = qs.filter(statement_type=statement_type)
         return qs.order_by("canonical_field")
@@ -1406,26 +1404,21 @@ class UploadExcelView(APIView):
         logger.info(f"Extracted data: {data}")
         return data
     
-    def _parse_trading_account_rows(self, sheet, company=None):
+    def _parse_trading_account_rows(self, sheet):
         """Parse Trading_Account sheet: Item, Amount. Uses StatementColumnConfig for item name matching first."""
         logger.info(f"=== PARSING TRADING ACCOUNT ROWS (Format A) ===")
         logger.info(f"Sheet name: {sheet.title}")
-        
-        # Print all rows from the sheet
         all_rows = []
         for row_idx, row in enumerate(sheet.iter_rows(values_only=True), 1):
             row_data = [str(cell) if cell is not None else '' for cell in row]
             all_rows.append(row_data)
             logger.info(f"Row {row_idx}: {row_data}")
-        
         logger.info(f"Total rows in Trading Account: {len(all_rows)}")
-        
         data = {}
         item_col = amount_col = None
         for row_idx, row in enumerate(all_rows, 1):
             row_values = [cell if cell else None for cell in row]
             logger.info(f"Processing Trading Account Row {row_idx}: {row_values}")
-            
             if row_idx == 1:
                 for col_idx, cell_value in enumerate(row_values):
                     if cell_value:
@@ -1439,20 +1432,17 @@ class UploadExcelView(APIView):
             elif row_idx > 1 and item_col is not None and amount_col is not None:
                 item = str(row_values[item_col] or '').strip() if item_col < len(row_values) else ''
                 amt = row_values[amount_col] if amount_col < len(row_values) else None
-                
                 logger.info(f"Row {row_idx} - Trading Account: item='{item}', amount='{amt}'")
-                
                 if not item or amt is None:
                     logger.debug(f"Row {row_idx}: Skipping (empty item or amount)")
                     continue
                 amt_val = self._parse_decimal(amt)
-                field_name = self._map_trading_account_field(item, company)
+                field_name = self._map_trading_account_field(item)
                 if field_name:
                     data[field_name] = amt_val
                     logger.info(f"✓ Row {row_idx}: Mapped '{item}' -> {field_name} = {amt_val}")
                 else:
                     logger.warning(f"✗ Row {row_idx}: Could not map trading account item: '{item}'")
-        
         logger.info(f"=== TRADING ACCOUNT ROWS PARSING COMPLETE ===")
         logger.info(f"Extracted data: {data}")
         return data
@@ -2445,16 +2435,12 @@ class DownloadWordTemplateView(APIView):
 
 class PeriodComparisonView(APIView):
     """
-    Compare financial ratios between two periods of the same company.
-    
+    Compare financial ratios between two periods.
     Query Parameters:
-        - company_id: ID of the company
         - period1: Label of the first period (e.g., "2024", "FY-2023-24")
         - period2: Label of the second period (e.g., "2025", "FY-2024-25")
-    
     Returns:
         {
-            "company": "Company Name",
             "period1": "2024",
             "period2": "2025",
             "ratios": {
@@ -2517,6 +2503,9 @@ class PeriodComparisonView(APIView):
         """Fetch and compare ratios between two periods."""
         try:
             # Get query parameters
+            period1_label = request.query_params.get('period1')
+            period2_label = request.query_params.get('period2')
+            
             # Validate required parameters
             if not all([period1_label, period2_label]):
                 return Response(
@@ -2653,7 +2642,6 @@ class PeriodComparisonView(APIView):
                     "status": "success",
                     "response_code": status.HTTP_200_OK,
                     "data": {
-                        "company": "Default",
                         "period1": period1_label,
                         "period2": period2_label,
                         "ratios": ratios_comparison
@@ -2678,65 +2666,49 @@ class PeriodComparisonView(APIView):
 class DashboardView(APIView):
     """
     Dashboard endpoint for aggregated financial metrics.
-    
     Query Parameters:
-        - company: 'all' (all companies) or company_id (specific company)
         - period: 'all' (all periods) or MONTHLY/QUARTERLY/YEARLY (specific period type)
         - include_ratios: 'true' to include full RatioResult data for each period (default: false)
-    
     Returns:
         Default (aggregated metrics):
         {
             "total_revenue": 90000,
             "avg_profit_margin": 66,
             "growth_rate": 77,
-            "company_data": [
-                {
-                    "company_id": 3,
-                    "company_name": "Canara Bank",
-                    "periods": {
-                        "2023-23": {
-                            "net_revenue": 4500,
-                            "net_profit": 1200,
-                            "period_type": "YEARLY",
-                            "is_finalized": true,
-                            "created_at": "2026-02-15T10:30:00Z"
-                        },
-                        "2024-25": {
-                            "net_revenue": 5000,
-                            "net_profit": 1500,
-                            "period_type": "YEARLY",
-                            "is_finalized": true,
-                            "created_at": "2026-02-14T09:15:00Z"
-                        }
-                    }
+            "periods": {
+                "2023-23": {
+                    "net_revenue": 4500,
+                    "net_profit": 1200,
+                    "period_type": "YEARLY",
+                    "is_finalized": true,
+                    "created_at": "2026-02-15T10:30:00Z"
+                },
+                "2024-25": {
+                    "net_revenue": 5000,
+                    "net_profit": 1500,
+                    "period_type": "YEARLY",
+                    "is_finalized": true,
+                    "created_at": "2026-02-14T09:15:00Z"
                 }
-            ]
+            }
         }
         
         With include_ratios=true (detailed ratio analysis):
         {
-            "company_data": [
+            "periods": [
                 {
-                    "company_id": 3,
-                    "company_name": "Canara Bank",
-                    "periods": [
-                        {
-                            "id": 5,
-                            "company": 3,
-                            "label": "2023-23",
-                            "period_type": "YEARLY",
-                            "start_date": "2023-04-01",
-                            "end_date": "2024-03-31",
-                            "is_finalized": true,
-                            "uploaded_file": "media/company_financials/...",
-                            "file_type": "excel",
-                            "created_at": "2026-02-15T10:30:00Z",
-                            "net_revenue": 4500,
-                            "net_profit": 1200,
-                            "ratios": { ... full RatioResult data ... }
-                        }
-                    ]
+                    "id": 5,
+                    "label": "2023-23",
+                    "period_type": "YEARLY",
+                    "start_date": "2023-04-01",
+                    "end_date": "2024-03-31",
+                    "is_finalized": true,
+                    "uploaded_file": "media/financials/...",
+                    "file_type": "excel",
+                    "created_at": "2026-02-15T10:30:00Z",
+                    "net_revenue": 4500,
+                    "net_profit": 1200,
+                    "ratios": { ... full RatioResult data ... }
                 }
             ]
         }
@@ -2850,7 +2822,7 @@ class DashboardView(APIView):
             # Get ratio data for all matching periods
             ratio_results = RatioResult.objects.filter(
                 period__in=periods_queryset
-            ).select_related('period', 'period__company')
+            ).select_related('period')
             
             if not ratio_results.exists():
                 # No data found for the given filters

@@ -190,7 +190,6 @@ const MasterDashboard = () => {
 
     const getExportData = () => {
         return filteredPeriods.map(p => ({
-            Company: "Default", // Or remove entirely
             Label: p.label,
             Type: p.period_type,
             StartDate: p.start_date,
@@ -237,7 +236,6 @@ const MasterDashboard = () => {
         doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
         const tableData = data.map(row => [
-            row.Company,
             row.Label,
             row.Type,
             row.StartDate,
@@ -247,7 +245,7 @@ const MasterDashboard = () => {
         ]);
 
         autoTable(doc, {
-            head: [['Company', 'Label', 'Type', 'Start', 'Status', 'Revenue', 'Net Profit']],
+            head: [['Label', 'Type', 'Start', 'Status', 'Revenue', 'Net Profit']],
             body: tableData,
             startY: 30,
         });
@@ -262,7 +260,6 @@ const MasterDashboard = () => {
 
         const tableRows = data.map(row => `
       <tr>
-        <td>${row.Company}</td>
         <td>${row.Label}</td>
         <td>${row.Type}</td>
         <td>${row.StartDate}</td>
@@ -281,7 +278,7 @@ const MasterDashboard = () => {
         <table border="1" style="border-collapse:collapse;width:100%">
           <thead>
             <tr style="background-color:#f2f2f2">
-              <th>Company</th><th>Label</th><th>Type</th><th>Start Date</th><th>Status</th><th>Revenue</th><th>Net Profit</th>
+              <th>Label</th><th>Type</th><th>Start Date</th><th>Status</th><th>Revenue</th><th>Net Profit</th>
             </tr>
           </thead>
           <tbody>

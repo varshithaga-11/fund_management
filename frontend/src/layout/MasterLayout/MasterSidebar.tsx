@@ -10,7 +10,6 @@ import {
   BarChart3,
   TrendingUp,
   Table,
-  Building,
 } from "lucide-react"; // 👈 Example icons
 
 import { HorizontaLDots } from "../../icons";
@@ -47,8 +46,8 @@ const navItems: NavItem[] = [
   },
   {
     icon: <BarChart3 className="w-5 h-5" />,
-    name: "Company Ratio Analysis",
-    path: "/company-ratio-analysis",
+    name: "Ratio Analysis",
+    path: "/ratio-analysis",
   },
   {
     icon: <TrendingUp className="w-5 h-5" />,

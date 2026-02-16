@@ -60,12 +60,14 @@ class FinancialPeriod(models.Model):
         ("YEARLY", "Yearly"),
     ]
 
-
     period_type = models.CharField(max_length=20, choices=PERIOD_TYPE_CHOICES)
     start_date = models.DateField()
     end_date = models.DateField()
     label = models.CharField(max_length=50)  # e.g. FY-2023-24, Mar-2024
     is_finalized = models.BooleanField(default=False)
+    
+    # Single-company system: company_id nullable for backward compatibility
+    company_id = models.BigIntegerField(null=True, blank=True)
     
     # Store uploaded file (Excel, Word, or PDF) - organized by company/period_type/period_label
     uploaded_file = models.FileField(upload_to=financial_file_upload_path, null=True, blank=True)

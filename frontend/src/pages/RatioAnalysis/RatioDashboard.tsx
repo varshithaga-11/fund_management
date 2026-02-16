@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   getFinancialPeriod,
   getRatioResults,
@@ -7,15 +7,19 @@ import {
   FinancialPeriodData,
 } from "../FinancialStatements/api";
 import RatioCard from "../../components/RatioCard";
+import RatioAnalysisTable from "../../components/RatioAnalysisTable";
 import { BeatLoader } from "react-spinners";
 import { toast, ToastContainer } from "react-toastify";
+import { LayoutGrid, Table, ArrowLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 
 const RatioDashboard: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
+  const navigate = useNavigate();
   const [ratios, setRatios] = useState<RatioResultData | null>(null);
   const [period, setPeriod] = useState<FinancialPeriodData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   useEffect(() => {
     if (periodId) {
@@ -275,19 +279,52 @@ const RatioDashboard: React.FC = () => {
       <ToastContainer position="bottom-right" autoClose={3000} />
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Ratio Analysis Dashboard
-        </h1>
-        {period && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {period.label} - Calculated on{" "}
-            {new Date(ratios.calculated_at).toLocaleDateString()}
-          </p>
-        )}
+      <div className="flex justify-between items-start">
+        <div>
+          <button
+            onClick={() => navigate('/ratio-analysis')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 mb-2 transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span>Back to Periods</span>
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Ratio Analysis Dashboard
+          </h1>
+          {period && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {period.label} - Calculated on{" "}
+              {new Date(ratios.calculated_at).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode("cards")}
+            className={`px-4 py-2 rounded flex items-center gap-2 transition-colors ${viewMode === "cards"
+              ? "bg-blue-600 text-white"
+              : "bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Cards
+          </button>
+          <button
+            onClick={() => setViewMode("table")}
+            className={`px-4 py-2 rounded flex items-center gap-2 transition-colors ${viewMode === "table"
+              ? "bg-blue-600 text-white"
+              : "bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+          >
+            <Table className="w-4 h-4" />
+            Table
+          </button>
+        </div>
       </div>
 
-      {/* Working Fund Summary */}
+      {/* Working Fund Summary - Always Show */}
       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           Working Fund
@@ -312,106 +349,114 @@ const RatioDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Trading Ratios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Trading Ratios
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {tradingRatios.map((ratio) => (
-            <RatioCard key={ratio.name} {...ratio} />
-          ))}
-        </div>
-      </div>
-
-      {/* Capital Efficiency Ratios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Capital Efficiency
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {capitalEfficiencyRatios.map((ratio) => (
-            <RatioCard key={ratio.name} {...ratio} />
-          ))}
-        </div>
-      </div>
-
-      {/* Fund Structure Ratios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Fund Structure Ratios
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {fundStructureRatios.map((ratio) => (
-            <RatioCard key={ratio.name} {...ratio} />
-          ))}
-        </div>
-      </div>
-
-      {/* Yield & Cost Ratios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Yield & Cost Ratios
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {yieldCostRatios.map((ratio) => (
-            <RatioCard key={ratio.name} {...ratio} />
-          ))}
-        </div>
-      </div>
-
-      {/* Margin Ratios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Margin Ratios
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {marginRatios.map((ratio) => (
-            <RatioCard key={ratio.name} {...ratio} />
-          ))}
-        </div>
-      </div>
-
-      {/* Productivity Ratios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Productivity Ratios
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {productivityRatios.map((ratio) => (
-            <RatioCard key={ratio.name} {...ratio} />
-          ))}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-          Status Legend
-        </h3>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-green-500 mr-2" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Meets or exceeds ideal
-            </span>
+      {/* View-based Content */}
+      {viewMode === "table" ? (
+        <RatioAnalysisTable ratios={ratios} period={period?.label} />
+      ) : (
+        <>
+          {/* Trading Ratios */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Trading Ratios
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {tradingRatios.map((ratio) => (
+                <RatioCard key={ratio.name} {...ratio} />
+              ))}
+            </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Sub-optimal but acceptable
-            </span>
+
+          {/* Capital Efficiency Ratios */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Capital Efficiency
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {capitalEfficiencyRatios.map((ratio) => (
+                <RatioCard key={ratio.name} {...ratio} />
+              ))}
+            </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-red-500 mr-2" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Critical - requires attention
-            </span>
+
+          {/* Fund Structure Ratios */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Fund Structure Ratios
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {fundStructureRatios.map((ratio) => (
+                <RatioCard key={ratio.name} {...ratio} />
+              ))}
+            </div>
+          </div>
+
+          {/* Yield & Cost Ratios */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Yield & Cost Ratios
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {yieldCostRatios.map((ratio) => (
+                <RatioCard key={ratio.name} {...ratio} />
+              ))}
+            </div>
+          </div>
+
+          {/* Margin Ratios */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Margin Ratios
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {marginRatios.map((ratio) => (
+                <RatioCard key={ratio.name} {...ratio} />
+              ))}
+            </div>
+          </div>
+
+          {/* Productivity Ratios */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Productivity Ratios
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {productivityRatios.map((ratio) => (
+                <RatioCard key={ratio.name} {...ratio} />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Legend - Only show in card view */}
+      {viewMode === "cards" && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            Status Legend
+          </h3>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-green-500 mr-2" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Meets or exceeds ideal
+              </span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Sub-optimal but acceptable
+              </span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-red-500 mr-2" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Critical - requires attention
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
-
 export default RatioDashboard;
