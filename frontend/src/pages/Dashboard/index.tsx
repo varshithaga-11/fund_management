@@ -16,7 +16,9 @@ import {
     LucideArrowDownRight,
     LucidePercent,
     LucideTrophy,
-    LucidePlus
+    LucidePlus,
+    LucideSearch,
+    LucideChevronDown
 } from "lucide-react";
 
 import { FinancialPeriodData } from "../FinancialStatements/api";
@@ -44,23 +46,35 @@ const MasterDashboard = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const [filterType, setFilterType] = useState<string>("");
-    const [filterLoading, setFilterLoading] = useState(false);
+    const [yearSearchOpen, setYearSearchOpen] = useState(false);
+    const [yearSearchTerm, setYearSearchTerm] = useState("");
+    const yearSearchRef = useRef<HTMLDivElement>(null);
+
+    // Close year search when clicking outside
+    useEffect(() => {
+        function handleClickOutsideYear(event: MouseEvent) {
+            if (yearSearchRef.current && !yearSearchRef.current.contains(event.target as Node)) {
+                setYearSearchOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutsideYear);
+        return () => document.removeEventListener("mousedown", handleClickOutsideYear);
+    }, []);
+
+    // const [filterType, setFilterType] = useState<string>("");
+    // const [filterLoading, setFilterLoading] = useState(false);
 
     // Fetch aggregated dashboard data and periods
-    const fetchFilteredData = async (periodType?: string) => {
+    const fetchFilteredData = async () => {
         try {
-            setFilterLoading(true);
+            // setFilterLoading(true);
 
             // Build params for dashboard API
             const params: any = {};
 
             // period parameter: 'all' or specific period type
-            if (periodType) {
-                params.period = periodType;
-            } else {
-                params.period = 'all';
-            }
+            // period parameter: 'all'
+            params.period = 'all';
 
             // Fetch aggregated dashboard data from the new endpoint
             const url = createApiUrl("api/dashboard/");
@@ -91,7 +105,7 @@ const MasterDashboard = () => {
             console.error("Error loading filtered data:", error);
             setDashboardData(null);
         } finally {
-            setFilterLoading(false);
+            // setFilterLoading(false);
         }
     };
 
@@ -99,11 +113,10 @@ const MasterDashboard = () => {
         fetchData();
     }, []);
 
-    // Fetch periods whenever filters change (including "all" which means no specific filter)
+    // Fetch data on mount
     useEffect(() => {
-        // Always fetch when filters change - even if both are empty (meaning "all")
-        fetchFilteredData(filterType);
-    }, [filterType]);
+        fetchFilteredData();
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -535,40 +548,58 @@ const MasterDashboard = () => {
                         <span className="font-semibold text-black dark:text-white">Filters</span>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                        <select
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            disabled={filterLoading}
-                            className="rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <option value="">All Periods</option>
-                            <option value="MONTHLY">Monthly</option>
-                            <option value="QUARTERLY">Quarterly</option>
-                            <option value="HALF_YEARLY">Half Yearly</option>
-                            <option value="YEARLY">Yearly</option>
-                        </select>
-                        {filterLoading && (
-                            <div className="flex items-center gap-2 px-3 py-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-500"></div>
-                                <span className="text-sm text-brand-600 dark:text-brand-400">Loading...</span>
-                            </div>
-                        )}
+                    <div className="flex flex-col gap-3 sm:flex-row" ref={yearSearchRef}>
+                        <div className="relative">
+                            <button
+                                onClick={() => setYearSearchOpen(!yearSearchOpen)}
+                                className="flex min-w-[180px] items-center justify-between rounded-lg border border-stroke bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            >
+                                <span>Select Year</span>
+                                <LucideChevronDown className="h-4 w-4 opacity-50" />
+                            </button>
+
+                            {yearSearchOpen && (
+                                <div className="absolute right-0 top-full z-50 mt-1 w-full min-w-[220px] rounded-lg border border-stroke bg-white p-2 shadow-lg dark:border-gray-600 dark:bg-gray-800">
+                                    <div className="mb-2 flex items-center rounded-md border border-gray-300 bg-gray-50 px-2 dark:border-gray-600 dark:bg-gray-700">
+                                        <LucideSearch className="h-4 w-4 text-gray-500" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search..."
+                                            value={yearSearchTerm}
+                                            onChange={(e) => setYearSearchTerm(e.target.value)}
+                                            className="w-full bg-transparent px-2 py-1.5 text-sm outline-none dark:text-white"
+                                            autoFocus
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {periods
+                                            .filter(p => p.period_type === 'YEARLY' && p.label.toLowerCase().includes(yearSearchTerm.toLowerCase()))
+                                            .length > 0 ? (
+                                            periods
+                                                .filter(p => p.period_type === 'YEARLY' && p.label.toLowerCase().includes(yearSearchTerm.toLowerCase()))
+                                                .map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => {
+                                                            navigate(`/ratio-analysis/${p.id}`);
+                                                            setYearSearchOpen(false);
+                                                        }}
+                                                        className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600"
+                                                    >
+                                                        {p.label}
+                                                    </button>
+                                                ))
+                                        ) : (
+                                            <div className="px-3 py-2 text-sm text-gray-500 text-center">No years found</div>
+                                        )
+                                        }
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-
-                {(filterType) && (
-                    <div className="mt-3 flex flex-wrap gap-2 border-t border-stroke pt-3 dark:border-gray-700">
-                        <span className="text-xs text-gray-500 py-1">Active:</span>
-                        {filterType && (
-                            <span className="flex items-center gap-1 rounded bg-brand-50 px-2 py-1 text-xs font-medium text-brand-500">
-                                Type: {filterType}
-                                <button onClick={() => setFilterType("")} className="ml-1 hover:text-brand-700">×</button>
-                            </span>
-                        )}
-                        <button onClick={() => { setFilterType(""); }} className="text-xs text-gray-500 hover:text-black hover:underline px-2" disabled={filterLoading}>Clear all</button>
-                    </div>
-                )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">

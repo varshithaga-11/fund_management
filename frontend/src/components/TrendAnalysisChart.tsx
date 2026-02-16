@@ -35,6 +35,8 @@ class ChartErrorBoundary extends React.Component<{ children: React.ReactNode }, 
 interface TrendAnalysisChartProps {
     ratioData: any[];
     periods: any[];
+    selectedRatios: string[];
+    onSelectedRatiosChange: (ratios: string[]) => void;
 }
 
 const RATIO_CATEGORIES = {
@@ -93,14 +95,13 @@ const formatRatioName = (name: string): string => {
 const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
     ratioData,
     periods,
+    selectedRatios,
+    onSelectedRatiosChange,
 }) => {
     console.log("TrendAnalysisChart rendering", { ratioDataCount: ratioData?.length, periodsCount: periods?.length });
 
     const [selectedCategory, setSelectedCategory] = useState<string>(
         "Trading Ratios"
-    );
-    const [selectedRatios, setSelectedRatios] = useState<string[]>(
-        RATIO_CATEGORIES["Trading Ratios"] || []
     );
     const [chartType, setChartType] = useState<"line" | "bar" | "area" | "radar" | "scatter" | "candlestick" | "waterfall">("line");
     const [expandedDropdown, setExpandedDropdown] = useState(false);
@@ -383,7 +384,7 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                             value={selectedCategory}
                             onChange={(e) => {
                                 setSelectedCategory(e.target.value);
-                                setSelectedRatios(
+                                onSelectedRatiosChange(
                                     RATIO_CATEGORIES[e.target.value as keyof typeof RATIO_CATEGORIES] || []
                                 );
                             }}
@@ -475,9 +476,9 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                                                     checked={selectedRatios.includes(ratioName)}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
-                                                            setSelectedRatios([...selectedRatios, ratioName]);
+                                                            onSelectedRatiosChange([...selectedRatios, ratioName]);
                                                         } else {
-                                                            setSelectedRatios(
+                                                            onSelectedRatiosChange(
                                                                 selectedRatios.filter((r) => r !== ratioName)
                                                             );
                                                         }

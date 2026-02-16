@@ -11,7 +11,7 @@ import {
   PeriodListData,
   PeriodComparisonResponse,
 } from "./api";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, ArrowRightLeft } from "lucide-react";
 
 const PeriodComparison: React.FC = () => {
   const [periods, setPeriods] = useState<PeriodListData[]>([]);
@@ -27,6 +27,7 @@ const PeriodComparison: React.FC = () => {
   const [loadingComparison, setLoadingComparison] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTableView, setShowTableView] = useState(true);
+  const [spinCount, setSpinCount] = useState(0);
 
   useEffect(() => {
     loadPeriods();
@@ -417,7 +418,7 @@ const PeriodComparison: React.FC = () => {
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-lg mb-6 border border-blue-200 dark:border-blue-800">
                   <div className="flex flex-col lg:flex-row items-center justify-center gap-4">
                     {selectedPeriod1 && (
-                      <div className="text-center">
+                      <div className="flex-1 w-full text-center">
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide font-semibold">Period 1</p>
                         <p className="font-bold text-gray-900 dark:text-white text-lg">{selectedPeriod1.label}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{selectedPeriod1.period_type}</p>
@@ -427,6 +428,8 @@ const PeriodComparison: React.FC = () => {
                     {selectedPeriod1 && selectedPeriod2 && (
                       <button
                         onClick={() => {
+                          // Animate spin
+                          setSpinCount(prev => prev + 1);
                           // Interchange periods
                           setSelectedPeriod1(selectedPeriod2);
                           setSelectedPeriod2(selectedPeriod1);
@@ -435,14 +438,17 @@ const PeriodComparison: React.FC = () => {
                         className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-blue-400 dark:border-blue-600 bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all group"
                         title="Swap periods"
                       >
-                        <svg className="w-6 h-6 text-blue-600 dark:text-blue-400 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                        </svg>
+                        <div className="rotate-90 lg:rotate-0 transition-none">
+                          <ArrowRightLeft
+                            className="w-5 h-5 text-blue-600 dark:text-blue-400 transition-transform duration-500 ease-in-out"
+                            style={{ transform: `rotate(${spinCount * 180}deg)` }}
+                          />
+                        </div>
                       </button>
                     )}
 
                     {selectedPeriod2 && (
-                      <div className="text-center">
+                      <div className="flex-1 w-full text-center">
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide font-semibold">Period 2</p>
                         <p className="font-bold text-gray-900 dark:text-white text-lg">{selectedPeriod2.label}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{selectedPeriod2.period_type}</p>

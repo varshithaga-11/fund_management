@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, TrendingUp } from "lucide-react";
 import TrendAnalysisChart from "../../components/TrendAnalysisChart";
 import TrendComparisonCards from "../../components/TrendComparisonCards";
 import { RatioResultData, getFinancialPeriods, getRatioResults } from "../FinancialStatements/api";
@@ -19,29 +19,10 @@ const TrendAnalysisPage: React.FC = () => {
     const [ratiosData, setRatiosData] = useState<RatioResultData[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [selectedRatio, setSelectedRatio] = useState<string>("gross_profit_ratio");
-    const [showRatioDropdown, setShowRatioDropdown] = useState(false);
+    const [selectedRatios, setSelectedRatios] = useState<string[]>(["gross_profit_ratio", "net_profit_ratio", "stock_turnover"]);
 
-    // Available ratios for comparison
-    const availableRatios = [
-        { key: "gross_profit_ratio", label: "Gross Profit Ratio" },
-        { key: "net_profit_ratio", label: "Net Profit Ratio" },
-        { key: "stock_turnover", label: "Stock Turnover" },
-        { key: "own_fund_to_wf", label: "Own Fund to WF" },
-        { key: "deposits_to_wf", label: "Deposits to WF" },
-        { key: "loans_to_wf", label: "Loans to WF" },
-        { key: "investments_to_wf", label: "Investments to WF" },
-        { key: "cost_of_deposits", label: "Cost of Deposits" },
-        { key: "yield_on_loans", label: "Yield on Loans" },
-        { key: "credit_deposit_ratio", label: "Credit Deposit Ratio" },
-        { key: "avg_yield_on_wf", label: "Avg Yield on WF" },
-        { key: "avg_cost_of_wf", label: "Avg Cost of WF" },
-        { key: "net_margin", label: "Net Margin" },
-        { key: "capital_turnover_ratio", label: "Capital Turnover Ratio" },
-        { key: "per_employee_deposit", label: "Per Employee Deposit" },
-        { key: "per_employee_loan", label: "Per Employee Loan" },
-        { key: "per_employee_contribution", label: "Per Employee Contribution" },
-    ];
+    // Available ratios are now managed by the Chart component's internal constants
+
 
     // Fetch all periods and initial data
     useEffect(() => {
@@ -132,57 +113,28 @@ const TrendAnalysisPage: React.FC = () => {
                     <TrendAnalysisChart
                         ratioData={ratiosData}
                         periods={periods.filter(p => selectedPeriods.includes(p.id))}
+                        selectedRatios={selectedRatios}
+                        onSelectedRatiosChange={setSelectedRatios}
                     />
                 )}
 
-                {/* Year-over-Year Comparison Section */}
+                {/* Yearly Comparison Section */}
                 {!loading && ratiosData.length > 0 && selectedPeriods.length > 0 && (
-                    <div className="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <div className="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                                Year-over-Year Comparison
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-1">
+                                Yearly Comparison
                             </h2>
-
-                            {/* Ratio Selection */}
-                            <div className="relative w-full md:w-72">
-                                <button
-                                    onClick={() => setShowRatioDropdown(!showRatioDropdown)}
-                                    className="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-left text-gray-900 dark:text-white font-medium flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600 transition"
-                                >
-                                    {availableRatios.find(r => r.key === selectedRatio)?.label || "Select Ratio"}
-                                    <ChevronDown
-                                        size={18}
-                                        className={`transition-transform ${showRatioDropdown ? "rotate-180" : ""}`}
-                                    />
-                                </button>
-
-                                {showRatioDropdown && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-                                        {availableRatios.map((ratio) => (
-                                            <button
-                                                key={ratio.key}
-                                                onClick={() => {
-                                                    setSelectedRatio(ratio.key);
-                                                    setShowRatioDropdown(false);
-                                                }}
-                                                className={`w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-gray-600 transition ${selectedRatio === ratio.key
-                                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold"
-                                                        : "text-gray-700 dark:text-gray-300"
-                                                    }`}
-                                            >
-                                                {ratio.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Analysis of ratio changes across financial years
+                            </p>
                         </div>
 
                         {/* Comparison Cards */}
                         <TrendComparisonCards
                             ratioData={ratiosData}
                             periods={periods.filter(p => selectedPeriods.includes(p.id))}
-                            selectedRatio={selectedRatio}
+                            selectedRatios={selectedRatios}
                         />
                     </div>
                 )}

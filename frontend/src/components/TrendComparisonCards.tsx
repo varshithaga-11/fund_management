@@ -1,5 +1,4 @@
 import React, { useMemo } from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface Period {
     id: number;
@@ -16,65 +15,70 @@ interface RatioResult {
 interface TrendComparisonCardsProps {
     ratioData: RatioResult[];
     periods: Period[];
-    selectedRatio: string;
+    selectedRatios: string[];
 }
+
+const formatRatioName = (name: string): string => {
+    return name
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+};
 
 const TrendComparisonCards: React.FC<TrendComparisonCardsProps> = ({
     ratioData,
     periods,
-    selectedRatio,
+    selectedRatios,
 }) => {
     const comparisonData = useMemo(() => {
-        if (!ratioData || !periods || ratioData.length === 0) {
+        if (!ratioData || !periods || ratioData.length === 0 || selectedRatios.length === 0) {
             return [];
         }
 
-        // Create map of period id to period data
         const periodMap = new Map();
         periods.forEach((period) => {
             periodMap.set(period.id, period);
         });
 
-        // Sort ratio data by period start_date
-        const sortedRatios = [...ratioData]
-            .filter((data) => data[selectedRatio] !== undefined)
-            .sort((a, b) => {
-                const aDate = new Date(periodMap.get(a.period)?.start_date || "");
-                const bDate = new Date(periodMap.get(b.period)?.start_date || "");
-                return aDate.getTime() - bDate.getTime();
-            });
+        return selectedRatios.map(ratioKey => {
+            const sortedPeriodData = [...ratioData]
+                .filter((data) => data[ratioKey] !== undefined && data[ratioKey] !== null && data[ratioKey] !== "")
+                .sort((a, b) => {
+                    const aDate = new Date(periodMap.get(a.period)?.start_date || "");
+                    const bDate = new Date(periodMap.get(b.period)?.start_date || "");
+                    return aDate.getTime() - bDate.getTime();
+                })
+                .map((current, index, array) => {
+                    const currentPeriod = periodMap.get(current.period);
+                    const currentValue = parseFloat(current[ratioKey]) || 0;
+                    const previousRatio = index > 0 ? array[index - 1] : null;
+                    const previousValue = previousRatio
+                        ? parseFloat(previousRatio[ratioKey]) || 0
+                        : null;
 
-        // Build comparison cards with year-over-year change
-        return sortedRatios.map((current, index) => {
-            const currentPeriod = periodMap.get(current.period);
-            const currentValue = parseFloat(current[selectedRatio]) || 0;
-            const previousRatio = index > 0 ? sortedRatios[index - 1] : null;
-            const previousPeriod = previousRatio
-                ? periodMap.get(previousRatio.period)
-                : null;
-            const previousValue = previousRatio
-                ? parseFloat(previousRatio[selectedRatio]) || 0
-                : null;
+                    let changePercent = null;
+                    let changeDirection = null;
 
-            let changePercent = null;
-            let changeDirection = null;
+                    if (previousValue !== null && previousValue !== 0) {
+                        changePercent = ((currentValue - previousValue) / previousValue) * 100;
+                        changeDirection =
+                            changePercent > 0 ? "up" : changePercent < 0 ? "down" : "stable";
+                    }
 
-            if (previousValue !== null && previousValue !== 0) {
-                changePercent = ((currentValue - previousValue) / previousValue) * 100;
-                changeDirection =
-                    changePercent > 0 ? "up" : changePercent < 0 ? "down" : "stable";
-            }
+                    return {
+                        periodLabel: currentPeriod?.label || "Unknown",
+                        value: currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                        changePercent: changePercent !== null ? Math.abs(changePercent).toFixed(1) : null,
+                        changeDirection: changeDirection,
+                    };
+                }).reverse(); // Latest years first
 
             return {
-                periodLabel: currentPeriod?.label || "Unknown",
-                value: currentValue.toFixed(2),
-                previousPeriodLabel: previousPeriod?.label || null,
-                previousValue: previousValue?.toFixed(2) || null,
-                changePercent,
-                changeDirection,
+                ratioLabel: formatRatioName(ratioKey),
+                periodsData: sortedPeriodData
             };
-        });
-    }, [ratioData, periods, selectedRatio]);
+        }).filter(item => item !== null);
+    }, [ratioData, periods, selectedRatios]);
 
     if (comparisonData.length === 0) {
         return (
@@ -85,81 +89,40 @@ const TrendComparisonCards: React.FC<TrendComparisonCardsProps> = ({
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
             {comparisonData.map((card, index) => (
                 <div
                     key={index}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900 transition-colors"
                 >
-                    {/* Period Label */}
-                    <div className="mb-2">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Year
-                        </p>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {card.periodLabel}
-                        </h3>
-                    </div>
+                    <h3 className="text-sm font-extrabold text-blue-900 dark:text-blue-100 mb-6 border-b border-gray-50 dark:border-gray-700 pb-2 uppercase tracking-wide">
+                        {card.ratioLabel}
+                    </h3>
 
-                    {/* Value */}
-                    <div className="mb-4">
-                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                            {card.value}
-                        </p>
-                    </div>
-
-                    {/* Change Comparison */}
-                    {card.changePercent !== null && (
-                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    vs {card.previousPeriodLabel}
-                                </p>
-                                <div
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${card.changeDirection === "up"
-                                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                            : card.changeDirection === "down"
-                                                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                                        }`}
-                                >
-                                    {card.changeDirection === "up" ? (
-                                        <TrendingUp size={14} />
-                                    ) : card.changeDirection === "down" ? (
-                                        <TrendingDown size={14} />
-                                    ) : null}
-                                    <span>
-                                        {card.changePercent > 0 ? "+" : ""}
-                                        {card.changePercent.toFixed(1)}%
+                    <div className="space-y-4">
+                        {card.periodsData.map((data, pIndex) => (
+                            <div key={pIndex} className="flex justify-between items-center group">
+                                <span className="text-[12px] font-bold text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                                    {data.periodLabel}
+                                </span>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        {data.value}
                                     </span>
+                                    {data.changePercent !== null && (
+                                        <span className={`text-[11px] font-bold flex items-center gap-1 ${data.changeDirection === 'up'
+                                                ? 'text-green-600 dark:text-green-400'
+                                                : data.changeDirection === 'down'
+                                                    ? 'text-red-600 dark:text-red-400'
+                                                    : 'text-gray-400 dark:text-gray-500'
+                                            }`}>
+                                            ({data.changePercent}% {data.changeDirection === 'up' ? 'Up' : data.changeDirection === 'down' ? 'Dip' : 'Stable'})
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Previous: {card.previousValue}
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Status Label */}
-                    {card.changePercent !== null && (
-                        <div className="mt-3 text-xs font-medium text-gray-600 dark:text-gray-400">
-                            {card.changeDirection === "up" && (
-                                <span className="text-green-600 dark:text-green-400">
-                                    ↑ Improved
-                                </span>
-                            )}
-                            {card.changeDirection === "down" && (
-                                <span className="text-red-600 dark:text-red-400">
-                                    ↓ Declined
-                                </span>
-                            )}
-                            {card.changeDirection === "stable" && (
-                                <span className="text-gray-600 dark:text-gray-400">
-                                    → No Change
-                                </span>
-                            )}
-                        </div>
-                    )}
+                        ))}
+                    </div>
                 </div>
             ))}
         </div>
