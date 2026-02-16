@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   getFinancialPeriod,
   FinancialPeriodData,
-  calculateRatios,
 } from "./api";
 import TradingAccountForm from "./TradingAccountForm";
 import ProfitLossForm from "./ProfitLossForm";
@@ -20,7 +19,6 @@ const FinancialPeriodPage: React.FC = () => {
   const [period, setPeriod] = useState<FinancialPeriodData | null>(null);
   const [activeTab, setActiveTab] = useState("trading");
   const [loading, setLoading] = useState(false);
-  const [calculating, setCalculating] = useState(false);
 
   // All data is read-only - no updates allowed
   useEffect(() => {
@@ -42,46 +40,6 @@ const FinancialPeriodPage: React.FC = () => {
       toast.error("Failed to load financial period");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCalculateRatios = async () => {
-    if (!periodId) return;
-
-    // Check if all required data exists
-    if (!period?.trading_account) {
-      toast.error("Please complete Trading Account first");
-      return;
-    }
-    if (!period?.profit_loss) {
-      toast.error("Please complete Profit & Loss first");
-      return;
-    }
-    if (!period?.balance_sheet) {
-      toast.error("Please complete Balance Sheet first");
-      return;
-    }
-    if (!period?.operational_metrics) {
-      toast.error("Please complete Operational Metrics first");
-      return;
-    }
-
-    setCalculating(true);
-    try {
-      await calculateRatios(parseInt(periodId));
-      toast.success("Ratios calculated successfully!");
-      await loadPeriod();
-      // Navigate to ratio dashboard
-      navigate(`/ratio-analysis/${periodId}`);
-    } catch (error: any) {
-      console.error("Error calculating ratios:", error);
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Failed to calculate ratios");
-      }
-    } finally {
-      setCalculating(false);
     }
   };
 
@@ -110,12 +68,6 @@ const FinancialPeriodPage: React.FC = () => {
     );
   }
 
-  const canCalculateRatios =
-    period.trading_account &&
-    period.profit_loss &&
-    period.balance_sheet &&
-    period.operational_metrics;
-
   return (
     <div className="p-6 space-y-6">
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -130,13 +82,14 @@ const FinancialPeriodPage: React.FC = () => {
             <span className="uppercase tracking-wider">{period.period_type}</span>
           </p>
         </div>
-        <Button
-          onClick={handleCalculateRatios}
-          disabled={!canCalculateRatios || calculating}
-          className="font-bold shadow-md"
-        >
-          {calculating ? "Calculating..." : "Calculate Ratios"}
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => navigate(`/ratio-analysis/${periodId}`)}
+            className="font-bold shadow-md bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800"
+          >
+            View Dashboard
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

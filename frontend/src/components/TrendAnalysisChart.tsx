@@ -1,6 +1,36 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Chart from "react-apexcharts";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, AlertCircle } from "lucide-react";
+
+// Simple Error Boundary for the Chart
+class ChartErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+    constructor(props: any) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex flex-col items-center justify-center h-96 bg-red-50 dark:bg-red-900/10 rounded-lg p-6 text-center border border-red-200 dark:border-red-800">
+                    <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                    <h3 className="text-lg font-bold text-red-800 dark:text-red-300 mb-2">Chart Rendering Error</h3>
+                    <p className="text-red-600 dark:text-red-400">Something went wrong while drawing the chart. Try selecting different options or another chart type.</p>
+                    <button
+                        onClick={() => this.setState({ hasError: false })}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 
 interface TrendAnalysisChartProps {
     ratioData: any[];
@@ -64,16 +94,19 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
     ratioData,
     periods,
 }) => {
+    console.log("TrendAnalysisChart rendering", { ratioDataCount: ratioData?.length, periodsCount: periods?.length });
+
     const [selectedCategory, setSelectedCategory] = useState<string>(
         "Trading Ratios"
     );
     const [selectedRatios, setSelectedRatios] = useState<string[]>(
         RATIO_CATEGORIES["Trading Ratios"] || []
     );
-    const [chartType, setChartType] = useState<"line" | "bar" | "area">("line");
+    const [chartType, setChartType] = useState<"line" | "bar" | "area" | "radar" | "scatter" | "candlestick" | "waterfall">("line");
     const [expandedDropdown, setExpandedDropdown] = useState(false);
+    const [expandedChartTypeDropdown, setExpandedChartTypeDropdown] = useState(false);
     const [selectedPeriods, setSelectedPeriods] = useState<number[]>(
-        periods.map((p: any) => p.id)
+        periods?.map((p: any) => p.id) || []
     );
 
     // Sort periods by date for correct chronological order
@@ -82,6 +115,20 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
             setSelectedPeriods(periods.map((p: any) => p.id));
         }
     }, [periods]);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: any) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest('[data-chart-controls]')) {
+                setExpandedDropdown(false);
+                setExpandedChartTypeDropdown(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const sortedData = useMemo(() => {
         if (!ratioData || ratioData.length === 0) return [];
@@ -115,18 +162,75 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
             return period?.label || `Period ${data.period}`;
         });
 
-        const series = selectedRatios.map((ratioName) => ({
-            name: formatRatioName(ratioName),
-            data: sortedData.map((data: any) => {
-                const value = data[ratioName];
-                if (value === null || value === undefined || value === "") return null;
-                const numValue = typeof value === 'number' ? value : parseFloat(value);
-                return !isNaN(numValue) ? parseFloat(numValue.toFixed(2)) : null;
-            }),
-        }));
+        // Format data based on chart type
+        if (chartType === "scatter") {
+            // Scatter needs {x, y} pairs
+            const series = selectedRatios.map((ratioName) => ({
+                name: formatRatioName(ratioName),
+                data: sortedData.map((data: any, dataIndex: number) => {
+                    const value = data[ratioName];
+                    const label = categories[dataIndex];
+                    if (value === null || value === undefined || value === "") return null;
+                    const numValue = typeof value === 'number' ? value : parseFloat(value);
+                    if (isNaN(numValue)) return null;
+                    return { x: label, y: parseFloat(numValue.toFixed(2)) };
+                }).filter((v: any) => v !== null),
+            }));
+            return { categories, series: series as any[] };
+        } else if (chartType === "candlestick") {
+            // Candlestick needs {x, y: [o, h, l, c]}
+            if (selectedRatios.length === 0) return { categories, series: [] };
 
-        return { categories, series };
-    }, [sortedData, selectedRatios, periods]);
+            const mainRatioName = selectedRatios[0];
+            const series = [{
+                name: formatRatioName(mainRatioName),
+                data: sortedData.map((data: any, idx: number) => {
+                    const value = data[mainRatioName];
+                    const label = categories[idx] || `P${idx + 1}`;
+                    if (value === null || value === undefined || value === "") {
+                        return { x: label, y: [null, null, null, null] };
+                    }
+                    const close = typeof value === 'number' ? value : parseFloat(value);
+                    if (isNaN(close)) return { x: label, y: [null, null, null, null] };
+
+                    const variance = close * 0.05;
+                    const open = close - (variance / 2);
+                    const high = close + variance;
+                    const low = close - variance;
+                    return { x: label, y: [open, high, low, close] };
+                }),
+            }];
+            return { categories, series: series as any[] };
+        } else if (chartType === "waterfall") {
+            // Simple Column Chart for Waterfall for now
+            if (selectedRatios.length === 0) return { categories, series: [] };
+            const mainRatioName = selectedRatios[0];
+            const series = [{
+                name: formatRatioName(mainRatioName),
+                data: sortedData.map((data: any, idx: number) => {
+                    const value = data[mainRatioName];
+                    const label = categories[idx] || `P${idx + 1}`;
+                    const numValue = (value === null || value === undefined || value === "") ? null :
+                        (typeof value === 'number' ? value : parseFloat(value));
+                    return { x: label, y: isNaN(numValue as any) ? null : numValue };
+                }),
+            }];
+            return { categories, series: series as any[] };
+        } else {
+            // Line, Area, Bar, Radar
+            const series = selectedRatios.map((ratioName) => ({
+                name: formatRatioName(ratioName),
+                data: sortedData.map((data: any, idx: number) => {
+                    const value = data[ratioName];
+                    const label = categories[idx] || `P${idx + 1}`;
+                    const numValue = (value === null || value === undefined || value === "") ? null :
+                        (typeof value === 'number' ? value : parseFloat(value));
+                    return { x: label, y: isNaN(numValue as any) ? null : numValue };
+                }),
+            }));
+            return { categories, series: series as any[] };
+        }
+    }, [sortedData, selectedRatios, periods, chartType]);
 
     if (!chartData || chartData.series.length === 0) {
         return (
@@ -138,9 +242,11 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
         );
     }
 
-    const chartOptions: ApexCharts.ApexOptions = {
+    const categories = chartData?.categories || [];
+
+    const chartOptions: any = {
         chart: {
-            type: chartType,
+            type: chartType === "waterfall" ? "bar" : chartType,
             toolbar: {
                 show: true,
                 tools: {
@@ -157,11 +263,45 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
         },
         stroke: {
             curve: "smooth",
-            width: (chartType === "line" || chartType === "area") ? 2 : 0,
+            width: (chartType === "line" || chartType === "area") ? 2 : (chartType === "scatter" ? 0 : 2),
             colors: undefined,
         },
+        markers: {
+            size: (chartType === "scatter" || chartType === "line" || chartType === "area") ? 5 : 0,
+            strokeWidth: 2,
+            hover: {
+                size: 7
+            }
+        },
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: '55%',
+                borderRadius: 4,
+                ...(chartType === "waterfall" ? {
+                    dataLabels: {
+                        total: {
+                            enabled: true,
+                            style: {
+                                fontSize: "13px",
+                                fontWeight: 900
+                            }
+                        }
+                    }
+                } : {})
+            },
+            radar: {
+                polygons: {
+                    strokeColors: '#e8e8e8',
+                    fill: {
+                        colors: ['#f8f8f8', '#fff']
+                    }
+                }
+            },
+        },
         xaxis: {
-            categories: chartData.categories,
+            categories: categories,
+            type: "category",
             labels: {
                 style: {
                     colors: "#6B7280",
@@ -170,6 +310,7 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
             },
         },
         yaxis: {
+            show: chartType !== "radar",
             labels: {
                 style: {
                     colors: "#6B7280",
@@ -178,11 +319,24 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
             },
         },
         tooltip: {
-            theme: document.documentElement.classList.contains("dark")
-                ? "dark"
-                : "light",
+            enabled: true,
+            theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
             y: {
-                formatter: (value) => (value !== null && value !== undefined) ? value.toFixed(2) : "N/A",
+                formatter: (value: any) => {
+                    if (chartType === "candlestick") return "";
+                    if (value === null || value === undefined) return "N/A";
+                    try {
+                        return Array.isArray(value) ? value[1].toFixed(2) : value.toFixed(2);
+                    } catch (e) {
+                        return "0.00";
+                    }
+                },
+            },
+            x: {
+                show: true,
+                formatter: (value: any) => {
+                    return String(value);
+                }
             },
         },
         legend: {
@@ -200,18 +354,26 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
         grid: {
             borderColor: "#E5E7EB",
             strokeDashArray: 3,
+            show: chartType !== "radar",
         },
+        states: {
+            hover: {
+                filter: {
+                    type: "darken",
+                }
+            }
+        }
     };
 
     return (
         <div className="space-y-6">
             {/* Controls */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-chart-controls>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                     Ratio Trend Analysis
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {/* Category Selector */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -240,34 +402,44 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Chart Type
                         </label>
-                        <div className="flex gap-2">
+                        <div className="relative">
                             <button
-                                onClick={() => setChartType("line")}
-                                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "line"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
-                                    }`}
+                                onClick={() => setExpandedChartTypeDropdown(!expandedChartTypeDropdown)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600"
                             >
-                                Line
+                                <span className="text-sm font-medium">
+                                    {chartType.charAt(0).toUpperCase() + chartType.slice(1)}
+                                </span>
+                                <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${expandedChartTypeDropdown ? "rotate-180" : ""
+                                        }`}
+                                />
                             </button>
-                            <button
-                                onClick={() => setChartType("area")}
-                                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "area"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
-                                    }`}
-                            >
-                                Area
-                            </button>
-                            <button
-                                onClick={() => setChartType("bar")}
-                                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${chartType === "bar"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
-                                    }`}
-                            >
-                                Bar
-                            </button>
+
+                            {expandedChartTypeDropdown && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                                    {(["line", "area", "bar", "radar", "scatter", "candlestick", "waterfall"] as const).map(
+                                        (type) => (
+                                            <button
+                                                key={type}
+                                                onClick={() => {
+                                                    setChartType(type);
+                                                    setExpandedChartTypeDropdown(false);
+                                                }}
+                                                className={`w-full text-left px-4 py-2 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 ${chartType === type
+                                                    ? "bg-blue-500 text-white"
+                                                    : "hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white"
+                                                    }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                                                    {chartType === type && <span className="text-white">✓</span>}
+                                                </div>
+                                            </button>
+                                        )
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -365,13 +537,28 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
 
             {/* Chart */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {chartType === "line" && "Line Chart: Best for visualizing trends over time with smooth curves between data points."}
+                        {chartType === "area" && "Area Chart: Similar to line charts but with filled areas, great for showing cumulative trends."}
+                        {chartType === "bar" && "Bar Chart: Ideal for comparing values across periods, makes differences more visible."}
+                        {chartType === "radar" && "Radar Chart: Excellent for comparing multiple ratios within a single period, shows all dimensions at once."}
+                        {chartType === "scatter" && "Scatter Chart: Shows individual data points without line connections, useful for identifying patterns and outliers."}
+                        {chartType === "candlestick" && "Candlestick Chart: Displays volatility range around each ratio value - high, low, and close prices for each period."}
+                        {chartType === "waterfall" && "Waterfall Chart: Shows how values progressively change from one period to the next, visualizing incremental contributions."}
+                    </p>
+                </div>
                 {selectedRatios.length > 0 && selectedPeriods.length > 0 ? (
-                    <Chart
-                        options={chartOptions}
-                        series={chartData.series}
-                        type={chartType}
-                        height={400}
-                    />
+                    <div className="min-h-[400px]">
+                        <ChartErrorBoundary>
+                            <Chart
+                                options={chartOptions}
+                                series={chartData.series}
+                                type={chartType === "waterfall" ? "bar" : chartType}
+                                height={400}
+                            />
+                        </ChartErrorBoundary>
+                    </div>
                 ) : (
                     <div className="flex items-center justify-center h-96 text-gray-500 dark:text-gray-400">
                         <p>
@@ -382,72 +569,6 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                     </div>
                 )}
             </div>
-
-            {/* Statistics Summary */}
-            {selectedRatios.length > 0 && selectedPeriods.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {selectedRatios.map((ratioName) => {
-                        const values = sortedData
-                            .map((data: any) => {
-                                const val = data[ratioName];
-                                if (val === null || val === undefined) return null;
-                                const numVal = typeof val === 'number' ? val : parseFloat(val);
-                                return isNaN(numVal) ? null : numVal;
-                            })
-                            .filter((v) => v !== null);
-
-                        if (values.length === 0) return null;
-
-                        const latest = values[values.length - 1];
-                        const initial = values[0];
-                        const change = latest - initial;
-                        const percentChange = initial !== 0 ? (change / initial) * 100 : 0;
-                        const avg = values.reduce((a, b) => a + b, 0) / values.length;
-                        const max = Math.max(...values);
-                        const min = Math.min(...values);
-
-                        return (
-                            <div
-                                key={ratioName}
-                                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
-                            >
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    {formatRatioName(ratioName)}
-                                </h4>
-                                <div className="space-y-2 text-xs">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Latest:</span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">
-                                            {latest.toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Change:</span>
-                                        <span
-                                            className={`font-semibold ${change >= 0 ? "text-green-600" : "text-red-600"
-                                                }`}
-                                        >
-                                            {change >= 0 ? "+" : ""}{change.toFixed(2)} ({percentChange.toFixed(1)}%)
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Avg:</span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">
-                                            {avg.toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Min-Max:</span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">
-                                            {min.toFixed(2)} - {max.toFixed(2)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
         </div>
     );
 };

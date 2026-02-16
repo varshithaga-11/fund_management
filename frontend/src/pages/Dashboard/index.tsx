@@ -680,26 +680,30 @@ const MasterDashboard = () => {
                         <h4 className="text-lg font-bold text-black dark:text-white">Top Periods</h4>
                     </div>
                     <div className="flex flex-col gap-3">
-                        {topPeriods.map((period, index) => (
-                            <div
-                                key={period.id}
-                                onClick={() => navigate(`/financial-statements/${period.id}`)}
-                                className="flex items-center justify-between rounded-lg border border-stroke dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' : 'bg-gradient-to-br from-blue-400 to-blue-600'}`}>
-                                        {index + 1}
+                        {topPeriods && topPeriods.length > 0 ? (
+                            topPeriods.map((period, index) => (
+                                <div
+                                    key={period.id && period.id.toString()}
+                                    onClick={() => navigate(`/financial-statements/${period.id}`)}
+                                    className="flex items-center justify-between rounded-lg border border-stroke dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' : 'bg-gradient-to-br from-blue-400 to-blue-600'}`}>
+                                            {index + 1}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-black dark:text-white">{period.label}</p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">{period.period_type}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-black dark:text-white">{period.label}</p>
-                                        <p className="text-xs text-gray-600 dark:text-gray-400">{period.period_type}</p>
+                                    <div className="text-right">
+                                        <p className="font-bold text-success">₹{formatCurrency(typeof period.profit_loss?.net_profit === 'number' ? period.profit_loss.net_profit : parseFloat(period.profit_loss?.net_profit || "0"))}M</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-success">₹{formatCurrency(typeof period.profit_loss?.net_profit === 'number' ? period.profit_loss.net_profit : parseFloat(period.profit_loss?.net_profit || "0"))}M</p>
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No periods available</p>
+                        )}
                     </div>
                 </div>
 
@@ -718,59 +722,59 @@ const MasterDashboard = () => {
                         {/* Continuous Vertical Line */}
                         <div className="absolute left-6 top-2 bottom-6 w-0.5 border-l-2 border-dashed border-gray-200 dark:border-gray-700 transition-colors duration-300"></div>
 
-                        {[...periods].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map((period) => {
-                            const timeAgo = (() => {
-                                const diff = new Date().getTime() - new Date(period.created_at).getTime();
-                                const minutes = Math.floor(diff / 60000);
-                                const hours = Math.floor(minutes / 60);
-                                const days = Math.floor(hours / 24);
-                                if (minutes < 60) return `${minutes}m ago`;
-                                if (hours < 24) return `${hours}h ago`;
-                                return `${days}d ago`;
-                            })();
+                        {periods && periods.length > 0 ? (
+                            [...periods].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map((period) => {
+                                const timeAgo = (() => {
+                                    const diff = new Date().getTime() - new Date(period.created_at).getTime();
+                                    const minutes = Math.floor(diff / 60000);
+                                    const hours = Math.floor(minutes / 60);
+                                    const days = Math.floor(hours / 24);
+                                    if (minutes < 60) return `${minutes}m ago`;
+                                    if (hours < 24) return `${hours}h ago`;
+                                    return `${days}d ago`;
+                                })();
 
-                            return (
-                                <div
-                                    key={period.id}
-                                    onClick={() => navigate(`/financial-statements/${period.id}`)}
-                                    className="group relative flex gap-4 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer"
-                                >
-                                    {/* Timeline Dot */}
-                                    <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${period.is_finalized
-                                        ? 'bg-gradient-to-br from-green-400 to-green-600'
-                                        : 'bg-gradient-to-br from-blue-400 to-blue-600'
-                                        }`}>
-                                        {period.is_finalized ? (
-                                            <LucideCheckCircle className="text-white h-4 w-4" />
-                                        ) : (
-                                            <LucidePlus className="text-white h-4 w-4" />
-                                        )}
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="flex flex-1 flex-col gap-1">
-                                        <div className="flex justify-between items-start">
-                                            <h5 className={`text-sm font-bold ${period.is_finalized ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'
-                                                }`}>
-                                                {period.is_finalized ? 'Period Finalized' : 'New Draft Created'}
-                                            </h5>
-                                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-                                                {timeAgo}
-                                            </span>
+                                return (
+                                    <div
+                                        key={period.id && period.id.toString()}
+                                        onClick={() => navigate(`/financial-statements/${period.id}`)}
+                                        className="group relative flex gap-4 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer"
+                                    >
+                                        {/* Timeline Dot */}
+                                        <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-4 border-white dark:border-gray-800 shadow-sm ${period.is_finalized
+                                            ? 'bg-gradient-to-br from-green-400 to-green-600'
+                                            : 'bg-gradient-to-br from-blue-400 to-blue-600'
+                                            }`}>
+                                            {period.is_finalized ? (
+                                                <LucideCheckCircle className="text-white h-4 w-4" />
+                                            ) : (
+                                                <LucidePlus className="text-white h-4 w-4" />
+                                            )}
                                         </div>
-                                        <p className="text-sm font-semibold text-black dark:text-white leading-tight">
-                                            {period.label}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                            <LucideFileText className="h-3 w-3" />
-                                            <span className="uppercase">{period.period_type.replace('_', ' ')}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
 
-                        {periods.length === 0 && (
+                                        {/* Content */}
+                                        <div className="flex flex-1 flex-col gap-1">
+                                            <div className="flex justify-between items-start">
+                                                <h5 className={`text-sm font-bold ${period.is_finalized ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'
+                                                    }`}>
+                                                    {period.is_finalized ? 'Period Finalized' : 'New Draft Created'}
+                                                </h5>
+                                                <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                                                    {timeAgo}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-black dark:text-white leading-tight">
+                                                {period.label}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                <LucideFileText className="h-3 w-3" />
+                                                <span className="uppercase">{period.period_type.replace('_', ' ')}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
                             <div className="py-8 text-center text-gray-500 dark:text-gray-400">
                                 No recent activity found.
                             </div>

@@ -11,7 +11,7 @@ import {
   PeriodListData,
   PeriodComparisonResponse,
 } from "./api";
-import { ArrowLeft, Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 
 const PeriodComparison: React.FC = () => {
   const [periods, setPeriods] = useState<PeriodListData[]>([]);
@@ -140,12 +140,7 @@ const PeriodComparison: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    setSelectedPeriod1(null);
-    setSelectedPeriod2(null);
-    setComparisonData(null);
-    setPeriods([]);
-  };
+
 
   const handleBackFromComparison = () => {
     setSelectedPeriod1(null);

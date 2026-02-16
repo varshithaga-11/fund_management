@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { getRatioResults, RatioResultData } from "../FinancialStatements/api";
+import { useParams, useNavigate } from "react-router-dom";
+import { getRatioResults, RatioResultData, getFinancialPeriod, FinancialPeriodData } from "../FinancialStatements/api";
 import { BeatLoader } from "react-spinners";
 import { toast } from "react-toastify";
+import { ArrowLeft } from "lucide-react";
 
 const InterpretationPanel: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
+  const navigate = useNavigate();
   const [ratios, setRatios] = useState<RatioResultData | null>(null);
+  const [period, setPeriod] = useState<FinancialPeriodData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,8 +22,12 @@ const InterpretationPanel: React.FC = () => {
     if (!periodId) return;
     setLoading(true);
     try {
-      const data = await getRatioResults(parseInt(periodId));
-      setRatios(data);
+      const [ratioData, periodData] = await Promise.all([
+        getRatioResults(parseInt(periodId)),
+        getFinancialPeriod(parseInt(periodId)),
+      ]);
+      setRatios(ratioData);
+      setPeriod(periodData);
     } catch (error) {
       console.error("Error loading ratio data:", error);
       toast.error("Failed to load ratio data");
@@ -149,9 +156,28 @@ const InterpretationPanel: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-        Automated Interpretation
-      </h1>
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(`/ratio-analysis/${periodId}`)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Interpretation Analysis
+            </h1>
+            {period && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {period.label}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Interpretation Text */}
       {ratios.interpretation && (
@@ -210,18 +236,18 @@ const InterpretationPanel: React.FC = () => {
         <ul className="space-y-2">
           {ratios.risk_cost_to_wf && ratios.risk_cost_to_wf > 0.25 && (
             <li className="text-red-700 dark:text-red-300">
-              ⚠ High risk cost ({ratios.risk_cost_to_wf.toFixed(2)}%) exceeds
+              ⚠ High risk cost ({Number(ratios.risk_cost_to_wf).toFixed(2)}%) exceeds
               ideal threshold (0.25%)
             </li>
           )}
           {ratios.net_margin < 0.5 && (
             <li className="text-red-700 dark:text-red-300">
-              ⚠ Net margin ({ratios.net_margin.toFixed(2)}%) is critically low
+              ⚠ Net margin ({Number(ratios.net_margin).toFixed(2)}%) is critically low
             </li>
           )}
           {ratios.credit_deposit_ratio < 50 && (
             <li className="text-red-700 dark:text-red-300">
-              ⚠ Very low credit deposit ratio ({ratios.credit_deposit_ratio.toFixed(2)}%)
+              ⚠ Very low credit deposit ratio ({Number(ratios.credit_deposit_ratio).toFixed(2)}%)
               indicates poor resource utilization
             </li>
           )}

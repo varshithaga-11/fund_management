@@ -66,9 +66,9 @@ export function appRoutes() {
           <Route path="statement-columns" element={<StatementColumnsConfigPage />} />
 
           {/* Ratio Analysis */}
-          <Route path="ratio-analysis" element={<RatioAnalysisPage />} />
           <Route path="ratio-analysis/trends" element={<TrendAnalysisPage />} />
           <Route path="ratio-analysis/:periodId" element={<RatioDashboard />} />
+          <Route path="ratio-analysis" element={<RatioAnalysisPage />} />
           <Route path="ratio-benchmarks" element={<RatioBenchmarksPage />} />
           <Route path="productivity-analysis/:periodId" element={<ProductivityAnalysis />} />
           <Route path="interpretation/:periodId" element={<InterpretationPanel />} />

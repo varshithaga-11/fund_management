@@ -177,7 +177,14 @@ class RatioResultViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = RatioResult.objects.all()
         period_id = self.request.query_params.get('period', None)
         if period_id:
-            queryset = queryset.filter(period_id=period_id)
+            try:
+                # Validate period_id is a valid integer
+                period_id_int = int(period_id)
+                if period_id_int > 0:
+                    queryset = queryset.filter(period_id=period_id_int)
+            except (ValueError, TypeError):
+                # Invalid period_id, return empty queryset
+                queryset = queryset.none()
         return queryset
 
 
@@ -2906,6 +2913,7 @@ class DashboardView(APIView):
                 else:
                     # Return aggregated data with minimal period info
                     period_data = {
+                        "id": period.id,
                         "label": period.label,
                         "net_revenue": float(net_revenue),
                         "net_profit": float(net_profit),

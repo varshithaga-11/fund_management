@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   getFinancialPeriod,
   FinancialPeriodData,
 } from "../FinancialStatements/api";
 import { BeatLoader } from "react-spinners";
 import { toast } from "react-toastify";
+import { ArrowLeft } from "lucide-react";
 
 const ProductivityAnalysis: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState<FinancialPeriodData | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
@@ -52,22 +54,28 @@ const ProductivityAnalysis: React.FC = () => {
     const pl = periodData.profit_loss;
     const ops = periodData.operational_metrics;
 
-    if (ops.staff_count > 0) {
-      const perEmployeeBusiness =
-        (bs.deposits + bs.loans_advances) / ops.staff_count;
+    const staffCount = Number(ops.staff_count) || 0;
+
+    if (staffCount > 0) {
+      const deposits = Number(bs.deposits) || 0;
+      const loansAdvances = Number(bs.loans_advances) || 0;
+      const perEmployeeBusiness = (deposits + loansAdvances) / staffCount;
+
+      const interestOnLoans = Number(pl.interest_on_loans) || 0;
+      const interestOnBankAc = Number(pl.interest_on_bank_ac) || 0;
+      const returnOnInvestment = Number(pl.return_on_investment) || 0;
+      const miscIncome = Number(pl.miscellaneous_income) || 0;
+      const interestOnDeposits = Number(pl.interest_on_deposits) || 0;
+      const interestOnBorrowings = Number(pl.interest_on_borrowings) || 0;
 
       const totalIncome =
-        pl.interest_on_loans +
-        pl.interest_on_bank_ac +
-        pl.return_on_investment +
-        pl.miscellaneous_income;
-      const totalInterestExpense =
-        pl.interest_on_deposits + pl.interest_on_borrowings;
+        interestOnLoans + interestOnBankAc + returnOnInvestment + miscIncome;
+      const totalInterestExpense = interestOnDeposits + interestOnBorrowings;
       const perEmployeeContribution =
-        (totalIncome - totalInterestExpense) / ops.staff_count;
+        (totalIncome - totalInterestExpense) / staffCount;
 
-      const perEmployeeOperatingCost =
-        pl.establishment_contingencies / ops.staff_count;
+      const establishmentContingencies = Number(pl.establishment_contingencies) || 0;
+      const perEmployeeOperatingCost = establishmentContingencies / staffCount;
 
       const isEfficient = perEmployeeContribution > perEmployeeOperatingCost;
 
@@ -98,9 +106,28 @@ const ProductivityAnalysis: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-        Productivity Analysis
-      </h1>
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(`/ratio-analysis/${periodId}`)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Productivity Analysis
+            </h1>
+            {period && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {period.label}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Per Employee Business */}
@@ -112,7 +139,7 @@ const ProductivityAnalysis: React.FC = () => {
             (Average Deposit + Average Loan) / Staff Count
           </p>
           <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-            ₹{metrics.perEmployeeBusiness.toLocaleString("en-IN", {
+            ₹{Number(metrics.perEmployeeBusiness).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -128,7 +155,7 @@ const ProductivityAnalysis: React.FC = () => {
             (Total Income - Interest Expenses) / Staff Count
           </p>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-            ₹{metrics.perEmployeeContribution.toLocaleString("en-IN", {
+            ₹{Number(metrics.perEmployeeContribution).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -144,7 +171,7 @@ const ProductivityAnalysis: React.FC = () => {
             Establishment & Contingencies / Staff Count
           </p>
           <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-            ₹{metrics.perEmployeeOperatingCost.toLocaleString("en-IN", {
+            ₹{Number(metrics.perEmployeeOperatingCost).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
