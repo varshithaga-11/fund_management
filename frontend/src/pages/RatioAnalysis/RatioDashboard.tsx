@@ -12,6 +12,7 @@ import { BeatLoader } from "react-spinners";
 import { toast, ToastContainer } from "react-toastify";
 import { LayoutGrid, Table, ArrowLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
+import PeriodDataEditForm from "../CompanyRatioAnalysis/PeriodDataEditForm";
 
 const RatioDashboard: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
@@ -43,6 +44,11 @@ const RatioDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDataUpdate = () => {
+    loadData();
+    toast.success("Period data updated and ratio results recalculated.");
   };
 
   if (loading) {
@@ -456,6 +462,20 @@ const RatioDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit period data */}
+      <div className="mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+          Edit period data & recalculate ratios
+        </h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click &quot;Update data & recalculate ratios&quot; to save and store updated ratio results.
+        </p>
+        <PeriodDataEditForm
+          periodId={parseInt(periodId!)}
+          onSuccess={handleDataUpdate}
+        />
+      </div>
     </div>
   );
 };

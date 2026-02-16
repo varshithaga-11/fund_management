@@ -24,6 +24,29 @@ interface PeriodDataEditFormProps {
   onSuccess?: () => void;
 }
 
+// Moved Section component outside
+const Section: React.FC<{
+  id: string;
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}> = ({ id, title, isOpen, onToggle, children }) => {
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 text-left font-medium text-gray-900 dark:text-white"
+      >
+        {title}
+        {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+      </button>
+      {isOpen && <div className="p-4 bg-white dark:bg-gray-900">{children}</div>}
+    </div>
+  );
+};
+
 const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
   periodId,
   onSuccess,
@@ -247,30 +270,14 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
     );
   }
 
-  const Section: React.FC<{
-    id: string;
-    title: string;
-    children: React.ReactNode;
-  }> = ({ id, title, children }) => {
-    const isOpen = openSection === id;
-    return (
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setOpenSection(isOpen ? "" : id)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 text-left font-medium text-gray-900 dark:text-white"
-        >
-          {title}
-          {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-        </button>
-        {isOpen && <div className="p-4 bg-white dark:bg-gray-900">{children}</div>}
-      </div>
-    );
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Section id="trading" title="Trading Account">
+      <Section
+        id="trading"
+        title="Trading Account"
+        isOpen={openSection === "trading"}
+        onToggle={() => setOpenSection(openSection === "trading" ? "" : "trading")}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(["opening_stock", "purchases", "trade_charges", "sales", "closing_stock"] as const).map((f) => (
             <div key={f}>
@@ -288,7 +295,12 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
         </div>
       </Section>
 
-      <Section id="profitloss" title="Profit & Loss">
+      <Section
+        id="profitloss"
+        title="Profit & Loss"
+        isOpen={openSection === "profitloss"}
+        onToggle={() => setOpenSection(openSection === "profitloss" ? "" : "profitloss")}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(
             [
@@ -318,7 +330,12 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
         </div>
       </Section>
 
-      <Section id="balancesheet" title="Balance Sheet">
+      <Section
+        id="balancesheet"
+        title="Balance Sheet"
+        isOpen={openSection === "balancesheet"}
+        onToggle={() => setOpenSection(openSection === "balancesheet" ? "" : "balancesheet")}
+      >
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Liabilities</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -380,7 +397,12 @@ const PeriodDataEditForm: React.FC<PeriodDataEditFormProps> = ({
         </div>
       </Section>
 
-      <Section id="operational" title="Operational Metrics">
+      <Section
+        id="operational"
+        title="Operational Metrics"
+        isOpen={openSection === "operational"}
+        onToggle={() => setOpenSection(openSection === "operational" ? "" : "operational")}
+      >
         <div>
           <Label htmlFor="staff_count">Staff count</Label>
           <Input
