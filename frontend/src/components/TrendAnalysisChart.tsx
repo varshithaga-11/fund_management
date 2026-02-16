@@ -48,8 +48,10 @@ const RATIO_CATEGORIES = {
     "Capital Ratios": [
         "own_fund_to_wf",
     ],
-    "Fund Structure": [
+    "Equity Analysis": [
         "net_own_funds",
+    ],
+    "Fund Structure": [
         "deposits_to_wf",
         "borrowings_to_wf",
         "loans_to_wf",
