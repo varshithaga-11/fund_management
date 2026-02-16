@@ -17,6 +17,8 @@ export interface FinancialPeriodData {
   balance_sheet?: BalanceSheetData;
   operational_metrics?: OperationalMetricsData;
   ratios?: RatioResultData;
+  uploaded_file?: string;
+  file_type?: "excel" | "docx" | "pdf";
 }
 
 export interface TradingAccountData {

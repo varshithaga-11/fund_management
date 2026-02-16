@@ -13,6 +13,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { LayoutGrid, Table, ArrowLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import PeriodDataEditForm from "../CompanyRatioAnalysis/PeriodDataEditForm";
+import { createApiUrl } from "../../access/access";
 
 const RatioDashboard: React.FC = () => {
   const { periodId } = useParams<{ periodId: string }>();
@@ -329,6 +330,42 @@ const RatioDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Uploaded File Link */}
+      {period && period.uploaded_file && (() => {
+        const fileUrl = period.uploaded_file.startsWith('http')
+          ? period.uploaded_file
+          : createApiUrl(period.uploaded_file);
+
+        return (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              {period.file_type === 'excel' && (
+                <svg className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path><path d="M14 2v6h6"></path><path d="M9 15l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none"></path></svg>
+              )}
+              {period.file_type === 'docx' && (
+                <svg className="w-8 h-8 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path><path d="M14 2v6h6"></path></svg>
+              )}
+              {period.file_type === 'pdf' && (
+                <svg className="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path><path d="M14 2v6h6"></path></svg>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {period.uploaded_file.split('/').pop()?.split('_').slice(1).join('_') || 'Financial Document'}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {period.file_type?.toUpperCase()} file • Click to open
+                </p>
+              </div>
+            </a>
+          </div>
+        );
+      })()}
 
       {/* Working Fund Summary - Always Show */}
       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
