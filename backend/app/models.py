@@ -248,8 +248,7 @@ class RatioResult(models.Model):
     per_employee_contribution = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     per_employee_operating_cost = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
 
-    # Store all ratios in JSON for flexibility
-    all_ratios = models.JSONField(default=dict, blank=True)
+
     traffic_light_status = models.JSONField(default=dict, blank=True)
 
     calculated_at = models.DateTimeField(auto_now_add=True)

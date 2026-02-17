@@ -319,7 +319,7 @@ class RatioResultSerializer(serializers.ModelSerializer):
             'per_employee_loan',
             'per_employee_contribution',
             'per_employee_operating_cost',
-            'all_ratios',
+
             'traffic_light_status',
             'calculated_at',
             'interpretation'
