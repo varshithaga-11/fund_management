@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
+from django.core.mail import send_mail
 from django.db import transaction
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import render
@@ -108,12 +109,18 @@ class ProfileView(viewsets.ModelViewSet):
 
 class FinancialPeriodViewSet(viewsets.ModelViewSet):
     queryset = FinancialPeriod.objects.all().order_by("-created_at")
-    serializer_class = FinancialPeriodSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         queryset = FinancialPeriod.objects.all()
         return queryset.order_by("-created_at")
+    
+    def get_serializer_class(self):
+        """Use lightweight serializer for list view, full serializer for detail view"""
+        if self.action == 'list':
+            from app.serializers import FinancialPeriodListSerializer
+            return FinancialPeriodListSerializer
+        return FinancialPeriodSerializer
 
 
 class TradingAccountViewSet(viewsets.ModelViewSet):

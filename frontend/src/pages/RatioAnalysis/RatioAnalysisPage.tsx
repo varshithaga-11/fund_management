@@ -4,7 +4,9 @@ import {
     FileText,
     TrendingUp,
     Calendar,
-    ArrowRight
+    ArrowRight,
+    Search,
+    X
 } from "lucide-react";
 import { FinancialPeriodData, getFinancialPeriods } from "../FinancialStatements/api";
 import { BeatLoader } from "react-spinners";
@@ -13,6 +15,7 @@ const RatioAnalysisPage: React.FC = () => {
     const navigate = useNavigate();
     const [periods, setPeriods] = useState<FinancialPeriodData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState<string>("");
 
     useEffect(() => {
         const fetchPeriods = async () => {
@@ -28,6 +31,28 @@ const RatioAnalysisPage: React.FC = () => {
 
         fetchPeriods();
     }, []);
+
+    // Month names mapping
+    const monthNames = [
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december"
+    ];
+
+    // Filter periods based on search query
+    const filteredPeriods = periods.filter((period) => {
+        if (!searchQuery.trim()) return true;
+        
+        const startDate = new Date(period.start_date);
+        const periodMonth = monthNames[startDate.getMonth()];
+        const periodYear = String(startDate.getFullYear());
+        const query = searchQuery.toLowerCase();
+
+        return periodMonth.includes(query) || periodYear.includes(query) || period.label.toLowerCase().includes(query);
+    });
+
+    const handleClearSearch = () => {
+        setSearchQuery("");
+    };
 
     if (loading) {
         return (
@@ -57,9 +82,38 @@ const RatioAnalysisPage: React.FC = () => {
                 </button>
             </div>
 
+            {/* Search Bar */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                    <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 flex items-center gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search by month name or year..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={handleClearSearch}
+                                className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1 text-sm flex-shrink-0"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                {searchQuery && (
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        Found <span className="font-semibold text-gray-900 dark:text-white">{filteredPeriods.length}</span> period{filteredPeriods.length !== 1 ? 's' : ''}
+                    </div>
+                )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Period Cards */}
-                {periods.map((period) => (
+                {filteredPeriods.map((period) => (
                     <div
                         key={period.id}
                         onClick={() => navigate(`/ratio-analysis/${period.id}`)}
@@ -100,14 +154,19 @@ const RatioAnalysisPage: React.FC = () => {
                 ))}
             </div>
 
-            {periods.length === 0 && (
+            {filteredPeriods.length === 0 && (
                 <div className="text-center py-12">
                     <div className="bg-gray-100 dark:bg-gray-800 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                         <FileText className="text-gray-400 w-8 h-8" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Periods Found</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                        {periods.length === 0 ? "No Periods Found" : "No Results Found"}
+                    </h3>
                     <p className="text-gray-500 dark:text-gray-400">
-                        Please upload financial statements to start analyzing ratios.
+                        {periods.length === 0
+                            ? "Please upload financial statements to start analyzing ratios."
+                            : "Try adjusting your search filters to find the period you're looking for."
+                        }
                     </p>
                 </div>
             )}

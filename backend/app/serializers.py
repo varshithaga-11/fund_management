@@ -248,6 +248,19 @@ class OperationalMetricsSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'period']
 
 
+class FinancialPeriodListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for list views - returns only essential fields"""
+    class Meta:
+        model = FinancialPeriod
+        fields = [
+            'id',
+            'label',
+            'start_date',
+            'end_date',
+        ]
+        read_only_fields = ['id']
+
+
 class FinancialPeriodSerializer(serializers.ModelSerializer):
     trading_account = TradingAccountSerializer(read_only=True)
     profit_loss = ProfitAndLossSerializer(read_only=True)
@@ -380,13 +393,11 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'role',
-            'phone_number',
             'created_by',            
             'created_by_first_name',  
             'created_by_last_name',  
         ]
         extra_kwargs = {
-            'phone_number': {'required': False, 'allow_null': True},
             'role': {'required': True},
         }
 
