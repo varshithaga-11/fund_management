@@ -108,7 +108,7 @@ export interface RatioResultData {
   per_employee_loan?: number;
   per_employee_contribution?: number;
   per_employee_operating_cost?: number;
-  all_ratios: Record<string, any>;
+
   traffic_light_status: Record<string, "green" | "yellow" | "red">;
   calculated_at: string;
   interpretation?: string;

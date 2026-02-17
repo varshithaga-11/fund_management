@@ -294,7 +294,7 @@ class CalculateRatiosView(APIView):
                     'per_employee_loan': Decimal(str(all_ratios.get('per_employee_loan', 0))),
                     'per_employee_contribution': Decimal(str(all_ratios.get('per_employee_contribution', 0))),
                     'per_employee_operating_cost': Decimal(str(all_ratios.get('per_employee_operating_cost', 0))),
-                    'all_ratios': all_ratios,
+
                     'traffic_light_status': traffic_light_statuses
                 }
             )
@@ -331,7 +331,7 @@ class CalculateRatiosView(APIView):
                 ratio_result.per_employee_loan = Decimal(str(all_ratios.get('per_employee_loan', 0)))
                 ratio_result.per_employee_contribution = Decimal(str(all_ratios.get('per_employee_contribution', 0)))
                 ratio_result.per_employee_operating_cost = Decimal(str(all_ratios.get('per_employee_operating_cost', 0)))
-                ratio_result.all_ratios = all_ratios
+
                 ratio_result.traffic_light_status = traffic_light_statuses
                 ratio_result.save()
             
@@ -607,7 +607,7 @@ class UploadExcelView(APIView):
                         'per_employee_loan': Decimal(str(all_ratios.get('per_employee_loan', 0))),
                         'per_employee_contribution': Decimal(str(all_ratios.get('per_employee_contribution', 0))),
                         'per_employee_operating_cost': Decimal(str(all_ratios.get('per_employee_operating_cost', 0))),
-                        'all_ratios': all_ratios,
+
                         'traffic_light_status': traffic_light_statuses
                     }
                 )
