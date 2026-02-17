@@ -71,7 +71,7 @@ const TrendComparisonCards: React.FC<TrendComparisonCardsProps> = ({
                         changePercent: changePercent !== null ? Math.abs(changePercent).toFixed(1) : null,
                         changeDirection: changeDirection,
                     };
-                }).reverse(); // Latest years first
+                }); // Oldest to newest
 
             return {
                 ratioLabel: formatRatioName(ratioKey),
