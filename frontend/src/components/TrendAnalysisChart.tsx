@@ -52,6 +52,7 @@ const RATIO_CATEGORIES = {
         "net_own_funds",
     ],
     "Fund Structure": [
+        "own_fund_to_wf",
         "deposits_to_wf",
         "borrowings_to_wf",
         "loans_to_wf",
