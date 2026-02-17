@@ -45,9 +45,6 @@ const RATIO_CATEGORIES = {
         "gross_profit_ratio",
         "net_profit_ratio",
     ],
-    "Capital Ratios": [
-        "own_fund_to_wf",
-    ],
     "Equity Analysis": [
         "net_own_funds",
     ],
@@ -377,7 +374,7 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                     Ratio Trend Analysis
                 </h3>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Category Selector */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -447,56 +444,43 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
                         </div>
                     </div>
 
-                    {/* Ratio Multi-Select */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Select Ratios
-                        </label>
-                        <div className="relative">
-                            <button
-                                onClick={() => setExpandedDropdown(!expandedDropdown)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600"
-                            >
-                                <span className="text-sm">
-                                    {selectedRatios.length} ratio{selectedRatios.length !== 1 ? "s" : ""} selected
-                                </span>
-                                <ChevronDown
-                                    className={`w-4 h-4 transition-transform ${expandedDropdown ? "rotate-180" : ""
-                                        }`}
-                                />
-                            </button>
+                </div>
 
-                            {expandedDropdown && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-                                    {RATIO_CATEGORIES[selectedCategory as keyof typeof RATIO_CATEGORIES]?.map(
-                                        (ratioName) => (
-                                            <label
-                                                key={ratioName}
-                                                className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b border-gray-200 dark:border-gray-600 last:border-b-0"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedRatios.includes(ratioName)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            onSelectedRatiosChange([...selectedRatios, ratioName]);
-                                                        } else {
-                                                            onSelectedRatiosChange(
-                                                                selectedRatios.filter((r) => r !== ratioName)
-                                                            );
-                                                        }
-                                                    }}
-                                                    className="mr-3"
-                                                />
-                                                <span className="text-sm text-gray-700 dark:text-gray-300">
-                                                    {formatRatioName(ratioName)}
-                                                </span>
-                                            </label>
-                                        )
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                {/* Ratio Selection - Displayed as a grid below */}
+                <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Select Ratios to Display
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {RATIO_CATEGORIES[selectedCategory as keyof typeof RATIO_CATEGORIES]?.map(
+                            (ratioName) => (
+                                <label
+                                    key={ratioName}
+                                    className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedRatios.includes(ratioName)
+                                        ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+                                        : "bg-gray-50 border-gray-200 dark:bg-gray-700/50 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedRatios.includes(ratioName)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                onSelectedRatiosChange([...selectedRatios, ratioName]);
+                                            } else {
+                                                onSelectedRatiosChange(
+                                                    selectedRatios.filter((r) => r !== ratioName)
+                                                );
+                                            }
+                                        }}
+                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:focus:ring-offset-gray-800"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300 select-none">
+                                        {formatRatioName(ratioName)}
+                                    </span>
+                                </label>
+                            )
+                        )}
                     </div>
                 </div>
             </div>
