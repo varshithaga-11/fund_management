@@ -43,7 +43,7 @@ export default function SignInForm() {
           }, 1000);
         } else {
           setTimeout(() => {
-            navigate("/admin/master-dashboard");
+            navigate("/master/master-dashboard");
           }, 1000);
         }
       } else {

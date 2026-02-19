@@ -72,7 +72,7 @@ const RatioDashboard: React.FC = () => {
         getRatioResults(id),
         getFinancialPeriod(id),
       ]);
-      
+
       // If period doesn't exist, treat as invalid period
       if (!periodData) {
         console.warn("Period not found:", id);
@@ -80,7 +80,7 @@ const RatioDashboard: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
       setRatios(ratioData);
       setPeriod(periodData);
     } catch (error: any) {
@@ -274,7 +274,7 @@ const RatioDashboard: React.FC = () => {
       yPos += 5;
       pdf.text(`From ${period.start_date} to ${period.end_date} | Finalized: ${period.is_finalized ? "Yes" : "No"}`, 15, yPos);
       yPos += 5;
-      pdf.text(`Working Fund: ₹${Number(ratios.working_fund).toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 15, yPos);
+      pdf.text(`Working Fund: ₹${Number(ratios.working_fund).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 15, yPos);
       yPos += 10;
 
       // Trading Ratios
@@ -944,18 +944,20 @@ const RatioDashboard: React.FC = () => {
       )}
 
       {/* Edit period data */}
-      <div className="mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-          Edit period data & recalculate ratios
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click &quot;Update data & recalculate ratios&quot; to save and store updated ratio results.
-        </p>
-        <PeriodDataEditForm
-          periodId={parseInt(periodId!)}
-          onSuccess={handleDataUpdate}
-        />
-      </div>
+      {localStorage.getItem("userRole") === "master" && (
+        <div className="mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+            Edit period data & recalculate ratios
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click &quot;Update data & recalculate ratios&quot; to save and store updated ratio results.
+          </p>
+          <PeriodDataEditForm
+            periodId={parseInt(periodId!)}
+            onSuccess={handleDataUpdate}
+          />
+        </div>
+      )}
     </div>
   );
 };

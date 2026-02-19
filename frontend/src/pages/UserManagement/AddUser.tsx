@@ -27,72 +27,72 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, onAdd }) => {
   const [error, setError] = useState("");
 
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (password !== confirmPassword) {
-    toast.error("Passwords do not match");
-    return;
-  }
-  if (password.length < 6) {
-    toast.error("Password must be at least 6 characters");
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const newUser: UserRegister & { password: string; created_by: number } = {
-      username,
-      email,
-      role,
-      first_name: firstName,
-      last_name: lastName,
-      is_active: isActive,
-      password, // include password for creation
-      created_by: userId!, // logged in user ID
-    };
-
-    const createdUser = await createUser(newUser);
-
-    toast.success("User created successfully!");
-
-    // Close modal after a short delay
-    setTimeout(() => {
-      onAdd(createdUser);
-      onClose();
-    }, 3500);
-  } catch (err: any) {
-    console.error("Error creating user:", err);
-
-    if (err.response?.data) {
-      const errors = err.response.data;
-      Object.values(errors).forEach((msg: any) => {
-        toast.error(Array.isArray(msg) ? msg[0] : msg);
-      });
-    } else {
-      toast.error(err.message || "Failed to create user");
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const newUser: UserRegister & { password: string; created_by: number } = {
+        username,
+        email,
+        role,
+        first_name: firstName,
+        last_name: lastName,
+        is_active: isActive,
+        password, // include password for creation
+        created_by: userId!, // logged in user ID
+      };
+
+      const createdUser = await createUser(newUser);
+
+      toast.success("User created successfully!");
+
+      // Close modal after a short delay
+      setTimeout(() => {
+        onAdd(createdUser);
+        onClose();
+      }, 3500);
+    } catch (err: any) {
+      console.error("Error creating user:", err);
+
+      if (err.response?.data) {
+        const errors = err.response.data;
+        Object.values(errors).forEach((msg: any) => {
+          toast.error(Array.isArray(msg) ? msg[0] : msg);
+        });
+      } else {
+        toast.error(err.message || "Failed to create user");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
     <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50 ">
-        <ToastContainer
-          position="bottom-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          className="z-[99999]"
-        />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        className="z-[99999]"
+      />
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-auto relative mt-24">
         <button
           onClick={onClose}

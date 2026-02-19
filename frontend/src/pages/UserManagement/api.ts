@@ -19,7 +19,7 @@ export const getLoggedUserFromToken = (): JwtPayload | null => {
 };
 
 export const userId: number | undefined = getLoggedUserFromToken()?.user_id;
-  
+
 
 
 export interface UserRegister {
@@ -38,42 +38,42 @@ export interface UserRegister {
 
 // Create a new user
 export const createUser = async (data: UserRegister) => {
-  const url = createApiUrl("/app/usermanagement/");
+  const url = createApiUrl("app/usermanagement/");
   const response = await axios.post(url, data, {
-      headers: await getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return response.data;
 };
 
 // Get user by ID
 export const getUserById = async (id: number) => {
-  const url = createApiUrl(`/api/usermanagement/${id}/`);
+  const url = createApiUrl(`api/usermanagement/${id}/`);
   const response = await axios.get(url, {
-      headers: await getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return response.data;
 };
 
 // Update user by ID (full update)
 export const updateUser = async (id: number, data: Partial<UserRegister>) => {
-  const url = createApiUrl(`/api/usermanagement/${id}/`);
+  const url = createApiUrl(`api/usermanagement/${id}/`);
   const response = await axios.put(url, data, {
-      headers: await getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return response.data;
 };
 
 // Delete user by ID
 export const deleteUser = async (id: number) => {
-  const url = createApiUrl(`/api/usermanagement/${id}/`);
+  const url = createApiUrl(`api/usermanagement/${id}/`);
   const response = await axios.delete(url, {
-      headers: await getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return response.data;
 };
 
 export const getUserList = async (createdBy?: number): Promise<UserRegister[]> => {
-  let url = createApiUrl("/api/usermanagement/");
+  let url = createApiUrl("api/usermanagement/");
   if (createdBy) {
     url += `?created_by=${createdBy}`;
   }
