@@ -100,79 +100,109 @@ class AppRoutes {
 
     switch (path) {
       case masterDashboard:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(
-          title: 'Dashboard',
-          child: DashboardPage()
-        ));
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MasterLayout(
+            title: 'Dashboard',
+            child: DashboardPage()
+          ),
+        );
       
       // Note: companyRatioAnalysis path '/ratio-analysis' conflicts with ratioAnalysisPage if they share the same base.
       // Adjusting paths:
       // - Company Ratio Analysis (High Level): '/ratio-analysis'
       // - Ratio Analysis (Periods List): '/ratio-analysis-list'
       case companyRatioAnalysis:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(
-          title: 'Company Analysis',
-          child: CompanyRatioAnalysisPage()
-        ));
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MasterLayout(
+            title: 'Company Analysis',
+            child: CompanyRatioAnalysisPage()
+          ),
+        );
 
       // Auth Routes
       case signIn:
-        return MaterialPageRoute(builder: (_) => const SignInPage());
+        return MaterialPageRoute(settings: settings, builder: (_) => const SignInPage());
       case signUp:
-        return MaterialPageRoute(builder: (_) => const SignUpPage());
+        return MaterialPageRoute(settings: settings, builder: (_) => const SignUpPage());
       case resetPassword:
-        return MaterialPageRoute(builder: (_) => const Scaffold(body: ForgotPasswordForm()));
+        return MaterialPageRoute(settings: settings, builder: (_) => const Scaffold(body: ForgotPasswordForm()));
 
       // Master Routes (Wrapped in Master Layout where appropriate or just the Page itself if it has scaffolding)
       
       case uploadData:
          // Using the fully implemented UploadDataPage
-        return MaterialPageRoute(builder: (_) => const MasterLayout(
-          title: 'Upload Data',
-          child: UploadDataPage()
-        ));
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MasterLayout(
+            title: 'Upload Data',
+            child: UploadDataPage()
+          ),
+        );
       
       case statementColumns:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(
-          title: 'Statement Columns',
-          child: StatementColumnsConfigPage()
-        ));
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MasterLayout(
+            title: 'Statement Columns',
+            child: StatementColumnsConfigPage()
+          ),
+        );
 
       case trendAnalysis:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(
-          title: 'Trend Analysis',
-          child: TrendAnalysisPage()
-        ));
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MasterLayout(
+            title: 'Trend Analysis',
+            child: TrendAnalysisPage()
+          ),
+        );
 
       case ratioAnalysis:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(
-           title: 'Ratio Analysis',
-           child: RatioAnalysisPage()
-         ));
+         return MaterialPageRoute(
+           settings: settings,
+           builder: (_) => const MasterLayout(
+             title: 'Ratio Analysis',
+             child: RatioAnalysisPage()
+           ),
+         );
 
       case ratioBenchmarks:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(
-           title: 'Benchmarks',
-           child: RatioBenchmarksPage()
-         ));
+         return MaterialPageRoute(
+           settings: settings,
+           builder: (_) => const MasterLayout(
+             title: 'Benchmarks',
+             child: RatioBenchmarksPage()
+           ),
+         );
 
       case periodComparison:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(
-           title: 'Period Comparison',
-           child: PeriodComparisonPage()
-         ));
+         return MaterialPageRoute(
+           settings: settings,
+           builder: (_) => const MasterLayout(
+             title: 'Period Comparison',
+             child: PeriodComparisonPage()
+           ),
+         );
       
       case userManagement:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(
-           title: 'User Management',
-           child: UserManagementPage()
-         ));
+         return MaterialPageRoute(
+           settings: settings,
+           builder: (_) => const MasterLayout(
+             title: 'User Management',
+             child: UserManagementPage()
+           ),
+         );
 
       case profile:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(
-           title: 'Profile',
-           child: ProfilePage()
-         ));
+         return MaterialPageRoute(
+           settings: settings,
+           builder: (_) => const MasterLayout(
+             title: 'Profile',
+             child: ProfilePage()
+           ),
+         );
       
       case calendar:
          return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Calendar')));
@@ -208,10 +238,13 @@ class AppRoutes {
            if (parts.length > 2) {
                final periodId = int.tryParse(parts.last);
                if (periodId != null) {
-                   return MaterialPageRoute(builder: (_) => MasterLayout(
-                       title: 'Financial Period',
-                       child: FinancialPeriodPage(periodId: periodId)
-                   ));
+                   return MaterialPageRoute(
+                       settings: settings,
+                       builder: (_) => MasterLayout(
+                           title: 'Financial Period',
+                           child: FinancialPeriodPage(periodId: periodId)
+                       ),
+                   );
                }
            }
         }
@@ -227,7 +260,10 @@ class AppRoutes {
             if (parts.length > 3) {
                 final periodId = int.tryParse(parts.last);
                 if (periodId != null) {
-                    return MaterialPageRoute(builder: (_) => RatioDashboardPage(periodId: periodId));
+                    return MaterialPageRoute(
+                        settings: settings,
+                        builder: (_) => RatioDashboardPage(periodId: periodId),
+                    );
                 }
             }
         }
@@ -237,7 +273,10 @@ class AppRoutes {
              if (parts.length > 2) {
                  final periodId = int.tryParse(parts.last);
                  if (periodId != null) {
-                     return MaterialPageRoute(builder: (_) => ProductivityAnalysisPage(periodId: periodId));
+                     return MaterialPageRoute(
+                         settings: settings,
+                         builder: (_) => ProductivityAnalysisPage(periodId: periodId),
+                     );
                  }
              }
         }
@@ -247,12 +286,15 @@ class AppRoutes {
              if (parts.length > 2) {
                  final periodId = int.tryParse(parts.last);
                  if (periodId != null) {
-                     return MaterialPageRoute(builder: (_) => InterpretationPanelPage(periodId: periodId));
+                     return MaterialPageRoute(
+                         settings: settings,
+                         builder: (_) => InterpretationPanelPage(periodId: periodId),
+                     );
                  }
              }
         }
 
-        return MaterialPageRoute(builder: (_) => const NotFoundPage());
+        return MaterialPageRoute(settings: settings, builder: (_) => const NotFoundPage());
     }
   }
 }
