@@ -1,5 +1,5 @@
-```
 import 'package:flutter/material.dart';
+import '../layout/master_sidebar.dart';
 
 // Auth Pages
 import '../components/auth/signin_form.dart';
@@ -7,6 +7,18 @@ import '../pages/authpages/sign_up.dart';
 import '../components/auth/forgot_password_form.dart';
 import '../pages/companyratioanalysis/company_ratio_analysis_page.dart';
 import '../pages/dashboard/index.dart';
+
+// Ratio Analysis Pages
+import '../pages/ratioanalysis/ratio_analysis_page.dart';
+import '../pages/ratioanalysis/trend_analysis_page.dart';
+import '../pages/ratioanalysis/ratio_benchmarks_page.dart';
+import '../pages/ratioanalysis/ratio_dashboard.dart';
+import '../pages/ratioanalysis/productivity_analysis.dart';
+import '../pages/ratioanalysis/interpretation_panel.dart';
+
+// Other Pages
+import '../pages/periodcomparison/period_comparison_page.dart';
+import '../pages/profile/profile_page.dart';
 
 // Placeholder Pages (To be implemented)
 class PlaceholderPage extends StatelessWidget {
@@ -34,17 +46,69 @@ class NotFoundPage extends StatelessWidget {
   }
 }
 
-// Master Layout Placeholder
-class MasterLayout extends StatelessWidget {
+
+
+// Master Layout
+class MasterLayout extends StatefulWidget {
   final Widget child;
-  const MasterLayout({super.key, required this.child});
+  final String title;
+
+  const MasterLayout({
+    super.key, 
+    required this.child, 
+    this.title = 'Fund Management',
+  });
+
+  @override
+  State<MasterLayout> createState() => _MasterLayoutState();
+}
+
+class _MasterLayoutState extends State<MasterLayout> {
+  bool _isSidebarExpanded = true;
+  bool _isSidebarHovered = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Master Layout')),
-      drawer: const Drawer(),
-      body: child,
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sidebar
+          MasterSidebar(
+            isExpanded: _isSidebarExpanded,
+            isMobileOpen: false, // For now assuming desktop behavior or handled via other means
+            isHovered: _isSidebarHovered,
+            onHover: (value) => setState(() => _isSidebarHovered = value),
+          ),
+          
+          // Main Content
+          Expanded(
+            child: Column(
+              children: [
+                // Header / AppBar
+                AppBar(
+                  title: Text(widget.title),
+                  leading: IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () => setState(() => _isSidebarExpanded = !_isSidebarExpanded),
+                  ),
+                  actions: [
+                     // Placeholder for profile/settings
+                     IconButton(icon: const Icon(Icons.person), onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.profile);
+                     }),
+                  ],
+                ),
+                
+                // Page Content
+                Expanded(
+                  child: widget.child,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -52,7 +116,7 @@ class MasterLayout extends StatelessWidget {
 class AppRoutes {
   static const String signIn = '/';
   static const String signUp = '/signup';
-  static const String dashboard = '/master/master-dashboard';
+  static const String masterDashboard = '/master/master-dashboard';
   static const String companyRatioAnalysis = '/ratio-analysis';
   static const String resetPassword = '/resetpassword';
   
@@ -66,7 +130,7 @@ class AppRoutes {
 
   // Ratio Analysis
   static const String trendAnalysis = '/ratio-analysis/trends';
-  static const String ratioAnalysis = '/ratio-analysis';
+  static const String ratioAnalysis = '/ratio-analysis-list'; // Changed to distinct path
   static const String ratioDashboard = '/ratio-analysis/dashboard'; // /:periodId
   static const String ratioBenchmarks = '/ratio-benchmarks';
   static const String productivityAnalysis = '/productivity-analysis'; // /:periodId
@@ -91,25 +155,29 @@ class AppRoutes {
     final uri = Uri.parse(settings.name ?? '/');
     final path = uri.path;
 
-    // Helper to handle parameterized routes if needed
-    // String? getParam(String key) => uri.queryParameters[key];
+    // Helper to extract params if needed, though simple params can be parsed from path splitting
+    // For specific period ID routes, we assume a convention or arguments passed via settings.arguments
 
     switch (path) {
-      case dashboard:
+      case masterDashboard:
         return MaterialPageRoute(builder: (_) => const DashboardPage());
+      
+      // Note: companyRatioAnalysis path '/ratio-analysis' conflicts with ratioAnalysisPage if they share the same base.
+      // Adjusting paths:
+      // - Company Ratio Analysis (High Level): '/ratio-analysis'
+      // - Ratio Analysis (Periods List): '/ratio-analysis-list'
       case companyRatioAnalysis:
-        return MaterialPageRoute(
-            builder: (_) => const CompanyRatioAnalysisPage());
+        return MaterialPageRoute(builder: (_) => const CompanyRatioAnalysisPage());
+
       // Auth Routes
       case signIn:
         return MaterialPageRoute(builder: (_) => const Scaffold(body: SignInForm()));
       case signUp:
-        return MaterialPageRoute(builder: (_) => const Scaffold(body: SignUpForm()));
+        return MaterialPageRoute(builder: (_) => const SignUpPage());
       case resetPassword:
         return MaterialPageRoute(builder: (_) => const Scaffold(body: ForgotPasswordForm()));
 
-      // Master Routes (Wrapped in Master Layout)
-
+      // Master Routes (Wrapped in Master Layout where appropriate or just the Page itself if it has scaffolding)
       
       case uploadData:
         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Upload Data')));
@@ -118,22 +186,22 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Statement Columns')));
 
       case trendAnalysis:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Trend Analysis')));
+        return MaterialPageRoute(builder: (_) => const TrendAnalysisPage());
 
       case ratioAnalysis:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Ratio Analysis')));
+         return MaterialPageRoute(builder: (_) => const RatioAnalysisPage());
 
       case ratioBenchmarks:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Ratio Benchmarks')));
+         return MaterialPageRoute(builder: (_) => const RatioBenchmarksPage());
 
       case periodComparison:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Period Comparison')));
+         return MaterialPageRoute(builder: (_) => const PeriodComparisonPage());
       
       case userManagement:
          return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('User Management')));
 
       case profile:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Profile')));
+         return MaterialPageRoute(builder: (_) => const ProfilePage());
       
       case calendar:
          return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Calendar')));
@@ -160,20 +228,47 @@ class AppRoutes {
          return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Bar Chart')));
 
 
-      // Handle dynamic routes (simple example, real apps might use regex or a router package like go_router)
+      // Handle dynamic routes
       default:
-        // Check for parameterized routes manually if using default Navigator
+        // /financial-statements/:id
         if (path.startsWith('/financial-statements/')) {
            return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Financial Statements Period')));
         }
-        if (path.startsWith('/ratio-analysis/') && path != trendAnalysis) {
-           return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Ratio Dashboard Period')));
+        
+        // /ratio-analysis/dashboard/:periodId
+        // This regex/check handles checking if the path starts with the base.
+        // Since we have specific paths defined like '/ratio-analysis/trends', we need to be careful.
+        // But the case statement handles exact matches first.
+        
+        if (path.startsWith('/ratio-analysis/dashboard/')) {
+            // Extract ID
+            final parts = path.split('/');
+            if (parts.length > 3) {
+                final periodId = int.tryParse(parts.last);
+                if (periodId != null) {
+                    return MaterialPageRoute(builder: (_) => RatioDashboardPage(periodId: periodId));
+                }
+            }
         }
+
         if (path.startsWith('/productivity-analysis/')) {
-           return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Productivity Analysis')));
+             final parts = path.split('/');
+             if (parts.length > 2) {
+                 final periodId = int.tryParse(parts.last);
+                 if (periodId != null) {
+                     return MaterialPageRoute(builder: (_) => ProductivityAnalysisPage(periodId: periodId));
+                 }
+             }
         }
+        
         if (path.startsWith('/interpretation/')) {
-           return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Interpretation')));
+            final parts = path.split('/');
+             if (parts.length > 2) {
+                 final periodId = int.tryParse(parts.last);
+                 if (periodId != null) {
+                     return MaterialPageRoute(builder: (_) => InterpretationPanelPage(periodId: periodId));
+                 }
+             }
         }
 
         return MaterialPageRoute(builder: (_) => const NotFoundPage());

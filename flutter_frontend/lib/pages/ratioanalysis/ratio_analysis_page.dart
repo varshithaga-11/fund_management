@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../financialstatements/financial_statements_api.dart';
+import '../financialstatements/financial_statements_api.dart';
 import 'ratio_dashboard.dart';
 import 'trend_analysis_page.dart';
 // import 'ratio_benchmarks_page.dart'; // Optional, user might want to navigate here

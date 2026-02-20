@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../../financialstatements/financial_statements_api.dart';
+import '../financialstatements/financial_statements_api.dart';
 
 class TrendAnalysisChart extends StatefulWidget {
   final List<RatioResultData> ratioData;
@@ -149,14 +149,17 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
   }
 
   Widget _buildLineChart() {
-    // Prepare spots
-    // Map periods to X axis indices (0, 1, 2...)
-    // Map ratio values to Y axis
-    
     final sortedData = _getSortedData();
+    // Prepare for drawing
+    // We need unique X labels
     final xLabels = sortedData.map((d) {
-       final p = widget.periods.firstWhere((p) => p.id == d.period);
-       return p.label;
+       // Finding period might fail if ID mismatch, safe access
+       try {
+         final p = widget.periods.firstWhere((p) => p.id == d.period);
+         return p.label;
+       } catch (e) {
+         return 'Unknown';
+       }
     }).toList();
 
     List<LineChartBarData> lineBars = [];
@@ -168,7 +171,8 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       
       for (int j = 0; j < sortedData.length; j++) {
         final val = _getRatioValue(sortedData[j], ratioKey);
-        if (val != null) {
+        // Ensure val is finite to avoid crashes
+        if (val != null && val.isFinite) {
           spots.add(FlSpot(j.toDouble(), val));
         }
       }
@@ -181,6 +185,9 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
         dotData: const FlDotData(show: true),
       ));
     }
+    
+    // Safety check - if no spots, return empty
+    if (lineBars.isEmpty) return const Center(child: Text('No data selected'));
 
     return LineChart(
       LineChartData(
@@ -217,8 +224,12 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
   Widget _buildBarChart() {
     final sortedData = _getSortedData();
     final xLabels = sortedData.map((d) {
-       final p = widget.periods.firstWhere((p) => p.id == d.period);
-       return p.label;
+       try {
+         final p = widget.periods.firstWhere((p) => p.id == d.period);
+         return p.label;
+       } catch (e) {
+         return 'Unknown';
+       }
     }).toList();
 
     List<BarChartGroupData> barGroups = [];
@@ -229,7 +240,8 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       for (int i = 0; i < widget.selectedRatios.length; i++) {
         final ratioKey = widget.selectedRatios[i];
         final val = _getRatioValue(sortedData[j], ratioKey);
-        if (val != null) {
+        // Ensure finite
+        if (val != null && val.isFinite) {
           rods.add(BarChartRodData(
             toY: val,
             color: colors[i % colors.length],
@@ -239,6 +251,8 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       }
       barGroups.add(BarChartGroupData(x: j, barRods: rods));
     }
+    
+    if (barGroups.isEmpty) return const Center(child: Text('No data selected'));
 
     return BarChart(
       BarChartData(

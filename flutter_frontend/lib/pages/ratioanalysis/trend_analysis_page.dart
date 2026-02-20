@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../financialstatements/financial_statements_api.dart';
+import '../financialstatements/financial_statements_api.dart';
 import 'trend_analysis_chart.dart';
 import 'trend_comparison_cards.dart';
 

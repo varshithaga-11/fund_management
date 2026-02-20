@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../financialstatements/financial_statements_api.dart';
+import '../financialstatements/financial_statements_api.dart';
 
 class TrendComparisonCards extends StatelessWidget {
   final List<RatioResultData> ratioData;

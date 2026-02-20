@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'productivity_analysis.dart';
 import 'interpretation_panel.dart';
-import '../../financialstatements/financial_statements_api.dart'; // Verify this import
+import '../financialstatements/financial_statements_api.dart';
 import 'ratio_card.dart';
 import 'ratio_analysis_table.dart';
 
