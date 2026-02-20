@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../layout/master_sidebar.dart';
-
+import '../layout/master_layout.dart';
 // Auth Pages
 import '../components/auth/signin_form.dart';
 import '../pages/authpages/sign_up.dart';
@@ -42,73 +41,6 @@ class NotFoundPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Not Found')),
       body: const Center(child: Text('404 - Page Not Found')),
-    );
-  }
-}
-
-
-
-// Master Layout
-class MasterLayout extends StatefulWidget {
-  final Widget child;
-  final String title;
-
-  const MasterLayout({
-    super.key, 
-    required this.child, 
-    this.title = 'Fund Management',
-  });
-
-  @override
-  State<MasterLayout> createState() => _MasterLayoutState();
-}
-
-class _MasterLayoutState extends State<MasterLayout> {
-  bool _isSidebarExpanded = true;
-  bool _isSidebarHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Sidebar
-          MasterSidebar(
-            isExpanded: _isSidebarExpanded,
-            isMobileOpen: false, // For now assuming desktop behavior or handled via other means
-            isHovered: _isSidebarHovered,
-            onHover: (value) => setState(() => _isSidebarHovered = value),
-          ),
-          
-          // Main Content
-          Expanded(
-            child: Column(
-              children: [
-                // Header / AppBar
-                AppBar(
-                  title: Text(widget.title),
-                  leading: IconButton(
-                    icon: const Icon(Icons.menu),
-                    onPressed: () => setState(() => _isSidebarExpanded = !_isSidebarExpanded),
-                  ),
-                  actions: [
-                     // Placeholder for profile/settings
-                     IconButton(icon: const Icon(Icons.person), onPressed: () {
-                        Navigator.pushNamed(context, AppRoutes.profile);
-                     }),
-                  ],
-                ),
-                
-                // Page Content
-                Expanded(
-                  child: widget.child,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -160,14 +92,20 @@ class AppRoutes {
 
     switch (path) {
       case masterDashboard:
-        return MaterialPageRoute(builder: (_) => const DashboardPage());
+        return MaterialPageRoute(builder: (_) => const MasterLayout(
+          title: 'Dashboard',
+          child: DashboardPage()
+        ));
       
       // Note: companyRatioAnalysis path '/ratio-analysis' conflicts with ratioAnalysisPage if they share the same base.
       // Adjusting paths:
       // - Company Ratio Analysis (High Level): '/ratio-analysis'
       // - Ratio Analysis (Periods List): '/ratio-analysis-list'
       case companyRatioAnalysis:
-        return MaterialPageRoute(builder: (_) => const CompanyRatioAnalysisPage());
+        return MaterialPageRoute(builder: (_) => const MasterLayout(
+          title: 'Company Analysis',
+          child: CompanyRatioAnalysisPage()
+        ));
 
       // Auth Routes
       case signIn:
@@ -180,28 +118,53 @@ class AppRoutes {
       // Master Routes (Wrapped in Master Layout where appropriate or just the Page itself if it has scaffolding)
       
       case uploadData:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Upload Data')));
+         // PlaceholderPage is typically just content, so we wrap it
+        return MaterialPageRoute(builder: (_) => const MasterLayout(
+          title: 'Upload Data',
+          child: PlaceholderPage('Upload Data')
+        ));
       
       case statementColumns:
-        return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Statement Columns')));
+        return MaterialPageRoute(builder: (_) => const MasterLayout(
+          title: 'Statement Columns',
+          child: PlaceholderPage('Statement Columns')
+        ));
 
       case trendAnalysis:
-        return MaterialPageRoute(builder: (_) => const TrendAnalysisPage());
+        return MaterialPageRoute(builder: (_) => const MasterLayout(
+          title: 'Trend Analysis',
+          child: TrendAnalysisPage()
+        ));
 
       case ratioAnalysis:
-         return MaterialPageRoute(builder: (_) => const RatioAnalysisPage());
+         return MaterialPageRoute(builder: (_) => const MasterLayout(
+           title: 'Ratio Analysis',
+           child: RatioAnalysisPage()
+         ));
 
       case ratioBenchmarks:
-         return MaterialPageRoute(builder: (_) => const RatioBenchmarksPage());
+         return MaterialPageRoute(builder: (_) => const MasterLayout(
+           title: 'Benchmarks',
+           child: RatioBenchmarksPage()
+         ));
 
       case periodComparison:
-         return MaterialPageRoute(builder: (_) => const PeriodComparisonPage());
+         return MaterialPageRoute(builder: (_) => const MasterLayout(
+           title: 'Period Comparison',
+           child: PeriodComparisonPage()
+         ));
       
       case userManagement:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('User Management')));
+         return MaterialPageRoute(builder: (_) => const MasterLayout(
+           title: 'User Management',
+           child: PlaceholderPage('User Management')
+         ));
 
       case profile:
-         return MaterialPageRoute(builder: (_) => const ProfilePage());
+         return MaterialPageRoute(builder: (_) => const MasterLayout(
+           title: 'Profile',
+           child: ProfilePage()
+         ));
       
       case calendar:
          return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Calendar')));
