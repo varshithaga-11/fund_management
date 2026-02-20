@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -51,20 +52,33 @@ class _UploadDataPageState extends State<UploadDataPage> {
     try {
       http.MultipartFile multipartFile;
       
-      if (_selectedFile!.path != null) {
-        multipartFile = await http.MultipartFile.fromPath(
-          'file',
-          _selectedFile!.path!,
-          filename: _selectedFile!.name,
-        );
-      } else if (_selectedFile!.bytes != null) {
-        multipartFile = http.MultipartFile.fromBytes(
-          'file',
-          _selectedFile!.bytes!,
-          filename: _selectedFile!.name,
-        );
+      if (kIsWeb) {
+        // On web, path is unavailable and accessing it throws. Use bytes instead.
+        if (_selectedFile!.bytes != null) {
+          multipartFile = http.MultipartFile.fromBytes(
+            'file',
+            _selectedFile!.bytes!,
+            filename: _selectedFile!.name,
+          );
+        } else {
+             throw Exception('File bytes not available. Please try picking the file again.');
+        }
       } else {
-        throw Exception('File path or bytes not available');
+        if (_selectedFile!.path != null) {
+          multipartFile = await http.MultipartFile.fromPath(
+            'file',
+            _selectedFile!.path!,
+            filename: _selectedFile!.name,
+          );
+        } else if (_selectedFile!.bytes != null) {
+          multipartFile = http.MultipartFile.fromBytes(
+            'file',
+            _selectedFile!.bytes!,
+            filename: _selectedFile!.name,
+          );
+        } else {
+          throw Exception('File path or bytes not available');
+        }
       }
 
       final result = await uploadExcelData(multipartFile);
@@ -130,45 +144,55 @@ class _UploadDataPageState extends State<UploadDataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Financial Data')),
+      backgroundColor: Colors.grey.shade50, // Light background for the page
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-             Text(
+            // Header
+            Text(
               'Upload Financial Data',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey.shade900,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Upload an Excel file (.xlsx, .xls), Word document (.docx), or PDF for financial data or statements',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // Download Buttons
+            // Template Buttons
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _downloadingTemplate != null ? null : () => _downloadTemplate('excel'),
-                    icon: _downloadingTemplate == 'excel' 
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.download),
-                    label: const Text('Excel Template'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                ElevatedButton.icon(
+                  onPressed: _downloadingTemplate != null ? null : () => _downloadTemplate('excel'),
+                  icon: _downloadingTemplate == 'excel' 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.download, size: 18),
+                  label: const Text('Download Excel Template'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981), // Green
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   ),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _downloadingTemplate != null ? null : () => _downloadTemplate('word'),
-                    icon: _downloadingTemplate == 'word'
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.download),
-                    label: const Text('Word Template'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                ElevatedButton.icon(
+                  onPressed: _downloadingTemplate != null ? null : () => _downloadTemplate('word'),
+                  icon: _downloadingTemplate == 'word'
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.download, size: 18),
+                  label: const Text('Download Word Template'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6), // Blue
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   ),
                 ),
               ],
@@ -176,83 +200,185 @@ class _UploadDataPageState extends State<UploadDataPage> {
 
             const SizedBox(height: 24),
 
-            // Upload Section
+            // Main Content Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(color: Colors.grey.shade200, blurRadius: 4, offset: const Offset(0, 2)),
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('File (Excel, Word, or PDF) *', style: TextStyle(fontWeight: FontWeight.bold)),
+                  // File Input Label
+                  const Text(
+                    'File (Excel, Word, or PDF) *',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87),
+                  ),
                   const SizedBox(height: 12),
-                  
-                  InkWell(
-                    onTap: _uploading ? null : _pickFile,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid), // Dashed borders need custom painter, solid is fine
-                        borderRadius: BorderRadius.circular(8),
-                        color: Colors.grey.shade50,
+
+                  // Custom File File Input
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _uploading ? null : _pickFile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEFF6FF), // Light blue bg
+                          foregroundColor: const Color(0xFF3B82F6), // Blue text
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        child: const Text('Choose file', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.upload_file, size: 48, color: Colors.grey.shade400),
-                          const SizedBox(height: 8),
-                          Text(
-                            _selectedFile != null ? _selectedFile!.name : 'Click to select file',
-                            style: TextStyle(
-                              color: _selectedFile != null ? Colors.blue : Colors.grey.shade600,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _selectedFile != null ? _selectedFile!.name : 'No file chosen',
+                          style: TextStyle(
+                            color: _selectedFile != null ? Colors.black87 : Colors.grey.shade500,
+                            fontSize: 14,
                           ),
-                        ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  
                   const SizedBox(height: 8),
-                  const Text('Supported formats: .xlsx, .xls, .docx, .pdf', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Info Boxes
-                  _buildInfoBox(
-                    'Filename = Period (India FY Apr–Mar)',
-                    'Name the file to auto-detect period. Use _ format: e.g. FY_2024_25, Q1_FY_2024_25, Apr_2024',
-                    Colors.amber.shade50,
-                    Colors.amber.shade900,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInfoBox(
-                    'Excel File Format (recommended – 5 sheets):',
-                    'Financial_Statement, Balance_Sheet_Liabilities, Balance_Sheet_Assets, Profit_Loss, Trading_Account',
-                    Colors.blue.shade50,
-                    Colors.blue.shade900,
+                  Text(
+                    'Supported formats: .xlsx, .xls (Excel), .docx (Word), .pdf',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
 
                   const SizedBox(height: 24),
-                  
-                  ElevatedButton(
-                    onPressed: (_selectedFile == null || _uploading) ? null : _handleUpload,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
+
+                  // Yellow Info Box
+                  _buildInfoBox(
+                    title: 'Filename = Period (India FY Apr–Mar)',
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Name the file to auto-detect period. Use _ format:', style: TextStyle(fontSize: 13, color: Colors.orange.shade900)),
+                        const SizedBox(height: 8),
+                        _buildRichTextParams('MONTHLY:', ' Apr_2024, May_2024, Jun_2024, Jul_2024, Aug_2024, Sep_2024, Oct_2024, Nov_2024, Dec_2024, Jan_2025, Feb_2025, Mar_2025'),
+                        _buildRichTextParams('QUARTERLY:', ' Q1_FY_2024_25, Q2_FY_2024_25, Q3_FY_2024_25, Q4_FY_2024_25'),
+                        _buildRichTextParams('HALF YEARLY:', ' H1_FY_2024_25, H2_FY_2024_25'),
+                        _buildRichTextParams('YEARLY:', ' FY_2024_25'),
+                      ],
                     ),
-                    child: _uploading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Upload & Process'),
+                    bgColor: const Color(0xFFFFFBEB), // Light yellow
+                    borderColor: const Color(0xFFFDE68A),
+                    titleColor: Colors.black87,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Blue Info Box
+                  _buildInfoBox(
+                    title: 'Excel File Format (recommended – 5 sheets):',
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildBulletPoint('Financial_Statement – Entity Name, Fiscal Year End, Currency, Staff Count'),
+                        _buildBulletPoint('Balance_Sheet_Liabilities – Liability Type, Amount (e.g. Share Capital, Deposits, Borrowings, Reserves, Provisions, Other Liabilities, Undistributed Profit)'),
+                        _buildBulletPoint('Balance_Sheet_Assets – Asset Type, Amount (e.g. Cash in Hand, Cash at Bank, Investments, Loans & Advances, Fixed Assets, Other Assets, Stock in Trade)'),
+                        _buildBulletPoint('Profit_Loss – Category, Item, Amount (Income / Expense / Net Profit rows)'),
+                        _buildBulletPoint('Trading_Account – Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)'),
+                      ],
+                    ),
+                    bgColor: const Color(0xFFEFF6FF), // Light blue
+                    borderColor: const Color(0xFFBFDBFE),
+                    titleColor: Colors.black87,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Upload Button (Right Aligned)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: (_selectedFile == null || _uploading) ? null : _handleUpload,
+                      style: ButtonStyle(
+                         backgroundColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.disabled)) return const Color(0xFFE0E7FF); // Lighter blue for disabled
+                          return const Color(0xFF6366F1); // Indigo/Periwinkle kind of blue
+                        }),
+                        foregroundColor: WidgetStateProperty.all(Colors.white),
+                        padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
+                        shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                      ),
+                      // Actually let's just use standard blue for functionality, design tweak can follow.
+                      // Screenshots show it is bottom right.
+                      child: _uploading
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Upload & Process', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Expected Sheet Structures (Use LayoutBuilder for responsiveness)
+            const Text(
+              'Expected Sheet Structures (5-sheet format):',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // If wide enough, 2 columns. Else 1 column.
+                // React screenshot shows 2 columns.
+                if (constraints.maxWidth > 800) {
+                   return Row(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Expanded(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             _buildSimpleStructureItem('Financial_Statement:', 'Entity Name, Fiscal Year End, Currency, Staff Count'),
+                             const SizedBox(height: 16),
+                             _buildSimpleStructureItem('Balance_Sheet_Assets:', 'Asset Type, Amount (one row per asset)'),
+                             const SizedBox(height: 16),
+                             _buildSimpleStructureItem('Trading_Account:', 'Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)'),
+                           ],
+                         ),
+                       ),
+                       const SizedBox(width: 40),
+                       Expanded(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                              _buildSimpleStructureItem('Balance_Sheet_Liabilities:', 'Liability Type, Amount (one row per liability)'),
+                              const SizedBox(height: 16),
+                              _buildSimpleStructureItem('Profit_Loss:', 'Category, Item, Amount (Income / Expense / Net Profit)'),
+                           ],
+                         ),
+                       ),
+                     ],
+                   );
+                } else {
+                   return Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       _buildSimpleStructureItem('Financial_Statement:', 'Entity Name, Fiscal Year End, Currency, Staff Count'),
+                       const SizedBox(height: 16),
+                       _buildSimpleStructureItem('Balance_Sheet_Liabilities:', 'Liability Type, Amount (one row per liability)'),
+                       const SizedBox(height: 16),
+                       _buildSimpleStructureItem('Balance_Sheet_Assets:', 'Asset Type, Amount (one row per asset)'),
+                       const SizedBox(height: 16),
+                       _buildSimpleStructureItem('Profit_Loss:', 'Category, Item, Amount (Income / Expense / Net Profit)'),
+                       const SizedBox(height: 16),
+                       _buildSimpleStructureItem('Trading_Account:', 'Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)'),
+                     ],
+                   );
+                }
+              }
             ),
           ],
         ),
@@ -260,22 +386,69 @@ class _UploadDataPageState extends State<UploadDataPage> {
     );
   }
 
-  Widget _buildInfoBox(String title, String content, Color bgColor, Color textColor) {
+  Widget _buildInfoBox({
+    required String title,
+    required Widget content,
+    required Color bgColor,
+    required Color borderColor,
+    required Color titleColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: textColor.withOpacity(0.3)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 4),
-          Text(content, style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 12)),
+          Text(title, style: TextStyle(color: titleColor, fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(height: 8),
+          content,
         ],
       ),
     );
   }
+
+  Widget _buildRichTextParams(String label, String value) {
+     return Padding(
+       padding: const EdgeInsets.only(bottom: 4.0),
+       child: RichText(
+          text: TextSpan(
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
+            children: [
+              TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.bold)),
+              TextSpan(text: value),
+            ],
+          ),
+        ),
+     );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.4)),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4))),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildSimpleStructureItem(String title, String desc) {
+    return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87)),
+         const SizedBox(height: 2),
+         Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+       ],
+    );
+  }
+
 }
