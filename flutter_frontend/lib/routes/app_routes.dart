@@ -7,6 +7,11 @@ import '../components/auth/forgot_password_form.dart';
 import '../pages/companyratioanalysis/company_ratio_analysis_page.dart';
 import '../pages/dashboard/index.dart';
 
+// Financial Statements Pages
+import '../pages/financialstatements/upload_data_page.dart';
+import '../pages/financialstatements/statement_columns_config_page.dart';
+// Note: FinancialPeriodPage is navigated to dynamically, typically doesn't have a top-level route in this list but could if needed.
+
 // Ratio Analysis Pages
 import '../pages/ratioanalysis/ratio_analysis_page.dart';
 import '../pages/ratioanalysis/trend_analysis_page.dart';
@@ -18,6 +23,7 @@ import '../pages/ratioanalysis/interpretation_panel.dart';
 // Other Pages
 import '../pages/periodcomparison/period_comparison_page.dart';
 import '../pages/profile/profile_page.dart';
+import '../pages/usermanagement/user_management_page.dart';
 
 // Placeholder Pages (To be implemented)
 class PlaceholderPage extends StatelessWidget {
@@ -118,16 +124,16 @@ class AppRoutes {
       // Master Routes (Wrapped in Master Layout where appropriate or just the Page itself if it has scaffolding)
       
       case uploadData:
-         // PlaceholderPage is typically just content, so we wrap it
+         // Using the fully implemented UploadDataPage
         return MaterialPageRoute(builder: (_) => const MasterLayout(
           title: 'Upload Data',
-          child: PlaceholderPage('Upload Data')
+          child: UploadDataPage()
         ));
       
       case statementColumns:
         return MaterialPageRoute(builder: (_) => const MasterLayout(
           title: 'Statement Columns',
-          child: PlaceholderPage('Statement Columns')
+          child: StatementColumnsConfigPage()
         ));
 
       case trendAnalysis:
@@ -157,7 +163,7 @@ class AppRoutes {
       case userManagement:
          return MaterialPageRoute(builder: (_) => const MasterLayout(
            title: 'User Management',
-           child: PlaceholderPage('User Management')
+           child: UserManagementPage()
          ));
 
       case profile:
