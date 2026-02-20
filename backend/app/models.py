@@ -341,10 +341,6 @@ class StatementColumnConfig(models.Model):
 
 
 
-
-
-
-
 class EmailOTP(models.Model):
     email = models.EmailField(unique=True)
     otp = models.CharField(max_length=6)
@@ -352,41 +348,14 @@ class EmailOTP(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):
-        return timezone.now() > self.created_at + timedelta(minutes=5)  
-    
+        return timezone.now() > self.created_at + timedelta(minutes=5)
 
-    
-# def get_statement_columns(company, statement_type):
-#     # 1. Company-specific
-#     cols = StatementColumnConfig.objects.filter(
-#         company=company,
-#         statement_type=statement_type
-#     )
+class ProductKey(models.Model):
+    key = models.CharField(max_length=50, unique=True, help_text="The license key (e.g., ASDF-1234-...)")
+    device_id = models.CharField(max_length=255, null=True, blank=True, help_text="Hardware ID of the bound device")
+    is_active = models.BooleanField(default=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-#     # 2. Fallback to global
-#     if not cols.exists():
-#         cols = StatementColumnConfig.objects.filter(
-#             company__isnull=True,
-#             statement_type=statement_type
-#         )
-
-#     return cols
-
-
-
-# FinancialPeriod
-#       ├── TradingAccount
-#       ├── ProfitAndLoss
-#       ├── BalanceSheet
-#       ├── OperationalMetrics
-#       └── RatioResult
-
-
-
-# FY-2023-24 → YEARLY
-
-# Apr-2024 → MONTHLY
-
-# Q1-FY-2024-25 → QUARTERLY
-
-# H1-FY-2024-25 → HALF_YEARLY
+    def __str__(self):
+        return f"{self.key} - {'Activated' if self.device_id else 'Available'}"

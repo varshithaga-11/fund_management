@@ -3,7 +3,9 @@ import '../layout/master_layout.dart';
 // Auth Pages
 import '../pages/authpages/sign_in.dart';
 import '../components/auth/signin_form.dart';
+
 import '../pages/authpages/sign_up.dart';
+import '../pages/authpages/activation_page.dart';
 import '../components/auth/forgot_password_form.dart';
 import '../pages/companyratioanalysis/company_ratio_analysis_page.dart';
 import '../pages/dashboard/index.dart';
@@ -54,7 +56,9 @@ class NotFoundPage extends StatelessWidget {
 }
 
 class AppRoutes {
+
   static const String signIn = '/';
+  static const String activate = '/activate';
   static const String signUp = '/signup';
   static const String masterDashboard = '/master/master-dashboard';
   static const String companyRatioAnalysis = '/ratio-analysis';
@@ -126,6 +130,9 @@ class AppRoutes {
         return MaterialPageRoute(settings: settings, builder: (_) => const SignInPage());
       case signUp:
         return MaterialPageRoute(settings: settings, builder: (_) => const SignUpPage());
+
+      case activate:
+        return MaterialPageRoute(settings: settings, builder: (_) => const ActivationPage());
       case resetPassword:
         return MaterialPageRoute(settings: settings, builder: (_) => const Scaffold(body: ForgotPasswordForm()));
 

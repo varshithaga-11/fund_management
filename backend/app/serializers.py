@@ -425,5 +425,10 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         if created_by:
             instance.created_by = created_by
+
         instance.save()
         return instance
+
+class ProductKeyActivationSerializer(serializers.Serializer):
+    product_key = serializers.CharField(max_length=50)
+    device_id = serializers.CharField(max_length=255)

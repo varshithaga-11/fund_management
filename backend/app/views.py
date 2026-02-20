@@ -3282,5 +3282,59 @@ class ResetPasswordView(APIView):
             otp_obj.verified = False
             otp_obj.save()
             return Response({"message": "Password reset successful."})
+
         except UserRegister.DoesNotExist:
             return Response({"error": "User not found."})
+
+class ActivateLicenseView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ProductKeyActivationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                "status": "failed",
+                "message": "Invalid data",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        product_key_str = serializer.validated_data['product_key']
+        device_id = serializer.validated_data['device_id']
+
+        try:
+            pk_obj = ProductKey.objects.get(key=product_key_str)
+            
+            if not pk_obj.is_active:
+                return Response({
+                    "status": "failed",
+                    "message": "This product key has been deactivated."
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # Check if already bound
+            if pk_obj.device_id:
+                if pk_obj.device_id == device_id:
+                    return Response({
+                        "status": "success",
+                        "message": "Activation verified for this device."
+                    })
+                else:
+                    return Response({
+                        "status": "failed",
+                        "message": "Product key is already in use on another device."
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # First time activation
+            pk_obj.device_id = device_id
+            pk_obj.activated_at = timezone.now()
+            pk_obj.save()
+
+            return Response({
+                "status": "success",
+                "message": "Activation successful."
+            })
+
+        except ProductKey.DoesNotExist:
+            return Response({
+                "status": "failed",
+                "message": "Invalid product key."
+            }, status=status.HTTP_404_NOT_FOUND)

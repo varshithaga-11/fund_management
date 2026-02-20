@@ -1,5 +1,4 @@
 
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
@@ -39,4 +38,5 @@ urlpatterns = [
     path('sendotp/', SendOtpView.as_view(),name='sendotp'),
     path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
+    path('activate/', ActivateLicenseView.as_view(), name='activate-license'),
 ]
