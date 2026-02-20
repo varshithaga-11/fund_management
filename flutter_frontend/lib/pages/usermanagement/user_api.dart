@@ -30,11 +30,11 @@ class UserRegister {
   factory UserRegister.fromJson(Map<String, dynamic> json) {
     return UserRegister(
       id: json['id'],
-      username: json['username'],
-      email: json['email'],
+      username: json['username'] ?? 'Unknown',
+      email: json['email'] ?? 'No Email',
       firstName: json['first_name'],
       lastName: json['last_name'],
-      role: json['role'],
+      role: json['role'] ?? 'employee', // Default to employee if null
       isActive: json['is_active'] ?? true,
       createdBy: json['created_by'],
     );

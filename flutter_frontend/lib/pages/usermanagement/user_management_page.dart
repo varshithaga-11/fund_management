@@ -37,17 +37,20 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   Future<void> _fetchUsers() async {
     setState(() => _loading = true);
+    print('Fetching users...');
     try {
       // React code passes userId to getUserList, but the API impl seems to handle filtering by created_by optionally.
       // If we want to see ALL users, we might not need to pass createdBy unless backend restricts it.
       // Let's first try fetching all.
       final users = await getUserList(); 
+      print('Users fetched: ${users.length}');
       setState(() {
         _allUsers = users;
         _applyFilters();
         _loading = false;
       });
     } catch (e) {
+      print('Error fetching users: $e');
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -116,12 +119,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Client-side pagination logic
-    final totalRows = _filteredUsers.length;
-    final start = _currentPage * _rowsPerPage;
-    final end = (start + _rowsPerPage < totalRows) ? start + _rowsPerPage : totalRows;
-    final pageUsers = _filteredUsers.sublist(start, end);
-
+    // Client-side pagination logic is handled by PaginatedDataTable source
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('User Management'),
@@ -216,10 +215,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       // Table
                       Expanded(
                         child: SingleChildScrollView(
-                          child: Theme(
-                             data: Theme.of(context).copyWith(cardColor: Theme.of(context).canvasColor),
-                             child: PaginatedDataTable(
-                              header: const Text('Users List'),
+                          scrollDirection: Axis.vertical,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              sortColumnIndex: _sortColumnIndex,
+                              sortAscending: _isAscending,
                               columns: [
                                 DataColumn(
                                   label: const Text('Username'),
@@ -274,29 +275,41 @@ class _UserManagementPageState extends State<UserManagementPage> {
                                 const DataColumn(label: Text('Active')),
                                 const DataColumn(label: Text('Actions')),
                               ],
-                              source: _UserDataSource(
-                                users: _filteredUsers,
-                                onDelete: (id) => _deleteUser(id),
-                                onEdit: (user) => _openAddEditDialog(user),
-                                context: context,
-                              ),
-                              rowsPerPage: _rowsPerPage,
-                              availableRowsPerPage: const [5, 10, 25, 50],
-                              onRowsPerPageChanged: (val) {
-                                setState(() {
-                                  _rowsPerPage = val ?? 10;
-                                  _currentPage = 0;
-                                });
-                              },
-                              initialFirstRowIndex: _currentPage * _rowsPerPage,
-                              onPageChanged: (rowIndex) {
-                                setState(() {
-                                  _currentPage = rowIndex ~/ _rowsPerPage;
-                                });
-                              },
-                              sortColumnIndex: _sortColumnIndex,
-                              sortAscending: _isAscending,
-                              showCheckboxColumn: false,
+                              rows: _filteredUsers.map((user) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(user.username)),
+                                    DataCell(Text(user.email)),
+                                    DataCell(Text(user.firstName ?? '')),
+                                    DataCell(Text(user.lastName ?? '')),
+                                    DataCell(Text(user.role)),
+                                    DataCell(
+                                      Icon(
+                                        user.isActive ? Icons.check_circle : Icons.cancel,
+                                        color: user.isActive ? Colors.green : Colors.red,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit, color: Colors.blue),
+                                            onPressed: () => _openAddEditDialog(user),
+                                            tooltip: 'Edit',
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete, color: Colors.red),
+                                            onPressed: () => _deleteUser(user.id!),
+                                            tooltip: 'Delete',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
                             ),
                           ),
                         ),
@@ -344,68 +357,4 @@ class _UserManagementPageState extends State<UserManagementPage> {
       ),
     );
   }
-}
-
-// DataTable Source
-class _UserDataSource extends DataTableSource {
-  final List<UserRegister> users;
-  final Function(int) onDelete;
-  final Function(UserRegister) onEdit;
-  final BuildContext context;
-
-  _UserDataSource({
-    required this.users,
-    required this.onDelete,
-    required this.onEdit,
-    required this.context,
-  });
-
-  @override
-  DataRow? getRow(int index) {
-    if (index >= users.length) return null;
-    final user = users[index];
-
-    return DataRow(
-      cells: [
-        DataCell(Text(user.username)),
-        DataCell(Text(user.email)),
-        DataCell(Text(user.firstName ?? '')),
-        DataCell(Text(user.lastName ?? '')),
-        DataCell(Text(user.role)),
-        DataCell(
-          Icon(
-            user.isActive ? Icons.check_circle : Icons.cancel,
-            color: user.isActive ? Colors.green : Colors.red,
-            size: 20,
-          ),
-        ),
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => onEdit(user),
-                tooltip: 'Edit',
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => onDelete(user.id!),
-                tooltip: 'Delete',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  bool get isRowCountApproximate => false;
-
-  @override
-  int get rowCount => users.length;
-
-  @override
-  int get selectedRowCount => 0;
 }

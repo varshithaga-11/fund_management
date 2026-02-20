@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'productivity_analysis.dart';
 import 'interpretation_panel.dart';
 import '../financialstatements/financial_statements_api.dart';
 import 'ratio_card.dart';
 import 'ratio_analysis_table.dart';
+import '../companyratioanalysis/period_data_edit_form.dart';
 
 // Adjust import path as per your project structure.
 // If your project name is not 'fund_management', change it accordingly.
@@ -25,11 +27,22 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
   FinancialPeriodData? _period;
   bool _loading = true;
   String _viewMode = 'cards'; // 'cards' or 'table'
+  String _userRole = '';
 
   @override
   void initState() {
     super.initState();
+    _checkUserRole();
     _loadData();
+  }
+
+  Future<void> _checkUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _userRole = prefs.getString('userRole') ?? '';
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -231,6 +244,38 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
               RatioAnalysisTable(ratios: _ratios!, periodLabel: _period?.label)
             else
               _buildCardsView(),
+            
+            // Edit Period Data Form (Master Role Only)
+            if (_userRole == 'master') ...[
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Edit period data & recalculate ratios',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click "Update data & recalculate ratios" to save and store updated ratio results.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 16),
+                    PeriodDataEditForm(
+                      periodId: widget.periodId,
+                      onSuccess: _loadData, // Reload dashboard data on success
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

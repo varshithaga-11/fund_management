@@ -139,49 +139,66 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     final visibleKeys = keys.where((k) => allKeys.contains(k)).toList();
     if (visibleKeys.isEmpty) return const SizedBox.shrink();
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            GridView.count(
-              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
-              childAspectRatio: 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: visibleKeys.map((key) {
-                final label = _data?.labels[key] ?? key.replaceAll('_', ' ');
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _controllers[key],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: '—',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      enabled: _canUpdate,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 600;
+              final itemWidth = isWide ? (constraints.maxWidth - 24) / 2 : constraints.maxWidth;
+              
+              return Wrap(
+                spacing: 24, // Horizontal gap
+                runSpacing: 12, // Vertical gap (Decreased)
+                children: visibleKeys.map((key) {
+                  final label = _data?.labels[key] ?? key.replaceAll('_', ' ');
+                  final controller = _controllers[key];
+                  
+                  if (controller == null) return const SizedBox.shrink();
+
+                  return SizedBox(
+                    width: itemWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(label,
+                            style: TextStyle(
+                                fontSize: 13, 
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade700
+                            )),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: controller,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: '—',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            isDense: true,
+                          ),
+                          enabled: _canUpdate,
+                        ),
+                      ],
                     ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ],
-        ),
+                  );
+                }).toList(),
+              );
+            }
+          ),
+        ],
       ),
     );
   }
@@ -208,58 +225,81 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     final otherKeys = allKeys.where((k) => !handledKeys.contains(k)).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ratio Benchmarks'),
-        actions: [
-          if (_canUpdate)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: ElevatedButton(
-                onPressed: _saving ? null : _handleSave,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Save Changes'),
-              ),
-            ),
-        ],
-      ),
+      // No AppBar, using custom header to match React layout inside standard container
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Ratio Benchmarks',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                if (_canUpdate)
+                  ElevatedButton(
+                    onPressed: _saving ? null : _handleSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1), // Indigo/Primary
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Save changes'),
+                  )
+                else
+                  Text(
+                    'Read Only',
+                    style: TextStyle(color: Colors.amber.shade700, fontWeight: FontWeight.bold),
+                  ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Description/Info
+            Text(
+              'These values are used for traffic light status (green/yellow/red) in the Ratio Dashboard. Leave blank where no fixed benchmark applies.',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            ),
+            
+            const SizedBox(height: 24),
+
             if (!_canUpdate)
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.amber.shade200),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.amber.shade700),
+                    Icon(Icons.info_outline, color: Colors.amber.shade700, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Only Master role can update benchmarks.',
-                        style: TextStyle(color: Colors.amber.shade900),
+                        style: TextStyle(color: Colors.amber.shade900, fontSize: 13),
                       ),
                     ),
                   ],
                 ),
               ),
-            const Text(
-              'These values are used for traffic light status (green/yellow/red) in the Ratio Dashboard. Leave blank where no fixed benchmark applies.',
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
+
+            // Categories
             ..._categories.entries.map((entry) =>
                 _buildCategorySection(entry.key, entry.value, allKeys)),
+            
             if (otherKeys.isNotEmpty)
               _buildCategorySection('Other', otherKeys, allKeys),
           ],

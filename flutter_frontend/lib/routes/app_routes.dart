@@ -11,6 +11,7 @@ import '../pages/dashboard/index.dart';
 import '../pages/financialstatements/upload_data_page.dart';
 import '../pages/financialstatements/statement_columns_config_page.dart';
 // Note: FinancialPeriodPage is navigated to dynamically, typically doesn't have a top-level route in this list but could if needed.
+import '../pages/financialstatements/financial_period_page.dart';
 
 // Ratio Analysis Pages
 import '../pages/ratioanalysis/ratio_analysis_page.dart';
@@ -200,8 +201,18 @@ class AppRoutes {
       // Handle dynamic routes
       default:
         // /financial-statements/:id
+        // /financial-statements/:id
         if (path.startsWith('/financial-statements/')) {
-           return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Financial Statements Period')));
+           final parts = path.split('/');
+           if (parts.length > 2) {
+               final periodId = int.tryParse(parts.last);
+               if (periodId != null) {
+                   return MaterialPageRoute(builder: (_) => MasterLayout(
+                       title: 'Financial Period',
+                       child: FinancialPeriodPage(periodId: periodId)
+                   ));
+               }
+           }
         }
         
         // /ratio-analysis/dashboard/:periodId

@@ -74,10 +74,7 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
               child: ElevatedButton(
                 onPressed: () {
                    // Navigate to dashboard
-                   // Navigator.pushNamed(context, '/ratio-analysis/${widget.periodId}');
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(content: Text('Dashboard navigation not implemented yet')),
-                   );
+                   Navigator.pushNamed(context, '/ratio-analysis/dashboard/${widget.periodId}');
                 },
                 child: const Text('View Dashboard'),
               ),
