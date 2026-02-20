@@ -66,70 +66,125 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Profile'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Breadcrumb Area could be here
-            
-            // Profile Card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Page Title (Breadcrumb equivalent)
+            const Text(
+              'Profile',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Main Content Area (Matches the white container in UserProfiles.tsx)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Profile',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // UserMetaCard equivalent
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${_profile!.firstName.isEmpty ? _profile!.username : _profile!.firstName} ${_profile!.lastName}',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Profile Info
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _profile!.username,
-                                    style: TextStyle(color: Colors.grey[600]),
+                                    '${_profile!.firstName.isEmpty ? _profile!.username : _profile!.firstName} ${_profile!.lastName}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                  Container(
-                                    height: 14,
-                                    width: 1,
-                                    color: Colors.grey[400],
-                                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                                  ),
-                                  Text(
-                                    _profile!.email,
-                                    style: TextStyle(color: Colors.grey[600]),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 12,
+                                    children: [
+                                      Text(
+                                        _profile!.username,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      Container(
+                                        height: 14,
+                                        width: 1,
+                                        color: Colors.grey[300],
+                                      ),
+                                      Text(
+                                        _profile!.email,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _showEditDialog,
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Edit'),
-                          style: ElevatedButton.styleFrom(
-                            shape: const StadiumBorder(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          ),
+                            ),
+                            
+                            // Edit Button
+                            OutlinedButton.icon(
+                              onPressed: _showEditDialog,
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: const Text('Edit'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey[700],
+                                side: BorderSide(color: Colors.grey.shade300),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -138,6 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
+
 
 class EditProfileDialog extends StatefulWidget {
   final UserProfileData currentProfile;
@@ -214,10 +270,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+       backgroundColor: Colors.white,
+       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
        child: Container(
          width: 600,
-         padding: const EdgeInsets.all(24),
+         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+         padding: const EdgeInsets.all(32),
          child: Form(
            key: _formKey,
            child: SingleChildScrollView(
@@ -230,8 +288,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                    children: [
                      Text(
                        'Edit Profile',
-                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                          fontWeight: FontWeight.bold,
+                         color: Colors.black,
                        ),
                      ),
                      IconButton(
@@ -243,13 +302,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                  const SizedBox(height: 8),
                  Text(
                    'Update your details to keep your profile up-to-date.',
-                   style: TextStyle(color: Colors.grey[600]),
+                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                  ),
-                 const SizedBox(height: 24),
+                 const SizedBox(height: 32),
                  
                  const Text('Personal Information', 
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                 const SizedBox(height: 16),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                 const SizedBox(height: 24),
                  
                  Row(
                    children: [
@@ -257,11 +316,16 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
-                           const Text('First Name'),
+                           const Text('First Name', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                            const SizedBox(height: 8),
                            TextFormField(
                              controller: _firstNameController,
-                             decoration: const InputDecoration(border: OutlineInputBorder()),
+                             decoration: InputDecoration(
+                               hintText: 'First Name',
+                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                             ),
                            ),
                          ],
                        ),
@@ -271,29 +335,39 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
-                           const Text('Last Name'),
+                           const Text('Last Name', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                            const SizedBox(height: 8),
                            TextFormField(
                              controller: _lastNameController,
-                             decoration: const InputDecoration(border: OutlineInputBorder()),
+                             decoration: InputDecoration(
+                               hintText: 'Last Name',
+                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                             ),
                            ),
                          ],
                        ),
                      ),
                    ],
                  ),
-                 const SizedBox(height: 16),
+                 const SizedBox(height: 20),
                  Row(
                    children: [
                      Expanded(
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
-                           const Text('Email Address'),
+                           const Text('Email Address', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                            const SizedBox(height: 8),
                            TextFormField(
                              controller: _emailController,
-                             decoration: const InputDecoration(border: OutlineInputBorder()),
+                             decoration: InputDecoration(
+                               hintText: 'Email Address',
+                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                             ),
                            ),
                          ],
                        ),
@@ -303,15 +377,17 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
-                           const Text('Username'),
+                           const Text('Username', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                            const SizedBox(height: 8),
                            TextFormField(
                              controller: _usernameController,
                              readOnly: true,
-                             decoration: const InputDecoration(
-                               border: OutlineInputBorder(),
-                               fillColor: Color(0xFFF3F4F6),
+                             decoration: InputDecoration(
+                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                               fillColor: const Color(0xFFF9FAFB),
                                filled: true,
+                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
                              ),
                            ),
                          ],
@@ -320,20 +396,31 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                    ],
                  ),
                  
-                 const SizedBox(height: 32),
+                 const SizedBox(height: 48),
                  Row(
                    mainAxisAlignment: MainAxisAlignment.end,
                    children: [
-                     OutlinedButton(
+                     TextButton(
                        onPressed: () => Navigator.of(context).pop(),
+                       style: TextButton.styleFrom(
+                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                         foregroundColor: Colors.grey[700],
+                       ),
                        child: const Text('Close'),
                      ),
                      const SizedBox(width: 12),
                      ElevatedButton(
                        onPressed: _saving ? null : _handleSubmit,
+                       style: ElevatedButton.styleFrom(
+                         backgroundColor: Colors.blue[600],
+                         foregroundColor: Colors.white,
+                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                         elevation: 0,
+                       ),
                        child: _saving 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Save Changes'),
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
                      ),
                    ],
                  ),
@@ -345,3 +432,4 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     );
   }
 }
+

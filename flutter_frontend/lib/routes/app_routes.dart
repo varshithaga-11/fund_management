@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../layout/master_layout.dart';
 // Auth Pages
+import '../pages/authpages/sign_in.dart';
 import '../components/auth/signin_form.dart';
 import '../pages/authpages/sign_up.dart';
 import '../components/auth/forgot_password_form.dart';
@@ -116,7 +117,7 @@ class AppRoutes {
 
       // Auth Routes
       case signIn:
-        return MaterialPageRoute(builder: (_) => const Scaffold(body: SignInForm()));
+        return MaterialPageRoute(builder: (_) => const SignInPage());
       case signUp:
         return MaterialPageRoute(builder: (_) => const SignUpPage());
       case resetPassword:

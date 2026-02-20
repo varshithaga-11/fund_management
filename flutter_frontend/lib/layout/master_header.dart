@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../pages/profile/profile_api.dart';
 
-class MasterHeader extends StatelessWidget {
+class MasterHeader extends StatefulWidget {
   final VoidCallback onToggleSidebar;
   final bool isMobileOpen;
 
@@ -9,6 +11,47 @@ class MasterHeader extends StatelessWidget {
     required this.onToggleSidebar,
     required this.isMobileOpen,
   });
+
+  @override
+  State<MasterHeader> createState() => _MasterHeaderState();
+}
+
+class _MasterHeaderState extends State<MasterHeader> {
+  UserProfileData? _profile;
+  String _role = 'User';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString('userRole') ?? 'User';
+      final profile = await getUserProfile();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _role = role;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile in header: $e');
+      // If profile fails, we still have the role from prefs
+    }
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access');
+    await prefs.remove('refresh');
+    await prefs.remove('userRole');
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +73,8 @@ class MasterHeader extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: onToggleSidebar,
-                icon: Icon(isMobileOpen ? Icons.close : Icons.menu),
+                onPressed: widget.onToggleSidebar,
+                icon: Icon(widget.isMobileOpen ? Icons.close : Icons.menu),
                 tooltip: 'Toggle Sidebar',
               ),
               const SizedBox(width: 16),
@@ -60,12 +103,6 @@ class MasterHeader extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               
-              // Notification Placeholder
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_none),
-                tooltip: 'Notifications',
-              ),
               const SizedBox(width: 8),
 
               // User Dropdown
@@ -78,28 +115,45 @@ class MasterHeader extends StatelessWidget {
                       child: const Icon(Icons.person, color: Colors.grey),
                     ),
                     const SizedBox(width: 8),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('User Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                         Text('Admin', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
-                    ),
+                    if (MediaQuery.of(context).size.width > 600)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            ('${_profile?.firstName ?? ""} ${_profile?.lastName ?? ""}'.trim().isNotEmpty)
+                                ? '${_profile!.firstName} ${_profile!.lastName}'.trim()
+                                : (_profile?.username ?? 'User'),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Text(_role.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
                     const Icon(Icons.keyboard_arrow_down),
                   ],
                 ),
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: [Icon(Icons.person, size: 20), SizedBox(width: 8), Text('My Profile')],
+                  PopupMenuItem(
+                    enabled: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ('${_profile?.firstName ?? ""} ${_profile?.lastName ?? ""}'.trim().isNotEmpty)
+                              ? '${_profile!.firstName} ${_profile!.lastName}'.trim()
+                              : (_profile?.username ?? ''),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                        ),
+                        if (_profile?.email != null)
+                          Text(_profile!.email, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Divider(),
+                      ],
                     ),
                   ),
                   const PopupMenuItem(
-                    value: 'settings',
+                    value: 'profile',
                     child: Row(
-                      children: [Icon(Icons.settings, size: 20), SizedBox(width: 8), Text('Account Settings')],
+                      children: [Icon(Icons.person_outline, size: 20), SizedBox(width: 8), Text('My Profile')],
                     ),
                   ),
                   const PopupMenuDivider(),
@@ -114,8 +168,7 @@ class MasterHeader extends StatelessWidget {
                   if (value == 'profile') {
                     Navigator.of(context).pushNamed('/profile');
                   } else if (value == 'logout') {
-                    // Handle logout
-                     Navigator.of(context).pushReplacementNamed('/');
+                    _logout();
                   }
                 },
               ),
@@ -126,3 +179,4 @@ class MasterHeader extends StatelessWidget {
     );
   }
 }
+
