@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'activation_api.dart';
-import '../routes/app_routes.dart';
+import 'package:flutter_frontend/routes/app_routes.dart';
 
 class ActivationForm extends StatefulWidget {
   const ActivationForm({super.key});

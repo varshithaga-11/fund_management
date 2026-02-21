@@ -1,13 +1,14 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+// Platform helpers: dart:io on native, dart:html on web — isolated via conditional import
+import 'export_stub.dart'
+    if (dart.library.html) 'export_web.dart';
 import '../../theme/app_theme.dart';
 import 'dashboard_api.dart';
+
 
 class MasterDashboardPage extends StatefulWidget {
   const MasterDashboardPage({Key? key}) : super(key: key);
@@ -24,6 +25,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   // Filter / Export state
   bool _showExportMenu = false;
   bool _showYearDropdown = false;
+  String? _selectedYear; // null = show all periods
   final TextEditingController _yearSearchController = TextEditingController();
   final LayerLink _exportLayerLink = LayerLink();
   final LayerLink _yearLayerLink = LayerLink();
@@ -44,6 +46,13 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     super.dispose();
   }
 
+  // Returns only periods matching the selected year label (or all if none selected)
+  List<DashboardPeriodData> get _filteredPeriods {
+    final all = _dashboardData?.periods ?? [];
+    if (_selectedYear == null) return all;
+    return all.where((p) => p.label == _selectedYear).toList();
+  }
+
   Future<void> _loadDashboardData() async {
     try {
       final data = await getDashboardData();
@@ -53,6 +62,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
           _isLoading = false;
           _isRefreshing = false;
         });
+        debugPrint('Dashboard: loaded ${data?.periods.length ?? 0} periods');
       }
     } catch (e) {
       if (mounted) {
@@ -75,12 +85,10 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   // ============ EXPORT DATA HELPER ============
 
   List<Map<String, dynamic>> _getExportData() {
-    final periods = _dashboardData?.periods ?? [];
+    final periods = _filteredPeriods;
     return periods.map((p) => {
       'Label': p.label,
       'Type': p.periodType,
-      'Start Date': p.startDate,
-      'End Date': p.endDate,
       'Status': p.isFinalized ? 'Finalized' : 'Draft',
       'Revenue': p.revenue.toStringAsFixed(2),
       'Net Profit': p.netProfit.toStringAsFixed(2),
@@ -98,14 +106,22 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       }
       final dateStr = DateTime.now().toIso8601String().split('T')[0];
       final ext = isExcel ? 'xlsx' : 'csv';
-      final headers = data[0].keys.join(',');
-      final rows = data.map((row) => row.values.map((v) => '"$v"').join(',')).join('\n');
-      final csvContent = '$headers\n$rows';
+      // Use explicit ordered columns so they always appear in the right order
+      const colOrder = ['Label', 'Type', 'Status', 'Revenue', 'Net Profit'];
+      final headerLine = colOrder.join(',');
+      final rowLines = data.map((row) =>
+          colOrder.map((k) => '"${row[k] ?? ''}"').join(',')).join('\n');
+      
+      // Add UTF-8 BOM for Excel compatibility (crucial for ₹ and other symbols)
+      final csvContent = '\uFEFF$headerLine\n$rowLines';
+      final filename = 'financial_data_$dateStr.$ext';
 
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/financial_data_$dateStr.$ext');
-      await file.writeAsString(csvContent);
-      await OpenFilex.open(file.path);
+      if (kIsWeb) {
+        downloadTextWeb(filename, csvContent);
+      } else {
+        await saveTextAndOpenNative(filename, csvContent);
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$ext file exported')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     }
@@ -120,47 +136,20 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No data to export')));
         return;
       }
-      final doc = pw.Document();
-      final dateStr = DateTime.now().toLocal().toString().split(' ')[0];
-      final headers = ['Label', 'Type', 'Start Date', 'Status', 'Revenue', 'Net Profit'];
-      final rows = data.map((r) => [r['Label']!, r['Type']!, r['Start Date']!, r['Status']!, r['Revenue']!, r['Net Profit']!]).toList();
-
-      doc.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (ctx) => [
-            pw.Text('Financial Dashboard Report', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 6),
-            pw.Text('Generated: $dateStr', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600)),
-            pw.SizedBox(height: 20),
-            pw.TableHelper.fromTextArray(
-              headers: headers,
-              data: rows,
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.indigo700),
-              cellAlignments: {0: pw.Alignment.centerLeft},
-              oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
-              cellHeight: 28,
-              cellStyle: const pw.TextStyle(fontSize: 10),
-              headerHeight: 30,
-            ),
-          ],
-        ),
-      );
-
-      final bytes = await doc.save();
-      final dir = await getTemporaryDirectory();
-      final dateFile = DateTime.now().toIso8601String().split('T')[0];
-      final file = File('${dir.path}/financial_report_$dateFile.pdf');
-      await file.writeAsBytes(bytes);
-      await OpenFilex.open(file.path);
+      final bytes = await _buildPdfBytes(data);
+      final filename = 'financial_report_${DateTime.now().toIso8601String().split('T')[0]}.pdf';
+      if (kIsWeb) {
+        downloadFileWeb(filename, bytes);
+      } else {
+        await saveAndOpenNative(filename, bytes);
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF exported successfully')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF export failed: $e')));
     }
   }
 
-  // ============ WORD (.doc HTML) EXPORT ============
+  // ============ WORD EXPORT ============
 
   Future<void> _handleExportWord() async {
     try {
@@ -170,12 +159,10 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
         return;
       }
       final dateStr = DateTime.now().toLocal().toString().split(' ')[0];
-      final tableRows = data.map((r) => '''
-        <tr>
-          <td>${r['Label']}</td><td>${r['Type']}</td><td>${r['Start Date']}</td>
-          <td>${r['Status']}</td><td>${r['Revenue']}</td><td>${r['Net Profit']}</td>
-        </tr>''').join('');
-
+      final tableRows = data.map((r) => '<tr>'
+          '<td>${r['Label']}</td><td>${r['Type']}</td>'
+          '<td>${r['Status']}</td><td>${r['Revenue']}</td><td>${r['Net Profit']}</td>'
+          '</tr>').join('');
       final content = '''
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><title>Financial Report</title></head>
@@ -184,17 +171,18 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   <p>Generated: $dateStr</p>
   <table border="1" style="border-collapse:collapse;width:100%">
     <thead><tr style="background-color:#4F46E5;color:white">
-      <th>Label</th><th>Type</th><th>Start Date</th><th>Status</th><th>Revenue</th><th>Net Profit</th>
+      <th>Label</th><th>Type</th><th>Status</th><th>Revenue</th><th>Net Profit</th>
     </tr></thead>
     <tbody>$tableRows</tbody>
   </table>
 </body></html>''';
-
-      final dir = await getTemporaryDirectory();
-      final dateFile = DateTime.now().toIso8601String().split('T')[0];
-      final file = File('${dir.path}/financial_report_$dateFile.doc');
-      await file.writeAsString(content);
-      await OpenFilex.open(file.path);
+      final filename = 'financial_report_${DateTime.now().toIso8601String().split('T')[0]}.doc';
+      if (kIsWeb) {
+        downloadTextWeb(filename, content);
+      } else {
+        await saveTextAndOpenNative(filename, content);
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Word document exported')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Word export failed: $e')));
     }
@@ -205,42 +193,57 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   Future<void> _handlePrint() async {
     try {
       final data = _getExportData();
-      final dateStr = DateTime.now().toLocal().toString().split(' ')[0];
-      final doc = pw.Document();
-      final headers = ['Label', 'Type', 'Start Date', 'Status', 'Revenue', 'Net Profit'];
-      final rows = data.map((r) => [r['Label']!, r['Type']!, r['Start Date']!, r['Status']!, r['Revenue']!, r['Net Profit']!]).toList();
-
-      doc.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (ctx) => [
-            pw.Text('Financial Dashboard Report', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 6),
-            pw.Text('Generated: $dateStr', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600)),
-            pw.SizedBox(height: 20),
-            if (data.isEmpty)
-              pw.Text('No data available.', style: const pw.TextStyle(fontSize: 12))
-            else
-              pw.TableHelper.fromTextArray(
-                headers: headers,
-                data: rows,
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.indigo700),
-                oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
-                cellHeight: 28,
-                cellStyle: const pw.TextStyle(fontSize: 10),
-                headerHeight: 30,
-              ),
-          ],
-        ),
-      );
-
-      await Printing.layoutPdf(onLayout: (_) async => doc.save());
+      if (kIsWeb) {
+        // Web: trigger browser print dialog (same as React's window.print())
+        printWeb();
+      } else {
+        // Native: generate PDF and open system print dialog
+        final bytes = await _buildPdfBytes(data);
+        final filename = 'print_${DateTime.now().toIso8601String().split('T')[0]}.pdf';
+        await saveAndOpenNative(filename, bytes);
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Print dialog opened')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Print failed: $e')));
     }
   }
+
+  // ============ SHARED PDF BUILDER ============
+
+  Future<List<int>> _buildPdfBytes(List<Map<String, dynamic>> data) async {
+    final doc = pw.Document();
+    final dateStr = DateTime.now().toLocal().toString().split(' ')[0];
+    final headers = ['Label', 'Type', 'Status', 'Revenue', 'Net Profit'];
+    final rows = data
+        .map((r) => [r['Label']!, r['Type']!, r['Status']!, r['Revenue']!, r['Net Profit']!])
+        .toList();
+    doc.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build: (ctx) => [
+        pw.Text('Financial Dashboard Report', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        pw.Text('Generated: $dateStr', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600)),
+        pw.SizedBox(height: 20),
+        if (data.isEmpty)
+          pw.Text('No data available.', style: const pw.TextStyle(fontSize: 12))
+        else
+          pw.TableHelper.fromTextArray(
+            headers: headers,
+            data: rows,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.indigo700),
+            cellAlignments: {0: pw.Alignment.centerLeft},
+            oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
+            cellHeight: 28,
+            cellStyle: const pw.TextStyle(fontSize: 10),
+            headerHeight: 30,
+          ),
+      ],
+    ));
+    return doc.save();
+  }
+
 
   String _formatCurrency(double value) {
     final v = value / 1000000;
@@ -274,12 +277,16 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
         _showYearDropdown = false;
         _showExportMenu = true;
       });
-      _exportOverlay = _buildExportOverlayEntry(context);
-      Overlay.of(context).insert(_exportOverlay!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _exportOverlay = _buildExportOverlayEntry(context);
+        Overlay.of(context).insert(_exportOverlay!);
+      });
     }
   }
 
   void _toggleYearDropdown(BuildContext context) {
+    debugPrint('_toggleYearDropdown called, current state: $_showYearDropdown');
     if (_showYearDropdown) {
       _removeYearOverlay();
       setState(() => _showYearDropdown = false);
@@ -289,8 +296,11 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
         _showExportMenu = false;
         _showYearDropdown = true;
       });
-      _yearOverlay = _buildYearOverlayEntry(context);
-      Overlay.of(context).insert(_yearOverlay!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _yearOverlay = _buildYearOverlayEntry(context);
+        Overlay.of(context).insert(_yearOverlay!);
+      });
     }
   }
 
@@ -375,9 +385,6 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
 
   OverlayEntry _buildYearOverlayEntry(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final yearlyPeriods = (_dashboardData?.periods ?? [])
-        .where((p) => p.periodType == 'YEARLY')
-        .toList();
 
     return OverlayEntry(
       builder: (ctx) => GestureDetector(
@@ -391,97 +398,171 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
             Positioned.fill(child: Container(color: Colors.transparent)),
             CompositedTransformFollower(
               link: _yearLayerLink,
-              showWhenUnlinked: false,
-              offset: const Offset(0, 44),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: 220,
-                    constraints: const BoxConstraints(maxHeight: 280),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard : AppColors.white,
-                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray300),
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.12), blurRadius: 16)],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Search box
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.darkBg : AppColors.gray50,
-                              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray300),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 8),
-                                Icon(Icons.search, size: 16, color: AppColors.gray400),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: StatefulBuilder(
-                                    builder: (_, setS) => TextField(
+              showWhenUnlinked: true,
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: const Offset(0, 8),
+              child: Material(
+                elevation: 12,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                color: isDark ? AppColors.darkCard : AppColors.white,
+                child: Container(
+                  width: 280,
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkCard : AppColors.white,
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray300),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.12), blurRadius: 16)],
+                  ),
+                  child: StatefulBuilder(
+                    builder: (context, setOverlayState) {
+                      final allPeriods = _dashboardData?.periods ?? [];
+                      final searchText = _yearSearchController.text.toLowerCase();
+                      final filtered = allPeriods
+                          .where((p) => p.label.toLowerCase().contains(searchText))
+                          .toList();
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.darkBg : AppColors.gray50,
+                                border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray300),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.search, size: 16, color: AppColors.gray400),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: TextField(
                                       controller: _yearSearchController,
-                                      onChanged: (_) => setS(() {}),
-                                      style: AppTypography.body3.copyWith(color: isDark ? AppColors.white : AppColors.black),
+                                      onChanged: (_) => setOverlayState(() {}),
+                                      style: AppTypography.body3.copyWith(
+                                          color: isDark ? AppColors.white : AppColors.black),
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
-                                        hintText: 'Search...',
+                                        hintText: 'Search periods...',
                                         hintStyle: AppTypography.body3.copyWith(color: AppColors.gray400),
                                         isDense: true,
                                         contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                       ),
                                     ),
                                   ),
+                                  if (_yearSearchController.text.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.clear, size: 14),
+                                      onPressed: () {
+                                        _yearSearchController.clear();
+                                        setOverlayState(() {});
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          Flexible(
+                            child: ListView(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              children: [
+                                _buildYearDropdownItem(
+                                  label: 'All Periods',
+                                  isSelected: _selectedYear == null,
+                                  isDark: isDark,
+                                  isReset: true,
+                                  onTap: () {
+                                    _removeYearOverlay();
+                                    setState(() {
+                                      _showYearDropdown = false;
+                                      _selectedYear = null;
+                                    });
+                                  },
                                 ),
+                                const Divider(height: 1),
+                                if (filtered.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.all(24),
+                                    child: Column(
+                                      children: [
+                                        Icon(Icons.info_outline, size: 24, color: AppColors.gray400),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          allPeriods.isEmpty
+                                              ? 'No periods found.\nCheck if data is loaded.'
+                                              : 'No results matching search.',
+                                          style: AppTypography.body3.copyWith(color: AppColors.gray400),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  ...filtered.map((p) => _buildYearDropdownItem(
+                                        label: p.label,
+                                        isSelected: _selectedYear == p.label,
+                                        isDark: isDark,
+                                        onTap: () {
+                                          _removeYearOverlay();
+                                          setState(() {
+                                            _showYearDropdown = false;
+                                            _selectedYear = p.label;
+                                          });
+                                        },
+                                      )),
                               ],
                             ),
                           ),
-                        ),
-                        // List
-                        Flexible(
-                          child: StatefulBuilder(
-                            builder: (_, setS) {
-                              final filtered = yearlyPeriods
-                                  .where((p) => p.label.toLowerCase().contains(_yearSearchController.text.toLowerCase()))
-                                  .toList();
-                              if (filtered.isEmpty) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Text('No years found',
-                                      style: AppTypography.body3.copyWith(color: AppColors.gray400), textAlign: TextAlign.center),
-                                );
-                              }
-                              return ListView.builder(
-                                shrinkWrap: true,
-                                itemCount: filtered.length,
-                                itemBuilder: (_, i) {
-                                  final p = filtered[i];
-                                  return InkWell(
-                                    onTap: () {
-                                      _removeYearOverlay();
-                                      setState(() => _showYearDropdown = false);
-                                      Navigator.pushNamed(context, '/ratio-analysis/${p.id}');
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      child: Text(p.label,
-                                          style: AppTypography.body3.copyWith(color: isDark ? AppColors.white : AppColors.black)),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      );
+                    },
                   ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYearDropdownItem({
+    required String label,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+    bool isReset = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+        child: Row(
+          children: [
+            if (isReset)
+              Icon(Icons.clear_all, size: 16, color: isSelected ? AppColors.primary : AppColors.gray400)
+            else if (isSelected)
+              const Icon(Icons.check, size: 16, color: AppColors.primary)
+            else
+              const Icon(Icons.calendar_today, size: 14, color: Colors.transparent), // Placeholder for alignment
+            
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.body3.copyWith(
+                  color: isSelected 
+                    ? AppColors.primary 
+                    : (isDark ? AppColors.white : AppColors.black),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ),
@@ -521,17 +602,22 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     final isMobile = width < 768;
     final isDesktop = width >= 1024;
 
-    final periods = _dashboardData?.periods ?? [];
-    final totalRevenue = (_dashboardData?.totalRevenue ?? 0).toDouble();
-    final avgProfitMargin = (_dashboardData?.avgProfitMargin ?? 0).toDouble();
-    final growthRate = (_dashboardData?.growthRate ?? 0).toDouble();
+    final periods = _filteredPeriods; // respects the selected year filter
+    // Recompute top-level stats from filtered periods (not the full API summary)
+    final totalRevenue = periods.fold<double>(0, (sum, p) => sum + p.revenue);
+    final totalProfit = periods.fold<double>(0, (sum, p) => sum + p.netProfit);
+    final avgProfitMargin = periods.isEmpty
+        ? 0.0
+        : periods.fold<double>(0, (s, p) => s + (p.revenue > 0 ? p.netProfit / p.revenue * 100 : 0)) / periods.length;
+    // Growth rate: compare first and last period revenue
+    double growthRate = 0;
+    if (periods.length >= 2) {
+      final first = periods.first.revenue;
+      final last = periods.last.revenue;
+      if (first != 0) growthRate = ((last - first) / first) * 100;
+    }
     final totalPeriods = periods.length;
     final finalizedPeriods = periods.where((p) => p.isFinalized).length;
-
-    double totalProfit = 0;
-    for (final p in periods) {
-      totalProfit += p.netProfit;
-    }
 
     // Top periods by profit
     final topPeriods = List<DashboardPeriodData>.from(periods)
@@ -736,25 +822,39 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
               style: AppTypography.body2.copyWith(
                   fontWeight: FontWeight.w600, color: isDark ? AppColors.white : AppColors.black)),
           const Spacer(),
-          // Year Select Dropdown
-          CompositedTransformTarget(
-            link: _yearLayerLink,
+          // Period filter dropdown — shows active label + clear button when filtered
+          CompositedTransformTarget(link: _yearLayerLink,
             child: GestureDetector(
               onTap: () => _toggleYearDropdown(context),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBg : AppColors.gray50,
-                  border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray300),
+                  color: _selectedYear != null
+                      ? AppColors.primary.withOpacity(0.1)
+                      : (isDark ? AppColors.darkBg : AppColors.gray50),
+                  border: Border.all(
+                      color: _selectedYear != null ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.gray300)),
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Select Year',
-                        style: AppTypography.body3.copyWith(color: isDark ? AppColors.white : AppColors.black)),
+                    Text(
+                      _selectedYear ?? 'Select Period',
+                      style: AppTypography.body3.copyWith(
+                          color: _selectedYear != null
+                              ? AppColors.primary
+                              : (isDark ? AppColors.white : AppColors.black),
+                          fontWeight: _selectedYear != null ? FontWeight.w600 : FontWeight.normal),
+                    ),
                     SizedBox(width: AppSpacing.sm),
-                    Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.gray400),
+                    if (_selectedYear != null)
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedYear = null),
+                        child: Icon(Icons.close, size: 14, color: AppColors.primary),
+                      )
+                    else
+                      Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.gray400),
                   ],
                 ),
               ),

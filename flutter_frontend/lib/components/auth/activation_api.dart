@@ -67,6 +67,7 @@ class ActivationService {
     String deviceId = await getDeviceId();
     
     try {
+      print('Activating with product key: ${productKey.substring(0, 5)}..., device: $deviceId');
       final response = await http.post(
         Uri.parse(createApiUrl('api/activate/')),
         headers: {"Content-Type": "application/json"},
@@ -76,15 +77,23 @@ class ActivationService {
         }),
       );
 
+      print('Activation response status: ${response.statusCode}');
+      print('Activation response body: ${response.body}');
+      
       final data = jsonDecode(response.body);
+      
       if (response.statusCode == 200 && data['status'] == 'success') {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(_activationKey, true);
+        print('Activation successful');
         return {"success": true, "message": data['message']};
       } else {
-        return {"success": false, "message": data['message'] ?? "Activation failed"};
+        final errorMsg = data['message'] ?? "Activation failed with status ${response.statusCode}";
+        print('Activation failed: $errorMsg');
+        return {"success": false, "message": errorMsg};
       }
     } catch (e) {
+      print('Activation error: $e');
       return {"success": false, "message": "Connection error: $e"};
     }
   }
