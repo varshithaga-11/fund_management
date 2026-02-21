@@ -1,7 +1,154 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../financialstatements/financial_statements_api.dart';
 import 'ratio_dashboard.dart';
 import 'trend_analysis_page.dart';
+
+// Hoverable Period Card Widget
+class PeriodCardWidget extends StatefulWidget {
+  final FinancialPeriodData period;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const PeriodCardWidget({
+    required this.period,
+    required this.isDark,
+    required this.onTap,
+    super.key,
+  });
+
+  @override
+  State<PeriodCardWidget> createState() => _PeriodCardWidgetState();
+}
+
+class _PeriodCardWidgetState extends State<PeriodCardWidget> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.identity()
+            ..translate(0.0, _isHovered ? -4.0 : 0.0),
+          decoration: BoxDecoration(
+            color: widget.isDark ? Colors.grey.shade900 : Colors.white,
+            border: Border.all(
+              color: widget.isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_isHovered ? 0.08 : 0.04),
+                blurRadius: _isHovered ? 8 : 4,
+                offset: Offset(0, _isHovered ? 4 : 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with Icon and Status Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.insert_chart, color: Colors.blue.shade600, size: 20),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: widget.period.isFinalized ? Colors.green.shade50 : Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        widget.period.isFinalized ? 'Finalized' : 'Draft',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: widget.period.isFinalized ? Colors.green.shade700 : Colors.amber.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Period Label
+                Text(
+                  widget.period.label,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: _isHovered
+                        ? Colors.blue.shade600
+                        : (widget.isDark ? Colors.white : Colors.black),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+
+                // Date Range
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${widget.period.startDate} - ${widget.period.endDate}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: widget.isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+
+                // Footer CTA
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View Analysis',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward,
+                        size: 14,
+                        color: _isHovered ? Colors.blue.shade600 : Colors.grey.shade400,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class RatioAnalysisPage extends StatefulWidget {
   const RatioAnalysisPage({super.key});
@@ -255,7 +402,9 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
   }
 
   Widget _buildPeriodCard(BuildContext context, FinancialPeriodData period, bool isDark) {
-    return InkWell(
+    return PeriodCardWidget(
+      period: period,
+      isDark: isDark,
       onTap: () {
         Navigator.push(
           context,
@@ -264,112 +413,6 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
           ),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade900 : Colors.white,
-          border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with Icon and Status Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.insert_chart, color: Colors.blue.shade600, size: 20),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: period.isFinalized ? Colors.green.shade50 : Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: period.isFinalized ? Colors.green.shade200 : Colors.amber.shade200,
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Text(
-                      period.isFinalized ? 'Finalized' : 'Draft',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: period.isFinalized ? Colors.green.shade700 : Colors.amber.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // Period Label
-              Text(
-                period.label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 10),
-
-              // Date Range
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '${period.startDate} - ${period.endDate}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-
-              // Footer CTA
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'View Analysis',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward, size: 14, color: Colors.grey.shade400),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

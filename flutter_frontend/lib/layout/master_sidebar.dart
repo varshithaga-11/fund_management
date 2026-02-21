@@ -71,7 +71,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
     NavItem(
       icon: Icons.bar_chart,
       name: "Ratio Analysis",
-      path: "/ratio-analysis",
+      path: "/ratio-analysis-list",
     ),
     NavItem(
       icon: Icons.trending_up,

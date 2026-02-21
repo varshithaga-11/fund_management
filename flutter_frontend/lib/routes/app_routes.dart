@@ -239,10 +239,7 @@ class AppRoutes {
                 if (periodId != null) {
                     return MaterialPageRoute(
                         settings: settings,
-                        builder: (_) => MasterLayout(
-                          title: 'Ratio Dashboard',
-                          child: RatioDashboardPage(periodId: periodId),
-                        ),
+                        builder: (_) => RatioDashboardPage(periodId: periodId),
                     );
                 }
             }
