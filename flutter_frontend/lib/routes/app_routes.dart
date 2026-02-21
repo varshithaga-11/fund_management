@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../layout/master_layout.dart';
+import '../pages/dashboard/master_dashboard.dart';
 // Auth Pages
 import '../pages/authpages/sign_in.dart';
 import '../components/auth/signin_form.dart';
@@ -107,8 +108,8 @@ class AppRoutes {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const MasterLayout(
-            title: 'Dashboard',
-            child: DashboardPage()
+            title: 'Financial Dashboard',
+            child: MasterDashboardPage()
           ),
         );
       

@@ -1,180 +1,165 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../pages/profile/profile_api.dart';
+import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
+import '../theme/responsive_helper.dart';
+import '../providers/theme_provider.dart';
 
 class MasterHeader extends StatefulWidget {
-  final VoidCallback onToggleSidebar;
-  final bool isMobileOpen;
-
+  final VoidCallback onMenuPressed;
+  final bool isSidebarExpanded;
+  
   const MasterHeader({
-    super.key,
-    required this.onToggleSidebar,
-    required this.isMobileOpen,
-  });
-
+    Key? key,
+    required this.onMenuPressed,
+    this.isSidebarExpanded = true,
+  }) : super(key: key);
+  
   @override
   State<MasterHeader> createState() => _MasterHeaderState();
 }
 
 class _MasterHeaderState extends State<MasterHeader> {
-  UserProfileData? _profile;
-  String _role = 'User';
-
+  bool _showUserMenu = false;
+  
   @override
   void initState() {
     super.initState();
-    _fetchProfile();
-  }
-
-  Future<void> _fetchProfile() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final role = prefs.getString('userRole') ?? 'User';
-      final profile = await getUserProfile();
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _role = role;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching profile in header: $e');
-      // If profile fails, we still have the role from prefs
-    }
   }
 
   Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access');
-    await prefs.remove('refresh');
-    await prefs.remove('userRole');
-    if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/');
-    }
+    // Handle logout
   }
-
+  
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      height: 64, // Common header height
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Left side: Sidebar Toggle
-          Row(
-            children: [
-              IconButton(
-                onPressed: widget.onToggleSidebar,
-                icon: Icon(widget.isMobileOpen ? Icons.close : Icons.menu),
-                tooltip: 'Toggle Sidebar',
-              ),
-              const SizedBox(width: 16),
-              // Mobile Logo (Text) - simplistic approach
-              if (MediaQuery.of(context).size.width < 1024) 
-                 const Text(
-                   'Fund Management',
-                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                 ),
-            ],
+    return Material(
+      elevation: 1,
+      color: isDark ? AppColors.darkCard : AppColors.white,
+      borderOnForeground: false,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? AppColors.darkBorder : AppColors.gray200,
+            ),
           ),
-
-          // Right side: Actions
-          Row(
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
             children: [
-              // Theme Toggle Placeholder
+              // Menu Button
               IconButton(
-                onPressed: () {
-                  // TODO: Implement Theme Toggle
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Theme Toggle not implemented yet')),
+                onPressed: widget.onMenuPressed,
+                icon: Icon(
+                  Icons.menu,
+                  color: isDark ? AppColors.gray400 : AppColors.gray500,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              
+              // Title
+              Expanded(
+                child: Text(
+                  'Financial Dashboard',
+                  style: AppTypography.h5.copyWith(
+                    color: isDark ? AppColors.white : AppColors.black,
+                  ),
+                ),
+              ),
+              
+              // Right Actions
+              Row(
+                children: [
+              // Dark Mode Toggle
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return IconButton(
+                    icon: Icon(
+                      themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                      color: isDark ? AppColors.gray400 : AppColors.gray500,
+                    ),
+                    onPressed: () {
+                      themeProvider.toggleTheme();
+                    },
                   );
                 },
-                icon: const Icon(Icons.wb_sunny_outlined), // Or dark_mode based on state
-                tooltip: 'Toggle Theme',
               ),
-              const SizedBox(width: 8),
-              
-              const SizedBox(width: 8),
-
-              // User Dropdown
-              PopupMenuButton<String>(
-                offset: const Offset(0, 50),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.grey.shade300,
-                      child: const Icon(Icons.person, color: Colors.grey),
+                  
+                  // Notifications
+                  IconButton(
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: isDark ? AppColors.gray400 : AppColors.gray500,
                     ),
-                    const SizedBox(width: 8),
-                    if (MediaQuery.of(context).size.width > 600)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            ('${_profile?.firstName ?? ""} ${_profile?.lastName ?? ""}'.trim().isNotEmpty)
-                                ? '${_profile!.firstName} ${_profile!.lastName}'.trim()
-                                : (_profile?.username ?? 'User'),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    onPressed: () {},
+                  ),
+                  
+                  // User Profile Menu
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'logout') {
+                          _logout();
+                        }
+                      },
+                      itemBuilder: (context) => <PopupMenuEntry<String>>[
+                        const PopupMenuItem(
+                          value: 'profile',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person),
+                              SizedBox(width: AppSpacing.md),
+                              Text('Profile'),
+                            ],
                           ),
-                          Text(_role.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        ],
-                      ),
-                    const Icon(Icons.keyboard_arrow_down),
-                  ],
-                ),
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    enabled: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ('${_profile?.firstName ?? ""} ${_profile?.lastName ?? ""}'.trim().isNotEmpty)
-                              ? '${_profile!.firstName} ${_profile!.lastName}'.trim()
-                              : (_profile?.username ?? ''),
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                         ),
-                        if (_profile?.email != null)
-                          Text(_profile!.email, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        const Divider(),
+                        const PopupMenuItem(
+                          value: 'settings',
+                          child: Row(
+                            children: [
+                              Icon(Icons.settings),
+                              SizedBox(width: AppSpacing.md),
+                              Text('Settings'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout),
+                              SizedBox(width: AppSpacing.md),
+                              Text('Logout'),
+                            ],
+                          ),
+                        ),
                       ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: [Icon(Icons.person_outline, size: 20), SizedBox(width: 8), Text('My Profile')],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: [Icon(Icons.logout, size: 20), SizedBox(width: 8), Text('Sign Out')],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary.withOpacity(0.1),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ),
                   ),
                 ],
-                onSelected: (value) {
-                  if (value == 'profile') {
-                    Navigator.of(context).pushNamed('/profile');
-                  } else if (value == 'logout') {
-                    _logout();
-                  }
-                },
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

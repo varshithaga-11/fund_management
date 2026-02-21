@@ -60,32 +60,31 @@ class DashboardPeriodData {
   });
 
   factory DashboardPeriodData.fromJson(Map<String, dynamic> json) {
-    // React Logic:
-    // trading_account: p.trading_account || { sales: p.net_revenue || 0 }
-    // profit_loss: p.profit_loss || { net_profit: p.net_profit || 0 }
+    // Dashboard API returns: net_revenue, net_profit
+    // Periods API returns: trading_account.sales, profit_loss.net_profit
     
     double rev = 0;
-    if (json['trading_account'] != null) {
+    if (json['trading_account'] != null && json['trading_account'] is Map) {
       rev = _toDouble(json['trading_account']['sales']);
     } else {
       rev = _toDouble(json['net_revenue']);
     }
 
     double prof = 0;
-    if (json['profit_loss'] != null) {
+    if (json['profit_loss'] != null && json['profit_loss'] is Map) {
       prof = _toDouble(json['profit_loss']['net_profit']);
     } else {
       prof = _toDouble(json['net_profit']);
     }
 
     return DashboardPeriodData(
-      id: json['id'],
-      label: json['label'],
-      periodType: json['period_type'],
-      startDate: json['start_date'],
-      endDate: json['end_date'],
-      isFinalized: json['is_finalized'],
-      createdAt: json['created_at'],
+      id: json['id'] ?? 0,
+      label: json['label'] ?? '',
+      periodType: json['period_type'] ?? 'YEARLY',
+      startDate: json['start_date'] ?? '',
+      endDate: json['end_date'] ?? '',
+      isFinalized: json['is_finalized'] ?? false,
+      createdAt: json['created_at'] ?? '',
       revenue: rev,
       netProfit: prof,
     );
@@ -107,9 +106,15 @@ Future<DashboardData?> getDashboardData() async {
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
       if (body['data'] != null) {
-        return DashboardData.fromJson(body['data']);
+        final data = DashboardData.fromJson(body['data']);
+        print('Dashboard: Loaded ${data.periods.length} periods');
+        for (var p in data.periods) {
+          print('  - ${p.label}: revenue=\$${p.revenue}, profit=\$${p.netProfit}');
+        }
+        return data;
       }
     }
+    print('Dashboard API error: status=${response.statusCode}');
     return null;
   } catch (e) {
     print("Error fetching dashboard data: $e");

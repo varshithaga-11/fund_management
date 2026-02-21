@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.1.0
-
+  provider: ^6.0.0
   shared_preferences: ^2.2.0
   jwt_decoder: ^2.0.1
   device_info_plus: ^10.1.0
@@ -47,6 +47,8 @@ dependencies:
   path_provider: ^2.1.2
   open_filex: ^4.3.2
   url_strategy: ^0.2.0
+  pdf: ^3.10.8
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:

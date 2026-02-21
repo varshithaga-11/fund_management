@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../routes/app_routes.dart';
+import '../theme/app_theme.dart';
+import '../theme/responsive_helper.dart';
 
 // Navigation Item Model
 class NavItem {
@@ -33,16 +34,14 @@ class SubNavItem {
 class MasterSidebar extends StatefulWidget {
   final bool isExpanded;
   final bool isMobileOpen;
-  final bool isHovered;
-  final ValueChanged<bool> onHover;
+  final VoidCallback onClose;
 
   const MasterSidebar({
-    super.key,
+    Key? key,
     required this.isExpanded,
     required this.isMobileOpen,
-    required this.isHovered,
-    required this.onHover,
-  });
+    required this.onClose,
+  }) : super(key: key);
 
   @override
   State<MasterSidebar> createState() => _MasterSidebarState();
@@ -56,37 +55,37 @@ class _MasterSidebarState extends State<MasterSidebar> {
     NavItem(
       icon: Icons.dashboard,
       name: "Dashboard",
-      path: AppRoutes.masterDashboard,
+      path: "/master/master-dashboard",
     ),
     NavItem(
       icon: Icons.description,
       name: "Upload Data",
-      path: AppRoutes.uploadData,
+      path: "/upload-data",
     ),
     NavItem(
       icon: Icons.table_chart,
       name: "Column Mapping",
-      path: AppRoutes.statementColumns,
+      path: "/statement-columns",
     ),
     NavItem(
       icon: Icons.bar_chart,
       name: "Ratio Analysis",
-      path: AppRoutes.ratioAnalysis,
+      path: "/ratio-analysis",
     ),
     NavItem(
       icon: Icons.trending_up,
       name: "Period Comparison",
-      path: AppRoutes.periodComparison,
+      path: "/period-comparison",
     ),
     NavItem(
       icon: Icons.show_chart,
       name: "Ratio Benchmarks",
-      path: AppRoutes.ratioBenchmarks,
+      path: "/ratio-benchmarks",
     ),
     NavItem(
       icon: Icons.manage_accounts,
       name: "User Management",
-      path: AppRoutes.userManagement,
+      path: "/user-management",
     ),
   ];
 
@@ -102,112 +101,166 @@ class _MasterSidebarState extends State<MasterSidebar> {
 
   bool _isActive(String? path) {
     if (path == null) return false;
-    final currentRoute = ModalRoute.of(context)?.settings.name;
-    return currentRoute == path;
+    return ModalRoute.of(context)?.settings.name == path;
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool showFullMenu = widget.isExpanded || widget.isHovered || widget.isMobileOpen;
-    final double width = showFullMenu ? 290 : 90;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    
+    final sidebarWidth = widget.isExpanded 
+        ? ResponsiveBoxConstraints.sidebarWidthExpanded 
+        : ResponsiveBoxConstraints.sidebarWidthCollapsed;
 
-    // Mobile drawer behavior vs Desktop sidebar behavior
-    // In a real responsive layout, this widget might be used inside a Drawer on mobile
-    // and a persistent side Row on desktop. 
-    // Here we just build the content assuming it's placed correctly by the parent layout.
+    // On mobile, render as drawer overlay
+    if (isMobile && widget.isMobileOpen) {
+      return Stack(
+        children: [
+          // Backdrop
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: widget.onClose,
+              child: Container(color: Colors.black26),
+            ),
+          ),
+          // Sidebar drawer
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: ResponsiveBoxConstraints.sidebarWidthExpanded,
+            child: _buildSidebarContent(isDark, ResponsiveBoxConstraints.sidebarWidthExpanded),
+          ),
+        ],
+      );
+    }
 
-    return MouseRegion(
-      onEnter: (_) => !widget.isExpanded ? widget.onHover(true) : null,
-      onExit: (_) => widget.onHover(false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: width,
-        decoration: BoxDecoration(
-          color: Theme.of(context).canvasColor,
-          border: Border(right: BorderSide(color: Colors.grey.shade200)),
+    // Desktop sidebar
+    if (isMobile) return const SizedBox.shrink();
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: sidebarWidth,
+      child: _buildSidebarContent(isDark, sidebarWidth),
+    );
+  }
+
+  Widget _buildSidebarContent(bool isDark, double width) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.white,
+        border: Border(
+          right: BorderSide(
+            color: isDark ? AppColors.darkBorder : AppColors.gray200,
+          ),
         ),
-        child: Column(
-          children: [
-            // Logo Area
-            Container(
-              height: 80,
-              alignment: showFullMenu ? Alignment.centerLeft : Alignment.center,
-              padding: EdgeInsets.symmetric(horizontal: showFullMenu ? 24 : 0),
-              child: Text(
-                showFullMenu ? "Fund Management" : "KB",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
+      ),
+      child: Column(
+        children: [
+          // Logo Area
+          Container(
+            height: 70,
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
+            alignment: widget.isExpanded ? Alignment.centerLeft : Alignment.center,
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.isExpanded ? AppSpacing.lg : 0,
+            ),
+            child: widget.isExpanded
+                ? Text(
+                    "FM",
+                    style: AppTypography.h5.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(
+                      Icons.trending_up,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+          ),
 
-            // Menu Items
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                children: [
-                  // Menu Header
+          // Menu Items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              children: [
+                // Menu Header
+                if (widget.isExpanded)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    child: showFullMenu
-                        ? Text(
-                            "MENU",
-                            style: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : const Icon(Icons.more_horiz, color: Colors.grey),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Text(
+                      "MENU",
+                      style: AppTypography.overline.copyWith(
+                        color: isDark ? AppColors.gray500 : AppColors.gray400,
+                      ),
+                    ),
                   ),
 
-                  // Nav Items
-                  ..._navItems.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final item = entry.value;
-                    final isActive = _isActive(item.path);
-                    final isSubmenuOpen = _openSubmenuIndex == index;
+                // Nav Items
+                ..._navItems.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  final isActive = _isActive(item.path);
+                  final isSubmenuOpen = _openSubmenuIndex == index;
 
-                    return Column(
-                      children: [
-                        _SidebarItem(
-                          icon: item.icon,
-                          title: item.name,
-                          isActive: isActive,
-                          isExpanded: showFullMenu,
-                          hasSubmenu: item.subItems != null && item.subItems!.isNotEmpty,
-                          isSubmenuOpen: isSubmenuOpen,
-                          onTap: () {
-                            if (item.subItems != null) {
-                              _toggleSubmenu(index);
-                            } else if (item.path != null) {
-                              Navigator.pushNamed(context, item.path!);
-                            }
-                          },
-                        ),
-                        
-                        // Submenu
-                        if (showFullMenu && item.subItems != null && isSubmenuOpen)
-                          ...item.subItems!.map((subItem) {
-                             final isSubActive = _isActive(subItem.path);
-                             return _SidebarSubItem(
-                               title: subItem.name,
-                               isActive: isSubActive,
-                               onTap: () => Navigator.pushNamed(context, subItem.path),
-                               isPro: subItem.pro,
-                               isNew: subItem.isNew,
-                             );
-                          }),
-                      ],
-                    );
-                  }),
-                ],
-              ),
+                  return Column(
+                    children: [
+                      _SidebarItem(
+                        icon: item.icon,
+                        title: item.name,
+                        isActive: isActive,
+                        isExpanded: widget.isExpanded,
+                        isDark: isDark,
+                        hasSubmenu: item.subItems != null && item.subItems!.isNotEmpty,
+                        isSubmenuOpen: isSubmenuOpen,
+                        onTap: () {
+                          if (item.subItems != null && item.subItems!.isNotEmpty) {
+                            _toggleSubmenu(index);
+                          } else if (item.path != null) {
+                            Navigator.pushNamed(context, item.path!);
+                          }
+                        },
+                      ),
+                      
+                      // Submenu
+                      if (widget.isExpanded && item.subItems != null && isSubmenuOpen)
+                        ...item.subItems!.map((subItem) {
+                          final isSubActive = _isActive(subItem.path);
+                          return _SidebarSubItem(
+                            title: subItem.name,
+                            isActive: isSubActive,
+                            isDark: isDark,
+                            onTap: () => Navigator.pushNamed(context, subItem.path),
+                            isPro: subItem.pro,
+                            isNew: subItem.isNew,
+                          );
+                        }),
+                    ],
+                  );
+                }),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -218,6 +271,7 @@ class _SidebarItem extends StatelessWidget {
   final String title;
   final bool isActive;
   final bool isExpanded;
+  final bool isDark;
   final bool hasSubmenu;
   final bool isSubmenuOpen;
   final VoidCallback onTap;
@@ -227,6 +281,7 @@ class _SidebarItem extends StatelessWidget {
     required this.title,
     required this.isActive,
     required this.isExpanded,
+    required this.isDark,
     required this.onTap,
     this.hasSubmenu = false,
     this.isSubmenuOpen = false,
@@ -234,44 +289,53 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? Colors.blue : Colors.grey.shade700;
-    final bgColor = isActive ? Colors.blue.withOpacity(0.1) : Colors.transparent;
+    final activeColor = AppColors.primary;
+    final inactiveColor = isDark ? AppColors.gray500 : AppColors.gray600;
+    final bgColor = isActive 
+        ? AppColors.primary.withOpacity(0.1)
+        : Colors.transparent;
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        height: 50,
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            if (isExpanded) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                    fontSize: 15
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          height: 48,
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Row(
+            mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 20,
               ),
-              if (hasSubmenu)
-                Icon(
-                  isSubmenuOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  size: 18,
-                  color: color,
-                )
+              if (isExpanded) ...[
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.body2.copyWith(
+                      color: isActive ? activeColor : inactiveColor,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (hasSubmenu)
+                  Icon(
+                    isSubmenuOpen ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: isActive ? activeColor : inactiveColor,
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -281,6 +345,7 @@ class _SidebarItem extends StatelessWidget {
 class _SidebarSubItem extends StatelessWidget {
   final String title;
   final bool isActive;
+  final bool isDark;
   final VoidCallback onTap;
   final bool isPro;
   final bool isNew;
@@ -288,6 +353,7 @@ class _SidebarSubItem extends StatelessWidget {
   const _SidebarSubItem({
     required this.title,
     required this.isActive,
+    required this.isDark,
     required this.onTap,
     this.isPro = false,
     this.isNew = false,
@@ -295,39 +361,52 @@ class _SidebarSubItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.only(left: 48, right: 12, top: 10, bottom: 10),
-        child: Row(
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: isActive ? Colors.blue : Colors.grey.shade600,
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
-              ),
-            ),
-             if (isNew || isPro) ...[
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isNew ? Colors.green.withOpacity(0.2) : Colors.purple.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.only(
+            left: AppSpacing.xxxl,
+            right: AppSpacing.md,
+            top: AppSpacing.md,
+            bottom: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Text(
+                title,
+                style: AppTypography.body3.copyWith(
+                  color: isActive
+                      ? AppColors.primary
+                      : (isDark ? AppColors.gray400 : AppColors.gray600),
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 ),
-                child: Text(
-                  isNew ? 'NEW' : 'PRO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isNew ? Colors.green : Colors.purple,
+              ),
+              if (isNew || isPro) ...[
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isNew 
+                        ? AppColors.success.withOpacity(0.1)
+                        : AppColors.warning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Text(
+                    isNew ? 'NEW' : 'PRO',
+                    style: AppTypography.overline.copyWith(
+                      fontSize: 10,
+                      color: isNew ? AppColors.success : AppColors.warning,
+                    ),
                   ),
                 ),
-              ),
-            ]
-          ],
+              ],
+            ],
+          ),
         ),
       ),
     );

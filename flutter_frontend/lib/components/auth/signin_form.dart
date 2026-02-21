@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signin_api.dart';
+import '../../services/api_service.dart';
 
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
@@ -39,6 +40,11 @@ class _SignInFormState extends State<SignInForm> {
 
       if (mounted) {
         if (result.success) {
+          // Set the auth token in ApiService
+          if (result.data != null && result.data['tokens'] != null && result.data['tokens']['access'] != null) {
+            await ApiService.setAuthToken(result.data['tokens']['access']);
+          }
+          
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Login successful! Redirecting...')),
           );

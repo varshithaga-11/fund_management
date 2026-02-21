@@ -116,10 +116,7 @@ class FinancialPeriodViewSet(viewsets.ModelViewSet):
         return queryset.order_by("-created_at")
     
     def get_serializer_class(self):
-        """Use lightweight serializer for list view, full serializer for detail view"""
-        if self.action == 'list':
-            from app.serializers import FinancialPeriodListSerializer
-            return FinancialPeriodListSerializer
+        """Always return full serializer with period data"""
         return FinancialPeriodSerializer
 
 
@@ -2758,6 +2755,39 @@ class DashboardView(APIView):
     
     def _get_filtered_ratios(self, ratio_result, category=None):
         """Filter ratio fields by category if specified"""
+        # Build all_ratios dict from individual ratio fields
+        all_ratios = {
+            "stock_turnover": float(ratio_result.stock_turnover or 0),
+            "gross_profit_ratio": float(ratio_result.gross_profit_ratio or 0),
+            "net_profit_ratio": float(ratio_result.net_profit_ratio or 0),
+            "net_own_funds": float(ratio_result.net_own_funds or 0),
+            "own_fund_to_wf": float(ratio_result.own_fund_to_wf or 0),
+            "deposits_to_wf": float(ratio_result.deposits_to_wf or 0),
+            "borrowings_to_wf": float(ratio_result.borrowings_to_wf or 0),
+            "loans_to_wf": float(ratio_result.loans_to_wf or 0),
+            "investments_to_wf": float(ratio_result.investments_to_wf or 0),
+            "cost_of_deposits": float(ratio_result.cost_of_deposits or 0),
+            "yield_on_loans": float(ratio_result.yield_on_loans or 0),
+            "yield_on_investments": float(ratio_result.yield_on_investments or 0),
+            "credit_deposit_ratio": float(ratio_result.credit_deposit_ratio or 0),
+            "avg_cost_of_wf": float(ratio_result.avg_cost_of_wf or 0),
+            "avg_yield_on_wf": float(ratio_result.avg_yield_on_wf or 0),
+            "gross_fin_margin": float(ratio_result.gross_fin_margin or 0),
+            "operating_cost_to_wf": float(ratio_result.operating_cost_to_wf or 0),
+            "net_fin_margin": float(ratio_result.net_fin_margin or 0),
+            "risk_cost_to_wf": float(ratio_result.risk_cost_to_wf or 0),
+            "net_margin": float(ratio_result.net_margin or 0),
+            "capital_turnover_ratio": float(ratio_result.capital_turnover_ratio or 0),
+            "earning_assets_to_wf": float(ratio_result.earning_assets_to_wf or 0),
+            "interest_tagged_funds_to_wf": float(ratio_result.interest_tagged_funds_to_wf or 0),
+            "misc_income_to_wf": float(ratio_result.misc_income_to_wf or 0),
+            "interest_exp_to_interest_income": float(ratio_result.interest_exp_to_interest_income or 0),
+            "per_employee_deposit": float(ratio_result.per_employee_deposit or 0),
+            "per_employee_loan": float(ratio_result.per_employee_loan or 0),
+            "per_employee_contribution": float(ratio_result.per_employee_contribution or 0),
+            "per_employee_operating_cost": float(ratio_result.per_employee_operating_cost or 0),
+        }
+        
         ratios = {
             "id": ratio_result.id,
             "working_fund": float(ratio_result.working_fund or 0),
@@ -2790,7 +2820,7 @@ class DashboardView(APIView):
             "per_employee_loan": float(ratio_result.per_employee_loan or 0),
             "per_employee_contribution": float(ratio_result.per_employee_contribution or 0),
             "per_employee_operating_cost": float(ratio_result.per_employee_operating_cost or 0),
-            "all_ratios": ratio_result.all_ratios or {},
+            "all_ratios": all_ratios,
             "traffic_light_status": ratio_result.traffic_light_status or {},
             "calculated_at": ratio_result.calculated_at.isoformat() if ratio_result.calculated_at else None
         }

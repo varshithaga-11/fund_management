@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../theme/responsive_helper.dart';
 import 'master_sidebar.dart';
-import 'master_header.dart'; // Import the newly created header
+import 'master_header.dart';
 
 class MasterLayout extends StatefulWidget {
   final Widget child;
   final String title;
 
   const MasterLayout({
-    super.key, 
-    required this.child, 
+    Key? key,
+    required this.child,
     this.title = 'Fund Management',
-  });
+  }) : super(key: key);
 
   @override
   State<MasterLayout> createState() => _MasterLayoutState();
 }
 
 class _MasterLayoutState extends State<MasterLayout> {
-  // Sidebar states
   bool _isSidebarExpanded = true;
-  bool _isSidebarHovered = false;
   bool _isMobileSidebarOpen = false;
 
   void _toggleSidebar() {
     setState(() {
-      if (MediaQuery.of(context).size.width >= 1024) {
+      if (ResponsiveHelper.isDesktop(context)) {
         _isSidebarExpanded = !_isSidebarExpanded;
       } else {
         _isMobileSidebarOpen = !_isMobileSidebarOpen;
@@ -32,85 +32,80 @@ class _MasterLayoutState extends State<MasterLayout> {
     });
   }
 
+  void _closeMobileSidebar() {
+    if (mounted) {
+      setState(() {
+        _isMobileSidebarOpen = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 1024;
-    
-    // Sidebar width logic
-    double sidebarWidth = 0;
-    if (isDesktop) {
-       sidebarWidth = (_isSidebarExpanded || _isSidebarHovered) ? 290 : 90;
-    } else {
-      // Mobile: sidebar is overlay (drawer), so layout width is 0 effectively for main content shift
-       sidebarWidth = 0; 
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = ResponsiveHelper.isDesktop(context);
+    final isMobile = ResponsiveHelper.isMobile(context);
+
+    final sidebarWidth = !isDesktop
+        ? 0
+        : (_isSidebarExpanded
+            ? ResponsiveBoxConstraints.sidebarWidthExpanded
+            : ResponsiveBoxConstraints.sidebarWidthCollapsed);
 
     return Scaffold(
-      body: Stack(
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
+      body: Row(
         children: [
-          // Main Content Area
-          Positioned(
-            left: sidebarWidth,
-            right: 0,
-            top: 0,
-            bottom: 0,
+          // Desktop Sidebar
+          if (isDesktop)
+            MasterSidebar(
+              isExpanded: _isSidebarExpanded,
+              isMobileOpen: false,
+              onClose: _closeMobileSidebar,
+            ),
+
+          // Main Content
+          Expanded(
             child: Column(
               children: [
                 // Header
                 MasterHeader(
-                  onToggleSidebar: _toggleSidebar,
-                  isMobileOpen: _isMobileSidebarOpen,
+                  onMenuPressed: _toggleSidebar,
+                  isSidebarExpanded: _isSidebarExpanded,
                 ),
-                
-                // Page Content
+
+                // Content
                 Expanded(
-                  child: widget.child,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: ResponsiveHelper.getResponsivePadding(context),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: ResponsiveBoxConstraints.maxContentWidth,
+                        ),
+                        child: widget.child,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-
-          // Sidebar (Desktop: Fixed / Mobile: Drawer-like)
-          if (isDesktop) 
-             Positioned(
-               left: 0,
-               top: 0,
-               bottom: 0,
-               width: sidebarWidth,
-               child: MasterSidebar(
-                 isExpanded: _isSidebarExpanded,
-                 isMobileOpen: false,
-                 isHovered: _isSidebarHovered,
-                 onHover: (val) => setState(() => _isSidebarHovered = val),
-               ),
-             ),
-          
-          // Mobile Sidebar Overlay
-          if (!isDesktop && _isMobileSidebarOpen) ...[
-             // Backdrop
-             Positioned.fill(
-               child: GestureDetector(
-                 onTap: () => setState(() => _isMobileSidebarOpen = false),
-                 child: Container(color: Colors.black54),
-               ),
-             ),
-             // Drawer Sidebar
-             Positioned(
-               left: 0,
-               top: 0,
-               bottom: 0,
-               width: 290,
-               child: MasterSidebar(
-                 isExpanded: true, // Always expanded on mobile drawer
-                 isMobileOpen: true,
-                 isHovered: false,
-                 onHover: (_) {}, 
-               ),
-             ),
-          ],
         ],
       ),
+
+      // Mobile Sidebar Drawer
+      endDrawer: isMobile && _isMobileSidebarOpen
+          ? Drawer(
+              child: MasterSidebar(
+                isExpanded: true,
+                isMobileOpen: _isMobileSidebarOpen,
+                onClose: _closeMobileSidebar,
+              ),
+            )
+          : null,
     );
   }
 }
+
+
