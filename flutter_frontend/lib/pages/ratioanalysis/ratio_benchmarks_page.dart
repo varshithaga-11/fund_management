@@ -139,10 +139,11 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     final visibleKeys = keys.where((k) => allKeys.contains(k)).toList();
     if (visibleKeys.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: isDark ? const Color(0xFF2D3748) : Colors.white,
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -227,7 +228,8 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     return Scaffold(
       // No AppBar, using custom header to match React layout inside standard container
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.only(left: 24.0, top: 24.0, right: 24.0, bottom: 0.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -297,11 +299,23 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
               ),
 
             // Categories
-            ..._categories.entries.map((entry) =>
-                _buildCategorySection(entry.key, entry.value, allKeys)),
+            ...() {
+              final widgets = <Widget>[];
+              final entries = _categories.entries.toList();
+              for (int i = 0; i < entries.length; i++) {
+                final section = _buildCategorySection(entries[i].key, entries[i].value, allKeys);
+                if (section is! SizedBox) {
+                  if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 12));
+                  widgets.add(section);
+                }
+              }
+              return widgets;
+            }(),
             
-            if (otherKeys.isNotEmpty)
+            if (otherKeys.isNotEmpty) ...[
+              const SizedBox(height: 12),
               _buildCategorySection('Other', otherKeys, allKeys),
+            ],
           ],
         ),
       ),

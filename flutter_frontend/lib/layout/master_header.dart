@@ -63,15 +63,7 @@ class _MasterHeaderState extends State<MasterHeader> {
               ),
               const SizedBox(width: AppSpacing.md),
               
-              // Title
-              Expanded(
-                child: Text(
-                  'Financial Dashboard',
-                  style: AppTypography.h5.copyWith(
-                    color: isDark ? AppColors.white : AppColors.black,
-                  ),
-                ),
-              ),
+              const Spacer(),
               
               // Right Actions
               Row(
