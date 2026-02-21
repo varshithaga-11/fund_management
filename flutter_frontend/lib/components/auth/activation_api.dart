@@ -1,37 +1,61 @@
-
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../../access/access.dart';
 
 class ActivationService {
   static const String _activationKey = "is_activated";
+  static const String _deviceIdKey = "persistent_device_id";
 
   Future<String> getDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Use cached ID if available to ensure persistence
+    String? storedId = prefs.getString(_deviceIdKey);
+    if (storedId != null && storedId.isNotEmpty) {
+      return storedId;
+    }
+
+    String deviceId = "unknown_device_id";
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+
     try {
-      if (Platform.isWindows) {
+      if (kIsWeb) {
+        WebBrowserInfo webInfo = await deviceInfo.webBrowserInfo;
+        // Combine multiple properties for a "pseudo-id" on web
+        deviceId = "web_${webInfo.vendor}_${webInfo.userAgent?.hashCode}";
+      } else if (Platform.isWindows) {
         WindowsDeviceInfo windowsInfo = await deviceInfo.windowsInfo;
-        return windowsInfo.deviceId; 
+        deviceId = windowsInfo.deviceId.replaceAll('{', '').replaceAll('}', '');
       } else if (Platform.isAndroid) {
         AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-        return androidInfo.id;
+        deviceId = androidInfo.id;
       } else if (Platform.isIOS) {
         IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-        return iosInfo.identifierForVendor ?? "unknown_ios_id";
+        deviceId = iosInfo.identifierForVendor ?? "unknown_ios_id";
       } else if (Platform.isLinux) {
         LinuxDeviceInfo linuxInfo = await deviceInfo.linuxInfo;
-        return linuxInfo.machineId ?? "unknown_linux_id";
+        deviceId = linuxInfo.machineId ?? "unknown_linux_id";
       } else if (Platform.isMacOS) {
         MacOsDeviceInfo macosInfo = await deviceInfo.macOsInfo;
-        return macosInfo.systemGUID ?? "unknown_macos_id";
+        deviceId = macosInfo.systemGUID ?? "unknown_macos_id";
       }
     } catch (e) {
-      print("Error getting device id: $e");
+      debugPrint("Error getting device info: $e");
     }
-    return "unknown_device_id";
+
+    // If still unknown or empty after platform-specific attempt, generate a random one
+    if (deviceId == "unknown_device_id" || deviceId.isEmpty) {
+      deviceId = const Uuid().v4();
+    }
+
+    // Save for future use
+    await prefs.setString(_deviceIdKey, deviceId);
+    return deviceId;
   }
 
   Future<bool> isActivated() async {

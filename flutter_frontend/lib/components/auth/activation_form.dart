@@ -1,6 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'activation_api.dart';
+import '../routes/app_routes.dart';
 
 class ActivationForm extends StatefulWidget {
   const ActivationForm({super.key});
@@ -40,7 +40,7 @@ class _ActivationFormState extends State<ActivationForm> {
           // Small delay before redirecting
           await Future.delayed(const Duration(seconds: 1));
           if (mounted) {
-            Navigator.pushReplacementNamed(context, '/signin');
+            Navigator.pushReplacementNamed(context, AppRoutes.signIn);
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
