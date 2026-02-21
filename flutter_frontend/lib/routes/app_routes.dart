@@ -57,6 +57,8 @@ class NotFoundPage extends StatelessWidget {
 }
 
 class AppRoutes {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final ValueNotifier<String?> currentRoute = ValueNotifier<String?>(null);
 
   static const String signIn = '/';
   static const String activate = '/activate';
@@ -107,10 +109,7 @@ class AppRoutes {
       case masterDashboard:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const MasterLayout(
-            title: 'Financial Dashboard',
-            child: MasterDashboardPage()
-          ),
+          builder: (_) => const MasterDashboardPage(),
         );
       
       // Note: companyRatioAnalysis path '/ratio-analysis' conflicts with ratioAnalysisPage if they share the same base.
@@ -120,10 +119,7 @@ class AppRoutes {
       case companyRatioAnalysis:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const MasterLayout(
-            title: 'Company Analysis',
-            child: CompanyRatioAnalysisPage()
-          ),
+          builder: (_) => const CompanyRatioAnalysisPage(),
         );
 
       // Auth Routes
@@ -143,98 +139,74 @@ class AppRoutes {
          // Using the fully implemented UploadDataPage
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const MasterLayout(
-            title: 'Upload Data',
-            child: UploadDataPage()
-          ),
+          builder: (_) => const UploadDataPage(),
         );
       
       case statementColumns:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const MasterLayout(
-            title: 'Statement Columns',
-            child: StatementColumnsConfigPage()
-          ),
+          builder: (_) => const StatementColumnsConfigPage(),
         );
 
       case trendAnalysis:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const MasterLayout(
-            title: 'Trend Analysis',
-            child: TrendAnalysisPage()
-          ),
+          builder: (_) => const TrendAnalysisPage(),
         );
 
       case ratioAnalysis:
          return MaterialPageRoute(
            settings: settings,
-           builder: (_) => const MasterLayout(
-             title: 'Ratio Analysis',
-             child: RatioAnalysisPage()
-           ),
+           builder: (_) => const RatioAnalysisPage(),
          );
 
       case ratioBenchmarks:
          return MaterialPageRoute(
            settings: settings,
-           builder: (_) => const MasterLayout(
-             title: 'Benchmarks',
-             child: RatioBenchmarksPage()
-           ),
+           builder: (_) => const RatioBenchmarksPage(),
          );
 
       case periodComparison:
          return MaterialPageRoute(
            settings: settings,
-           builder: (_) => const MasterLayout(
-             title: 'Period Comparison',
-             child: PeriodComparisonPage()
-           ),
+           builder: (_) => const PeriodComparisonPage(),
          );
       
       case userManagement:
          return MaterialPageRoute(
            settings: settings,
-           builder: (_) => const MasterLayout(
-             title: 'User Management',
-             child: UserManagementPage()
-           ),
+           builder: (_) => const UserManagementPage(),
          );
 
       case profile:
          return MaterialPageRoute(
            settings: settings,
-           builder: (_) => const MasterLayout(
-             title: 'Profile',
-             child: ProfilePage()
-           ),
+           builder: (_) => const ProfilePage(),
          );
       
       case calendar:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Calendar')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Calendar'));
       
       case blank:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Blank')));
-
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Blank'));
+ 
       // UI Elements
       case alerts:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Alerts')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Alerts'));
       case avatars:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Avatars')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Avatars'));
       case badges:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Badges')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Badges'));
       case buttons:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Buttons')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Buttons'));
       case images:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Images')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Images'));
       case videos:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Videos')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Videos'));
       case lineChart:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Line Chart')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Line Chart'));
       case barChart:
-         return MaterialPageRoute(builder: (_) => const MasterLayout(child: PlaceholderPage('Bar Chart')));
+         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Bar Chart'));
 
 
       // Handle dynamic routes
@@ -248,10 +220,7 @@ class AppRoutes {
                if (periodId != null) {
                    return MaterialPageRoute(
                        settings: settings,
-                       builder: (_) => MasterLayout(
-                           title: 'Financial Period',
-                           child: FinancialPeriodPage(periodId: periodId)
-                       ),
+                       builder: (_) => FinancialPeriodPage(periodId: periodId),
                    );
                }
            }
@@ -306,6 +275,36 @@ class AppRoutes {
         }
 
         return MaterialPageRoute(settings: settings, builder: (_) => const NotFoundPage());
+    }
+  }
+}
+
+class ShellRouteObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _updateRoute(route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (previousRoute != null) {
+      _updateRoute(previousRoute);
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute != null) {
+      _updateRoute(newRoute);
+    }
+  }
+
+  void _updateRoute(Route<dynamic> route) {
+    if (route.settings.name != null) {
+      AppRoutes.currentRoute.value = route.settings.name;
     }
   }
 }

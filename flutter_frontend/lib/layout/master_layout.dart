@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_helper.dart';
+import '../providers/layout_provider.dart';
 import 'master_sidebar.dart';
 import 'master_header.dart';
 
-class MasterLayout extends StatefulWidget {
+class MasterLayout extends StatelessWidget {
   final Widget child;
   final String title;
 
@@ -15,77 +17,58 @@ class MasterLayout extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<MasterLayout> createState() => _MasterLayoutState();
-}
-
-class _MasterLayoutState extends State<MasterLayout> {
-  bool _isSidebarExpanded = true;
-  bool _isMobileSidebarOpen = false;
-
-  void _toggleSidebar() {
-    setState(() {
-      if (ResponsiveHelper.isDesktop(context)) {
-        _isSidebarExpanded = !_isSidebarExpanded;
-      } else {
-        _isMobileSidebarOpen = !_isMobileSidebarOpen;
-      }
-    });
-  }
-
-  void _closeMobileSidebar() {
-    if (mounted) {
-      setState(() {
-        _isMobileSidebarOpen = false;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveHelper.isDesktop(context);
     final isMobile = ResponsiveHelper.isMobile(context);
-
-    final sidebarWidth = !isDesktop
-        ? 0
-        : (_isSidebarExpanded
-            ? ResponsiveBoxConstraints.sidebarWidthExpanded
-            : ResponsiveBoxConstraints.sidebarWidthCollapsed);
+    
+    final layoutProvider = Provider.of<LayoutProvider>(context);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
-      body: Row(
+      body: Column(
         children: [
-          // Desktop Sidebar
-          if (isDesktop)
-            MasterSidebar(
-              isExpanded: _isSidebarExpanded,
-              isMobileOpen: false,
-              onClose: _closeMobileSidebar,
-            ),
-
-          // Main Content
+          // Header Header at the top (full width)
+          MasterHeader(
+            onMenuPressed: () {
+              if (isDesktop) {
+                layoutProvider.toggleSidebar();
+              } else {
+                layoutProvider.toggleMobileSidebar();
+              }
+            },
+            isSidebarExpanded: layoutProvider.isSidebarExpanded,
+          ),
           Expanded(
-            child: Column(
+            child: Row(
               children: [
-                // Header
-                MasterHeader(
-                  onMenuPressed: _toggleSidebar,
-                  isSidebarExpanded: _isSidebarExpanded,
-                ),
+                // Desktop Sidebar below header
+                if (isDesktop)
+                  MasterSidebar(
+                    isExpanded: layoutProvider.isSidebarExpanded,
+                    isMobileOpen: false,
+                    onClose: layoutProvider.closeMobileSidebar,
+                  ),
 
-                // Content
+                // Main Content
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: ResponsiveHelper.getResponsivePadding(context),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: ResponsiveBoxConstraints.maxContentWidth,
+                  child: Column(
+                    children: [
+                      // Content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: ResponsiveHelper.getResponsivePadding(context),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: ResponsiveBoxConstraints.maxContentWidth,
+                              ),
+                              child: child,
+                            ),
+                          ),
                         ),
-                        child: widget.child,
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -95,12 +78,12 @@ class _MasterLayoutState extends State<MasterLayout> {
       ),
 
       // Mobile Sidebar Drawer
-      endDrawer: isMobile && _isMobileSidebarOpen
+      endDrawer: isMobile && layoutProvider.isMobileSidebarOpen
           ? Drawer(
               child: MasterSidebar(
                 isExpanded: true,
-                isMobileOpen: _isMobileSidebarOpen,
-                onClose: _closeMobileSidebar,
+                isMobileOpen: layoutProvider.isMobileSidebarOpen,
+                onClose: layoutProvider.closeMobileSidebar,
               ),
             )
           : null,
