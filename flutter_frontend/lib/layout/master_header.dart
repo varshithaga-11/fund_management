@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_helper.dart';
 import '../providers/theme_provider.dart';
+import '../routes/app_routes.dart';
 
 class MasterHeader extends StatefulWidget {
   final VoidCallback onMenuPressed;
@@ -19,7 +20,6 @@ class MasterHeader extends StatefulWidget {
 }
 
 class _MasterHeaderState extends State<MasterHeader> {
-  bool _showUserMenu = false;
   
   @override
   void initState() {
@@ -27,7 +27,8 @@ class _MasterHeaderState extends State<MasterHeader> {
   }
 
   Future<void> _logout() async {
-    // Handle logout
+    // Clear any auth state here if needed
+    AppRoutes.navigatorKey.currentState?.pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
   }
   
   @override
@@ -37,7 +38,6 @@ class _MasterHeaderState extends State<MasterHeader> {
     return Material(
       elevation: 1,
       color: isDark ? AppColors.darkCard : AppColors.white,
-      borderOnForeground: false,
       child: Container(
         decoration: BoxDecoration(
           border: Border(
@@ -68,20 +68,20 @@ class _MasterHeaderState extends State<MasterHeader> {
               // Right Actions
               Row(
                 children: [
-              // Dark Mode Toggle
-              Consumer<ThemeProvider>(
-                builder: (context, themeProvider, child) {
-                  return IconButton(
-                    icon: Icon(
-                      themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                      color: isDark ? AppColors.gray400 : AppColors.gray500,
-                    ),
-                    onPressed: () {
-                      themeProvider.toggleTheme();
+                  // Dark Mode Toggle
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, child) {
+                      return IconButton(
+                        icon: Icon(
+                          themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                          color: isDark ? AppColors.gray400 : AppColors.gray500,
+                        ),
+                        onPressed: () {
+                          themeProvider.toggleTheme();
+                        },
+                      );
                     },
-                  );
-                },
-              ),
+                  ),
                   
                   // Notifications
                   IconButton(
@@ -92,57 +92,98 @@ class _MasterHeaderState extends State<MasterHeader> {
                     onPressed: () {},
                   ),
                   
+                  const SizedBox(width: AppSpacing.md),
+                  
                   // User Profile Menu
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'logout') {
-                          _logout();
-                        }
-                      },
-                      itemBuilder: (context) => <PopupMenuEntry<String>>[
-                        const PopupMenuItem(
-                          value: 'profile',
-                          child: Row(
-                            children: [
-                              Icon(Icons.person),
-                              SizedBox(width: AppSpacing.md),
-                              Text('Profile'),
-                            ],
-                          ),
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, 45),
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      side: BorderSide(
+                        color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                        width: 1,
+                      ),
+                    ),
+                    color: isDark ? AppColors.darkCard : AppColors.white,
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        _logout();
+                      }
+                    },
+                    itemBuilder: (context) => <PopupMenuEntry<String>>[
+                      PopupMenuItem(
+                        value: 'profile',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline, 
+                              size: 20,
+                              color: isDark ? AppColors.gray300 : AppColors.gray700,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Text(
+                              'Profile', 
+                              style: AppTypography.body2.copyWith(
+                                color: isDark ? AppColors.gray300 : AppColors.gray700,
+                              ),
+                            ),
+                          ],
                         ),
-                        const PopupMenuItem(
-                          value: 'settings',
-                          child: Row(
-                            children: [
-                              Icon(Icons.settings),
-                              SizedBox(width: AppSpacing.md),
-                              Text('Settings'),
-                            ],
-                          ),
+                      ),
+                      PopupMenuItem(
+                        value: 'settings',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.settings_outlined, 
+                              size: 20,
+                              color: isDark ? AppColors.gray300 : AppColors.gray700,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Text(
+                              'Settings', 
+                              style: AppTypography.body2.copyWith(
+                                color: isDark ? AppColors.gray300 : AppColors.gray700,
+                              ),
+                            ),
+                          ],
                         ),
-                        const PopupMenuDivider(),
-                        const PopupMenuItem(
-                          value: 'logout',
-                          child: Row(
-                            children: [
-                              Icon(Icons.logout),
-                              SizedBox(width: AppSpacing.md),
-                              Text('Logout'),
-                            ],
-                          ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.logout, size: 20, color: AppColors.danger),
+                            const SizedBox(width: AppSpacing.md),
+                            Text(
+                              'Logout', 
+                              style: AppTypography.body2.copyWith(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primary.withOpacity(0.1),
+                      ),
+                    ],
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primary.withOpacity(0.1),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.2),
+                          width: 1,
                         ),
-                        child: const Icon(
+                      ),
+                      child: const Center(
+                        child: Icon(
                           Icons.person,
                           color: AppColors.primary,
+                          size: 22,
                         ),
                       ),
                     ),
@@ -156,4 +197,3 @@ class _MasterHeaderState extends State<MasterHeader> {
     );
   }
 }
-

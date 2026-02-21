@@ -11,6 +11,7 @@ class DashboardShell extends StatefulWidget {
 }
 
 class _DashboardShellState extends State<DashboardShell> {
+  final _innerNavigatorKey = GlobalKey<NavigatorState>();
   String? _currentRoute;
 
   @override
@@ -52,7 +53,13 @@ class _DashboardShellState extends State<DashboardShell> {
       valueListenable: AppRoutes.currentRoute,
       builder: (context, currentRoute, _) {
         if (_shouldShowLayout(currentRoute)) {
-          return MasterLayout(child: widget.child);
+          return Navigator(
+            key: _innerNavigatorKey,
+            onGenerateRoute: (settings) => MaterialPageRoute(
+              settings: RouteSettings(name: currentRoute),
+              builder: (context) => MasterLayout(child: widget.child),
+            ),
+          );
         }
         return widget.child;
       },

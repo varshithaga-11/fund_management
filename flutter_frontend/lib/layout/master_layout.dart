@@ -28,7 +28,7 @@ class MasterLayout extends StatelessWidget {
       backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
       body: Column(
         children: [
-          // Header Header at the top (full width)
+          // Header at the top (full width)
           MasterHeader(
             onMenuPressed: () {
               if (isDesktop) {
