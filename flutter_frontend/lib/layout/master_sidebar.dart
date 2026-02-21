@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_helper.dart';
+import '../routes/app_routes.dart';
 
 // Navigation Item Model
 class NavItem {
@@ -236,7 +237,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
                           if (item.subItems != null && item.subItems!.isNotEmpty) {
                             _toggleSubmenu(index);
                           } else if (item.path != null) {
-                            Navigator.pushNamed(context, item.path!);
+                            AppRoutes.navigatorKey.currentState?.pushNamed(item.path!);
                           }
                         },
                       ),
@@ -249,7 +250,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
                             title: subItem.name,
                             isActive: isSubActive,
                             isDark: isDark,
-                            onTap: () => Navigator.pushNamed(context, subItem.path),
+                            onTap: () => AppRoutes.navigatorKey.currentState?.pushNamed(subItem.path),
                             isPro: subItem.pro,
                             isNew: subItem.isNew,
                           );
