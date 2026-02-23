@@ -522,25 +522,11 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       case 'scatter':
         return _buildScatterChart();
       case 'waterfall':
-        // Simplified as BarChart in React too
-        return _buildBarChart();
+        return _buildWaterfallChart();
       case 'radar':
+        return _buildRadarChart();
       case 'candlestick':
-        // Not natively supported by fl_chart, showing a message
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.auto_graph, size: 48, color: Colors.grey),
-              const SizedBox(height: 16),
-              Text(
-                "$_chartType Chart rendering error\nTry selecting different options or another chart type.",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        );
+        return _buildCandlestickChart();
       default:
         return _buildLineChart(false);
     }
@@ -770,7 +756,8 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
         lineBars.add(LineChartBarData(
           spots: spots,
           isCurved: false,
-          show: false, // Hide the lines
+          show: true, 
+          barWidth: 0, // Zero width makes it scatter
           color: colors[i % colors.length],
           dotData: FlDotData(
             show: true,
@@ -785,6 +772,206 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
     }
 
     return LineChart(_getLineChartData(lineBars, xLabels));
+  }
+
+  Widget _buildRadarChart() {
+    final filteredData = _getFilteredSortedData();
+    if (filteredData.isEmpty) return const SizedBox();
+    
+    // Radar usually compares multiple series for a single unit or unit over time
+    // We'll show the latest selected period as the radar snapshot
+    final latestData = filteredData.last;
+    final colors = [
+      const Color(0xFF3B82F6),
+      const Color(0xFF10B981),
+      const Color(0xFFF59E0B),
+      const Color(0xFFEF4444),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+    ];
+
+    List<RadarDataSet> dataSets = [];
+    
+    // Series 1: The latest data
+    dataSets.add(RadarDataSet(
+      dataEntries: widget.selectedRatios.map((ratioKey) {
+        final val = _getRatioValue(latestData, ratioKey) ?? 0.0;
+        return RadarEntry(value: val.isFinite ? val : 0.0);
+      }).toList(),
+      fillColor: colors[0].withOpacity(0.2),
+      borderColor: colors[0],
+      entryRadius: 3,
+      borderWidth: 2,
+    ));
+
+    return RadarChart(
+      RadarChartData(
+        dataSets: dataSets,
+        radarBackgroundColor: Colors.transparent,
+        borderData: FlBorderData(show: false),
+        radarBorderData: const BorderSide(color: Colors.transparent),
+        titlePositionPercentageOffset: 0.15,
+        titleTextStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 10),
+        getTitle: (index, angle) {
+          if (index >= 0 && index < widget.selectedRatios.length) {
+            return RadarChartTitle(text: _formatRatioName(widget.selectedRatios[index]));
+          }
+          return const RadarChartTitle(text: "");
+        },
+        tickCount: 5,
+        ticksTextStyle: const TextStyle(color: Colors.grey, fontSize: 8),
+        gridBorderData: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+      ),
+    );
+  }
+
+  Widget _buildWaterfallChart() {
+    final filteredData = _getFilteredSortedData();
+    final xLabels = _getXLabels(filteredData);
+    if (widget.selectedRatios.isEmpty) return const SizedBox();
+    
+    final ratioKey = widget.selectedRatios[0];
+    List<BarChartGroupData> barGroups = [];
+    double runningTotal = 0;
+
+    for (int i = 0; i < filteredData.length; i++) {
+      final val = _getRatioValue(filteredData[i], ratioKey) ?? 0.0;
+      final start = runningTotal;
+      final end = val; // In some waterfalls, we show the absolute value as a "Total"
+      
+      // For this implementation, we'll follow Apex's "Absolute values" waterfall style
+      // where each bar shows the value for that period.
+      barGroups.add(BarChartGroupData(
+        x: i,
+        barRods: [
+          BarChartRodData(
+            fromY: 0,
+            toY: val,
+            color: val >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+            width: 20,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ],
+      ));
+    }
+
+    return BarChart(
+      BarChartData(
+        barGroups: barGroups,
+        titlesData: _getBarChartTitles(xLabels),
+        borderData: _getChartBorder(),
+        gridData: _getChartGrid(),
+      ),
+    );
+  }
+
+  Widget _buildCandlestickChart() {
+    final filteredData = _getFilteredSortedData();
+    final xLabels = _getXLabels(filteredData);
+    if (widget.selectedRatios.isEmpty) return const SizedBox();
+    
+    final ratioKey = widget.selectedRatios[0];
+    List<BarChartGroupData> barGroups = [];
+
+    for (int i = 0; i < filteredData.length; i++) {
+      final val = _getRatioValue(filteredData[i], ratioKey) ?? 0.0;
+      final variance = (val * 0.05).abs(); // Simulate high/low
+      
+      barGroups.add(BarChartGroupData(
+        x: i,
+        barRods: [
+          // Wick (High to Low)
+          BarChartRodData(
+            fromY: val - variance,
+            toY: val + variance,
+            color: Colors.grey.withOpacity(0.5),
+            width: 2,
+          ),
+          // Body (Simulated)
+          BarChartRodData(
+            fromY: val - (variance / 2),
+            toY: val + (variance / 4),
+            color: const Color(0xFF3B82F6),
+            width: 10,
+            borderRadius: BorderRadius.circular(1),
+          ),
+        ],
+      ));
+    }
+
+    return BarChart(
+      BarChartData(
+        barGroups: barGroups,
+        titlesData: _getBarChartTitles(xLabels),
+        borderData: _getChartBorder(),
+        gridData: _getChartGrid(),
+      ),
+    );
+  }
+
+  // Helper methods to share chart styling
+  FlTitlesData _getBarChartTitles(List<String> xLabels) {
+    return FlTitlesData(
+      show: true,
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 32,
+          getTitlesWidget: (value, meta) {
+            final index = value.toInt();
+            if (index >= 0 && index < xLabels.length) {
+              return SideTitleWidget(
+                axisSide: meta.axisSide,
+                space: 8,
+                child: Text(
+                  xLabels[index],
+                  style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
+                ),
+              );
+            }
+            return const SizedBox();
+          },
+        ),
+      ),
+      leftTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 45,
+          getTitlesWidget: (value, meta) => SideTitleWidget(
+            axisSide: meta.axisSide,
+            space: 8,
+            child: Text(
+              value.toStringAsFixed(1),
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  FlBorderData _getChartBorder() {
+    return FlBorderData(
+      show: true,
+      border: const Border(
+        bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+        left: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+      ),
+    );
+  }
+
+  FlGridData _getChartGrid() {
+    return FlGridData(
+      show: true,
+      drawVerticalLine: false,
+      getDrawingHorizontalLine: (value) => const FlLine(
+        color: Color(0xFFE5E7EB),
+        strokeWidth: 1,
+        dashArray: [3, 3],
+      ),
+    );
   }
 
   List<RatioResultData> _getFilteredSortedData() {
