@@ -3,8 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart'; // import open_filex
+import '../../utils/file_saver.dart';
 import 'financial_statements_api.dart';
 import '../../theme/responsive_helper.dart';
 import 'financial_period_page.dart'; // To navigate to period page
@@ -121,17 +120,11 @@ class _UploadDataPageState extends State<UploadDataPage> {
         filename = 'Financial_Data_Template.docx';
       }
 
-      // Save file
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(bytes);
+      await saveAndOpenFile(bytes, filename);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$type template downloaded to ${file.path}'), backgroundColor: Colors.green),
+        SnackBar(content: Text('$type template download initiated'), backgroundColor: Colors.green),
       );
-      
-      // Open file
-      await OpenFilex.open(file.path);
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -126,7 +126,7 @@ class RatioCard extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -141,18 +141,18 @@ class RatioCard extends StatelessWidget {
                     Text(
                       name.toUpperCase(),
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
                     ),
                     if (description != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
+                        padding: const EdgeInsets.only(top: 2.0),
                         child: Text(
                           description!,
                           style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -162,7 +162,7 @@ class RatioCard extends StatelessWidget {
               _getStatusIcon(),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -170,7 +170,7 @@ class RatioCard extends StatelessWidget {
               Text(
                 _formatValue(value),
                 style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -178,7 +178,7 @@ class RatioCard extends StatelessWidget {
               Text(
                 unit,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.grey[700],
                 ),

@@ -160,7 +160,7 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
                   if (_ratios!.interpretation != null && _ratios!.interpretation!.isNotEmpty && _ratios!.interpretation != 'null')
                     _buildInterpretationSection(),
                   
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
   
                   // Main Content based on View Mode
                   if (_viewMode == 'table')
@@ -362,14 +362,17 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
         ),
         _buildGrid(ratios),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -675,9 +678,9 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
         crossAxisCount: count,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1.5,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 2.1,
         children: children,
       );
     });

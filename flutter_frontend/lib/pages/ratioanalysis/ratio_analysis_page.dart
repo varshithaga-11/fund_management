@@ -54,23 +54,25 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
           ),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.only(top: 10, left: 12, right: 12, bottom: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Header with Icon and Status Badge
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.insert_chart, color: Colors.blue.shade600, size: 20),
+                      child: Icon(Icons.insert_chart, color: Colors.blue.shade600, size: 16),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: widget.period.isFinalized ? Colors.green.shade50 : Colors.amber.shade50,
                         borderRadius: BorderRadius.circular(12),
@@ -78,7 +80,7 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                       child: Text(
                         widget.period.isFinalized ? 'Finalized' : 'Draft',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: widget.period.isFinalized ? Colors.green.shade700 : Colors.amber.shade700,
                         ),
@@ -86,31 +88,33 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 8),
 
                 // Period Label
                 Text(
                   widget.period.label,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontSize: 14,
                     color: _isHovered
                         ? Colors.blue.shade600
                         : (widget.isDark ? Colors.white : Colors.black),
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 4),
 
                 // Date Range
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
-                    const SizedBox(width: 6),
+                    Icon(Icons.calendar_today, size: 10, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         '${widget.period.startDate} - ${widget.period.endDate}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 10,
                           color: widget.isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                         maxLines: 1,
@@ -119,29 +123,21 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                     ),
                   ],
                 ),
-                const Spacer(),
+                const SizedBox(height: 4),
 
                 // Footer CTA
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'View Analysis',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade600,
-                        ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'View Analysis',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: Colors.blue.shade600,
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 14,
-                        color: _isHovered ? Colors.blue.shade600 : Colors.grey.shade400,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -286,8 +282,7 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  
+                  const SizedBox(height: 16),
                   // Search Bar
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -341,8 +336,7 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 24),
-
+                  const SizedBox(height: 16),
                   // Period Grid
                   if (_periods.isEmpty)
                     Center(
@@ -385,9 +379,9 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 20,
-                            mainAxisSpacing: 20,
-                            childAspectRatio: 1.3,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 3.0,
                           ),
                           itemCount: _filteredPeriods.length,
                           itemBuilder: (context, index) {

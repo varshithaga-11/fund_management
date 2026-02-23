@@ -232,53 +232,159 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
   @override
   Widget build(BuildContext context) {
     if (loadingData) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     double tl = totalLiabilities();
     double taVal = totalAssets();
     double diff = (tl - taVal).abs();
     bool isBalanced = diff < 0.01;
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: [
-          _buildSection("trading", "Trading Account", ta.keys.map((k) => 
-            _buildInput(ta[k]!, k.replaceAll("_", " "))).toList()),
+          _buildSection(
+            "trading",
+            "Trading Account",
+            _buildFieldGrid(
+              context,
+              ta.keys.map((k) => _buildInput(ta[k]!, k.replaceAll("_", " "))).toList(),
+            ),
+          ),
           
-          _buildSection("profitloss", "Profit & Loss", pl.keys.map((k) => 
-            _buildInput(pl[k]!, k.replaceAll("_", " "))).toList()),
+          _buildSection(
+            "profitloss",
+            "Profit & Loss",
+            _buildFieldGrid(
+              context,
+              pl.keys.map((k) => _buildInput(pl[k]!, k.replaceAll("_", " "))).toList(),
+            ),
+          ),
             
-          _buildSection("balancesheet", "Balance Sheet", [
-            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text("Liabilities", style: TextStyle(fontWeight: FontWeight.bold))),
-            ...["share_capital", "deposits", "borrowings", "reserves_statutory_free", "undistributed_profit", "provisions", "other_liabilities"]
-               .map((k) => _buildInput(bs[k]!, k.replaceAll("_", " "))),
-            
-            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text("Assets", style: TextStyle(fontWeight: FontWeight.bold))),
-             ...["cash_in_hand", "cash_at_bank", "investments", "loans_advances", "fixed_assets", "other_assets", "stock_in_trade"]
-               .map((k) => _buildInput(bs[k]!, k.replaceAll("_", " "))),
+          _buildSection(
+            "balancesheet",
+            "Balance Sheet",
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "LIABILITIES",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.blue.shade400 : Colors.blue.shade700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildFieldGrid(
+                  context,
+                  [
+                    "share_capital", "deposits", "borrowings", "reserves_statutory_free",
+                    "undistributed_profit", "provisions", "other_liabilities"
+                  ].map((k) => _buildInput(bs[k]!, k.replaceAll("_", " "))).toList(),
+                ),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Divider(),
+                ),
 
-             Padding(
-               padding: const EdgeInsets.all(8.0),
-               child: Text(
-                 isBalanced ? "Liabilities = Assets" : "Diff: ${diff.toStringAsFixed(2)}",
-                 style: TextStyle(color: isBalanced ? Colors.green : Colors.red),
-               ),
-             )
-          ]),
+                Text(
+                  "ASSETS",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.green.shade400 : Colors.green.shade700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildFieldGrid(
+                  context,
+                  [
+                    "cash_in_hand", "cash_at_bank", "investments", "loans_advances",
+                    "fixed_assets", "other_assets", "stock_in_trade"
+                  ].map((k) => _buildInput(bs[k]!, k.replaceAll("_", " "))).toList(),
+                ),
 
-          _buildSection("operational", "Operational Metrics", [
-            _buildInput(staffCount, "Staff Count")
-          ]),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isBalanced 
+                        ? Colors.green.withOpacity(0.1) 
+                        : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isBalanced 
+                          ? Colors.green.withOpacity(0.3) 
+                          : Colors.red.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isBalanced ? Icons.check_circle : Icons.warning_amber_rounded,
+                        color: isBalanced ? Colors.green : Colors.red,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          isBalanced 
+                              ? "Liabilities = Assets" 
+                              : "Assets not equal to Liabilities. Liabilities ${tl.toStringAsFixed(2)} vs Assets ${taVal.toStringAsFixed(2)} (Δ ${diff.toStringAsFixed(2)})",
+                          style: TextStyle(
+                            color: isBalanced ? Colors.green.shade700 : Colors.red.shade700,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          _buildSection(
+            "operational",
+            "Operational Metrics",
+            _buildFieldGrid(
+              context,
+              [_buildInput(staffCount, "Staff Count")],
+            ),
+          ),
 
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 24),
             child: SizedBox(
               width: double.infinity,
+              height: 52,
               child: ElevatedButton.icon(
                 onPressed: loading ? null : _handleSubmit,
-                icon: loading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.refresh),
-                label: const Text("Update & Recalculate"),
+                icon: loading 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                    : const Icon(Icons.refresh_rounded),
+                label: Text(
+                  loading ? "Updating..." : "Update data & recalculate ratios",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1), // Indigo
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
               ),
             ),
           )
@@ -287,43 +393,102 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
     );
   }
 
-  Widget _buildSection(String id, String title, List<Widget> children) {
+  Widget _buildSection(String id, String title, Widget content) {
     bool isOpen = openSection == id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          ListTile(
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            trailing: Icon(isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
-            onTap: () {
-              setState(() {
-                openSection = isOpen ? "" : id;
-              });
-            },
+          InkWell(
+            onTap: () => setState(() => openSection = isOpen ? "" : id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              color: isOpen 
+                  ? (isDark ? Colors.grey.shade800 : Colors.grey.shade50)
+                  : Colors.transparent,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
           ),
           if (isOpen)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: children,
-              ),
-            )
+              padding: const EdgeInsets.all(20.0),
+              child: content,
+            ),
         ],
       ),
     );
   }
 
+  Widget _buildFieldGrid(BuildContext context, List<Widget> children) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 500 ? 2 : 1;
+        final spacing = 16.0;
+        
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children.map((w) {
+            return SizedBox(
+              width: crossAxisCount == 2 
+                  ? (constraints.maxWidth - spacing) / 2 
+                  : constraints.maxWidth,
+              child: w,
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
   Widget _buildInput(TextEditingController controller, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InputField(
-        controller: controller,
-        hintText: label,
-        helperText: label, // Using helper text as label since InputField design varies
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.replaceAll("_", " ").toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InputField(
+          controller: controller,
+          hintText: "0.00",
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        ),
+      ],
     );
   }
 }
