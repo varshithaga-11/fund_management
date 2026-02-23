@@ -209,113 +209,124 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
         .length;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 32.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Statement Column Mapping',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueGrey.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Choose a statement type to manage display names and ordering of financial statement fields.',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                  ),
-                ],
-              ),
-              if (_canUpdate)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Row(
-                    children: [
-                      OutlinedButton(
-                        onPressed: (_loading || availableFieldsCount == 0) ? null : _handleAddConfig,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          side: BorderSide(color: Colors.grey.shade300),
-                          foregroundColor: Colors.black87,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        ),
-                        child: const Text('Add configuration'),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: (_saving || _rows.isEmpty) ? null : _handleSave,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6366F1),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        ),
-                        child: _saving 
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Save changes'),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 32),
+              // Header Row
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SizedBox(
-                    width: 300,
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Statement Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
+                        Text(
+                          'Statement Column Mapping',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E293B),
+                            fontSize: 26,
                           ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _statementType,
-                              isExpanded: true,
-                              items: _statementTypeOptions.entries.map((e) {
-                                return DropdownMenuItem(
-                                  value: e.key,
-                                  child: Text(e.value),
-                                );
-                              }).toList(),
-                              onChanged: (value) async {
-                                if (value != null) {
-                                  setState(() => _statementType = value);
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setString(_prefKey, value);
-                                  await _loadConfigs();
-                                }
-                              },
-                            ),
-                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Choose a statement type to manage display names and ordering of financial statement fields.',
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.2),
                         ),
                       ],
                     ),
                   ),
+                  if (_canUpdate)
+                    Row(
+                      children: [
+                        OutlinedButton(
+                          onPressed: (_loading || availableFieldsCount == 0) ? null : _handleAddConfig,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                            side: BorderSide(color: Colors.grey.shade200),
+                            foregroundColor: Colors.grey.shade600,
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Add configuration', style: TextStyle(fontWeight: FontWeight.w500)),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: (_saving || _rows.isEmpty) ? null : _handleSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4F46E5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: _saving 
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Save changes', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
                 ],
               ),
-              const SizedBox(height: 24),
+              
+              const SizedBox(height: 32),
+
+              // Statement Type Dropdown
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Statement Type', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF475569))),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: 450,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _statementType,
+                          isExpanded: true,
+                          icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade600),
+                          items: _statementTypeOptions.entries.map((e) {
+                            return DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value, style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B))),
+                            );
+                          }).toList(),
+                          onChanged: (value) async {
+                            if (value != null) {
+                              setState(() => _statementType = value);
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setString(_prefKey, value);
+                              await _loadConfigs();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 40),
+
               if (_loading)
-                const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                const Center(child: Padding(padding: EdgeInsets.all(64), child: CircularProgressIndicator()))
               else if (_rows.isEmpty)
                 Container(
-                  padding: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(48),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    border: Border.all(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade100),
                   ),
                   child: Center(
                     child: Column(
@@ -332,114 +343,113 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                   ),
                 )
               else
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    child: Scrollbar(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                          dataRowMinHeight: 90,
-                          dataRowMaxHeight: 120,
-                          columnSpacing: 24,
-                          horizontalMargin: 16,
-                          columns: [
-                            const DataColumn(label: Text('Canonical Field (Model)', style: TextStyle(fontWeight: FontWeight.bold))),
-                            const DataColumn(label: Text('Display Name (UI / PDF)', style: TextStyle(fontWeight: FontWeight.bold))),
-                            const DataColumn(label: Text('Alternative Names / Aliases', style: TextStyle(fontWeight: FontWeight.bold))),
-                            const DataColumn(label: Text('Required', style: TextStyle(fontWeight: FontWeight.bold))),
-                            if (_canUpdate) const DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-                          ],
-                          rows: _rows.map((row) {
-                            return DataRow(
-                              key: ValueKey('row_${row.id}'),
-                              cells: [
-                                DataCell(Text(row.canonicalField, style: const TextStyle(fontWeight: FontWeight.w500))),
-                                DataCell(
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    dividerColor: Colors.transparent,
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      horizontalMargin: 0,
+                      columnSpacing: 60,
+                      dataRowMinHeight: 100,
+                      dataRowMaxHeight: 110,
+                      columns: [
+                        const DataColumn(label: Text('Canonical Field (Model)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)))),
+                        const DataColumn(label: Text('Display Name (UI / PDF)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)))),
+                        const DataColumn(label: Text('Alternative Names / Aliases', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)))),
+                        const DataColumn(label: Text('Required', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)))),
+                        if (_canUpdate) const DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)))),
+                      ],
+                      rows: _rows.map((row) {
+                        return DataRow(
+                          key: ValueKey('row_${row.id}'),
+                          cells: [
+                            DataCell(Text(row.canonicalField, style: const TextStyle(fontSize: 14, color: Color(0xFF334155)))),
+                            DataCell(
+                              SizedBox(
+                                width: 320,
+                                child: TextFormField(
+                                  key: ValueKey('dn_${_statementType}_${row.id}'),
+                                  initialValue: row.displayName,
+                                  enabled: _canUpdate,
+                                  style: const TextStyle(fontSize: 14),
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5)),
+                                  ),
+                                  onChanged: (val) => _handleFieldChange(row.id, 'display_name', val),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
                                   SizedBox(
-                                    width: 250,
+                                    width: 420,
                                     child: TextFormField(
-                                      key: ValueKey('dn_${_statementType}_${row.id}'),
-                                      initialValue: row.displayName,
+                                      key: ValueKey('al_${_statementType}_${row.id}'),
+                                      initialValue: row.aliases.join(", "),
                                       enabled: _canUpdate,
+                                      style: const TextStyle(fontSize: 14),
                                       decoration: InputDecoration(
-                                        isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5)),
                                       ),
-                                      onChanged: (val) => _handleFieldChange(row.id, 'display_name', val),
+                                      onChanged: (val) => _handleFieldChange(row.id, 'aliases', val),
                                     ),
                                   ),
-                                ),
-                                DataCell(
-                                  Container(
-                                    width: 350,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        TextFormField(
-                                          key: ValueKey('al_${_statementType}_${row.id}'),
-                                          initialValue: row.aliases.join(", "),
-                                          enabled: _canUpdate,
-                                          decoration: InputDecoration(
-                                            isDense: true,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                          ),
-                                          onChanged: (val) => _handleFieldChange(row.id, 'aliases', val),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Comma-separated names to match during upload',
-                                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                                        )
-                                      ],
-                                    ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Comma-separated names to match during upload',
+                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                  )
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Checkbox(
+                                value: row.isRequired,
+                                activeColor: const Color(0xFF4F46E5),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                onChanged: _canUpdate ? (val) => _handleFieldChange(row.id, 'is_required', val) : null,
+                              ),
+                            ),
+                            if (_canUpdate)
+                              DataCell(
+                                OutlinedButton(
+                                  onPressed: () => _handleEditConfig(row),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    side: BorderSide(color: Colors.grey.shade200),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    foregroundColor: const Color(0xFF1E293B),
                                   ),
+                                  child: const Text('Edit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                                 ),
-                                DataCell(
-                                  Checkbox(
-                                    value: row.isRequired,
-                                    onChanged: _canUpdate ? (val) => _handleFieldChange(row.id, 'is_required', val) : null,
-                                  ),
-                                ),
-                                if (_canUpdate)
-                                  DataCell(
-                                    OutlinedButton(
-                                      onPressed: () => _handleEditConfig(row),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                        minimumSize: Size.zero,
-                                        side: BorderSide(color: Colors.grey.shade300),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                      ),
-                                      child: const Text('Edit', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                              ),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
-                const SizedBox(height: 40), // Spacing at the very bottom
-              ],
-            ),
+              const SizedBox(height: 60),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 }
 

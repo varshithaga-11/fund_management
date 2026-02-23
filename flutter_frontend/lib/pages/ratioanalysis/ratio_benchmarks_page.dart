@@ -139,30 +139,31 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     final visibleKeys = keys.where((k) => allKeys.contains(k)).toList();
     if (visibleKeys.isEmpty) return const SizedBox.shrink();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2D3748) : Colors.white,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+        borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
+              style: const TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold, 
+                color: Color(0xFF1E293B)
+              )),
+          const SizedBox(height: 20),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 600;
-              final itemWidth = isWide ? (constraints.maxWidth - 24) / 2 : constraints.maxWidth;
+              final isWide = constraints.maxWidth > 700;
+              final itemWidth = isWide ? (constraints.maxWidth - 32) / 2 : constraints.maxWidth;
               
               return Wrap(
-                spacing: 24, // Horizontal gap
-                runSpacing: 12, // Vertical gap (Decreased)
+                spacing: 32,
+                runSpacing: 20,
                 children: visibleKeys.map((key) {
                   final label = _data?.labels[key] ?? key.replaceAll('_', ' ');
                   final controller = _controllers[key];
@@ -175,19 +176,24 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(label,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 fontSize: 13, 
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade700
+                                color: Color(0xFF475569)
                             )),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         TextField(
                           controller: controller,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
                             hintText: '—',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5)),
                             isDense: true,
                           ),
                           enabled: _canUpdate,
@@ -208,12 +214,14 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
+        backgroundColor: Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_data == null) {
       return const Scaffold(
+        backgroundColor: Colors.white,
         body: Center(child: Text('Failed to load data')),
       );
     }
@@ -226,10 +234,10 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     final otherKeys = allKeys.where((k) => !handledKeys.contains(k)).toList();
 
     return Scaffold(
-      // No AppBar, using custom header to match React layout inside standard container
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.only(left: 24.0, top: 24.0, right: 24.0, bottom: 0.0),
+        padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 32.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -237,52 +245,70 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Ratio Benchmarks',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ratio Benchmarks',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1E293B),
+                          fontSize: 26,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'These values are used for traffic light status (green/yellow/red) in the Ratio Dashboard. Leave blank where no fixed benchmark applies.',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.2),
+                      ),
+                    ],
+                  ),
                 ),
                 if (_canUpdate)
                   ElevatedButton(
                     onPressed: _saving ? null : _handleSave,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1), // Indigo/Primary
+                      backgroundColor: const Color(0xFF4F46E5),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: _saving
                         ? const SizedBox(
-                            width: 16,
-                            height: 16,
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Save changes'),
+                        : const Text('Save changes', style: TextStyle(fontWeight: FontWeight.w600)),
                   )
                 else
-                  Text(
-                    'Read Only',
-                    style: TextStyle(color: Colors.amber.shade700, fontWeight: FontWeight.bold),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.amber.shade100),
+                    ),
+                    child: Text(
+                      'Read Only',
+                      style: TextStyle(color: Colors.amber.shade700, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
                   ),
               ],
             ),
             
-            const SizedBox(height: 12),
-            
-            // Description/Info
-            Text(
-              'These values are used for traffic light status (green/yellow/red) in the Ratio Dashboard. Leave blank where no fixed benchmark applies.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-            ),
-            
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
             if (!_canUpdate)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 32),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.amber.shade200),
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFEF3C7)),
                 ),
                 child: Row(
                   children: [
@@ -291,7 +317,7 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
                     Expanded(
                       child: Text(
                         'Only Master role can update benchmarks.',
-                        style: TextStyle(color: Colors.amber.shade900, fontSize: 13),
+                        style: TextStyle(color: Colors.amber.shade900, fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -305,7 +331,7 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
               for (int i = 0; i < entries.length; i++) {
                 final section = _buildCategorySection(entries[i].key, entries[i].value, allKeys);
                 if (section is! SizedBox) {
-                  if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 12));
+                  if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 24));
                   widgets.add(section);
                 }
               }
@@ -313,9 +339,10 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
             }(),
             
             if (otherKeys.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 24),
               _buildCategorySection('Other', otherKeys, allKeys),
             ],
+            const SizedBox(height: 60),
           ],
         ),
       ),
