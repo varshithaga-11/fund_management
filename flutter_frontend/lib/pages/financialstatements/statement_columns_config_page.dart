@@ -209,14 +209,13 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
         .where((f) => !_rows.any((r) => r.canonicalField == f))
         .length;
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: Column(
@@ -305,26 +304,86 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                             }
                           },
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Choose a statement type to manage display names and ordering of financial statement fields.',
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  if (_canUpdate)
+                    Row(
+                      children: [
+                        OutlinedButton(
+                          onPressed: (_loading || availableFieldsCount == 0) ? null : _handleAddConfig,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            foregroundColor: Colors.black87,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          child: const Text('Add configuration'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: (_saving || _rows.isEmpty) ? null : _handleSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6366F1), // Indigo
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          child: _saving 
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Save changes'),
+                        ),
+                      ],
+                    ),
+                ],
               ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Data Table Section
-          if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-          else if (_rows.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border.all(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(8),
+              
+              const SizedBox(height: 32),
+    
+              // Dropdown Section
+              Row(
+                children: [
+                  SizedBox(
+                    width: 300,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Statement Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _statementType,
+                              isExpanded: true,
+                              items: _statementTypeOptions.entries.map((e) {
+                                return DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(e.value),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _statementType = value);
+                                  _loadConfigs();
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               child: Center(
                 child: Column(
@@ -410,49 +469,75 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
                                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
                                         ),
-                                         onChanged: (val) => _handleFieldChange(row.id, 'aliases', val),
+                                        onChanged: (val) => _handleFieldChange(row.id, 'display_name', val),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Comma-separated names to match during upload',
-                                        style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              
-                              // Required Checkbox
-                              DataCell(
-                                Checkbox(
-                                  value: row.isRequired,
-                                  onChanged: _canUpdate ? (val) => _handleFieldChange(row.id, 'is_required', val) : null,
-                                ),
-                              ),
-                              
-                              // Actions
-                              if (_canUpdate)
-                                DataCell(
-                                  OutlinedButton(
-                                    onPressed: () => _handleEditConfig(row),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      minimumSize: Size.zero,
-                                      side: BorderSide(color: Colors.grey.shade300),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                     ),
-                                    child: const Text('Edit', style: TextStyle(fontSize: 13, color: Colors.black87)),
                                   ),
-                                ),
-                            ],
-                          );
-                        }).toList(),
+                                  
+                                  // Aliases Input
+                                  DataCell(
+                                    Container(
+                                      width: 350,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          TextFormField(
+                                            key: ValueKey('al_${_statementType}_${row.id}'),
+                                            initialValue: row.aliases.join(", "),
+                                            enabled: _canUpdate,
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                            ),
+                                             onChanged: (val) => _handleFieldChange(row.id, 'aliases', val),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Comma-separated names to match during upload',
+                                            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Required Checkbox
+                                  DataCell(
+                                    Checkbox(
+                                      value: row.isRequired,
+                                      onChanged: _canUpdate ? (val) => _handleFieldChange(row.id, 'is_required', val) : null,
+                                    ),
+                                  ),
+                                  
+                                  // Actions
+                                  if (_canUpdate)
+                                    DataCell(
+                                      OutlinedButton(
+                                        onPressed: () => _handleEditConfig(row),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          minimumSize: Size.zero,
+                                          side: BorderSide(color: Colors.grey.shade300),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                        ),
+                                        child: const Text('Edit', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                       ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
