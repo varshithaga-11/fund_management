@@ -53,7 +53,6 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
             padding: const EdgeInsets.only(top: 10, left: 12, right: 12, bottom: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
