@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_helper.dart';
-import '../routes/route_constants.dart';
+import '../routes/app_routes.dart';
 
 // Navigation Item Model
 class NavItem {
@@ -50,45 +50,61 @@ class MasterSidebar extends StatefulWidget {
 
 class _MasterSidebarState extends State<MasterSidebar> {
   int? _openSubmenuIndex;
+  late final VoidCallback _routeListener;
   
   // Define navigation items
   final List<NavItem> _navItems = [
     NavItem(
       icon: Icons.dashboard,
       name: "Dashboard",
-      path: "/master/master-dashboard",
+      path: AppRoutes.masterDashboard,
     ),
     NavItem(
       icon: Icons.description,
       name: "Upload Data",
-      path: "/upload-data",
+      path: AppRoutes.uploadData,
     ),
     NavItem(
       icon: Icons.table_chart,
       name: "Column Mapping",
-      path: "/statement-columns",
+      path: AppRoutes.statementColumns,
     ),
     NavItem(
       icon: Icons.bar_chart,
       name: "Ratio Analysis",
-      path: "/ratio-analysis-list",
+      path: AppRoutes.ratioAnalysis,
     ),
     NavItem(
       icon: Icons.trending_up,
       name: "Period Comparison",
-      path: "/period-comparison",
+      path: AppRoutes.periodComparison,
     ),
     NavItem(
       icon: Icons.show_chart,
       name: "Ratio Benchmarks",
-      path: "/ratio-benchmarks",
+      path: AppRoutes.ratioBenchmarks,
     ),
     NavItem(
       icon: Icons.manage_accounts,
       name: "User Management",
-      path: "/user-management",
+      path: AppRoutes.userManagement,
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _routeListener = () {
+      if (mounted) setState(() {});
+    };
+    AppRoutes.currentRoute.addListener(_routeListener);
+  }
+
+  @override
+  void dispose() {
+    AppRoutes.currentRoute.removeListener(_routeListener);
+    super.dispose();
+  }
 
   void _toggleSubmenu(int index) {
     setState(() {
@@ -100,9 +116,9 @@ class _MasterSidebarState extends State<MasterSidebar> {
     });
   }
 
-  bool _isActive(String? path, String? currentPath) {
-    if (path == null || currentPath == null) return false;
-    return currentPath == path;
+  bool _isActive(String? path) {
+    if (path == null) return false;
+    return AppRoutes.currentRoute.value == path;
   }
 
   @override
@@ -110,8 +126,8 @@ class _MasterSidebarState extends State<MasterSidebar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     final sidebarWidth = widget.isExpanded 
-        ? ResponsiveBoxConstraints.sidebarWidthExpanded 
-        : ResponsiveBoxConstraints.sidebarWidthCollapsed;
+        ? 260.0 // AppConstants-like width
+        : 80.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -123,10 +139,10 @@ class _MasterSidebarState extends State<MasterSidebar> {
   Widget _buildSidebarContent(bool isDark, double width) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.white,
+        color: isDark ? const Color(0xFF111827) : Colors.white,
         border: Border(
           right: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.gray200,
+            color: isDark ? Colors.white10 : Colors.grey.shade200,
           ),
         ),
       ),
@@ -135,35 +151,29 @@ class _MasterSidebarState extends State<MasterSidebar> {
           // Logo Area
           Container(
             height: 70,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
-                ),
-              ),
-            ),
             alignment: widget.isExpanded ? Alignment.centerLeft : Alignment.center,
             padding: EdgeInsets.symmetric(
-              horizontal: widget.isExpanded ? AppSpacing.lg : 0,
+              horizontal: widget.isExpanded ? 24 : 0,
             ),
             child: widget.isExpanded
-                ? Text(
+                ? const Text(
                     "FM",
-                    style: AppTypography.h5.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
+                    style: TextStyle(
+                      color: Color(0xFF6366F1),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
                     ),
                   )
                 : Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      color: const Color(0xFF6366F1).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.trending_up,
-                      color: AppColors.primary,
+                      color: Color(0xFF6366F1),
                       size: 20,
                     ),
                   ),
@@ -173,21 +183,24 @@ class _MasterSidebarState extends State<MasterSidebar> {
             child: ValueListenableBuilder<String?>(
               valueListenable: AppRoutes.currentRoute,
               builder: (context, currentRoute, _) {
-                final isMobile = ResponsiveHelper.isMobile(context); // Fixed scope
+                final isMobile = ResponsiveHelper.isMobile(context);
                 return ListView(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   children: [
                     // Menu Header
                     if (widget.isExpanded)
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
+                          horizontal: 24,
+                          vertical: 12,
                         ),
                         child: Text(
                           "MENU",
-                          style: AppTypography.overline.copyWith(
-                            color: isDark ? AppColors.gray500 : AppColors.gray400,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
                           ),
                         ),
                       ),
@@ -196,7 +209,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
                     ..._navItems.asMap().entries.map((entry) {
                       final index = entry.key;
                       final item = entry.value;
-                      final isActive = _isActive(item.path, currentRoute);
+                      final isActive = _isActive(item.path);
                       final isSubmenuOpen = _openSubmenuIndex == index;
     
                       return Column(
@@ -214,7 +227,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
                                 _toggleSubmenu(index);
                               } else if (item.path != null) {
                                 AppRoutes.navigatorKey.currentState?.pushNamed(item.path!);
-                                if (isMobile) widget.onClose(); // Close mobile drawer on navigation
+                                if (isMobile) widget.onClose();
                               }
                             },
                           ),
@@ -222,7 +235,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
                           // Submenu
                           if (widget.isExpanded && item.subItems != null && isSubmenuOpen)
                             ...item.subItems!.map((subItem) {
-                              final isSubActive = _isActive(subItem.path, currentRoute);
+                              final isSubActive = _isActive(subItem.path);
                               return _SidebarSubItem(
                                 title: subItem.name,
                                 isActive: isSubActive,
@@ -272,10 +285,10 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = AppColors.primary;
-    final inactiveColor = isDark ? AppColors.gray500 : AppColors.gray600;
+    const activeColor = Color(0xFF6366F1);
+    final inactiveColor = isDark ? Colors.grey.shade500 : Colors.grey.shade600;
     final bgColor = isActive 
-        ? AppColors.primary.withOpacity(0.1)
+        ? activeColor.withOpacity(0.1)
         : Colors.transparent;
 
     return Material(
@@ -284,11 +297,11 @@ class _SidebarItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: 48,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
@@ -299,11 +312,12 @@ class _SidebarItem extends StatelessWidget {
                 size: 20,
               ),
               if (isExpanded) ...[
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
-                    style: AppTypography.body2.copyWith(
+                    style: TextStyle(
+                      fontSize: 14,
                       color: isActive ? activeColor : inactiveColor,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                     ),
@@ -350,19 +364,20 @@ class _SidebarSubItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.only(
-            left: AppSpacing.xxxl,
-            right: AppSpacing.md,
-            top: AppSpacing.md,
-            bottom: AppSpacing.md,
+            left: 48,
+            right: 16,
+            top: 12,
+            bottom: 12,
           ),
           child: Row(
             children: [
               Text(
                 title,
-                style: AppTypography.body3.copyWith(
+                style: TextStyle(
+                  fontSize: 13,
                   color: isActive
-                      ? AppColors.primary
-                      : (isDark ? AppColors.gray400 : AppColors.gray600),
+                      ? const Color(0xFF6366F1)
+                      : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -370,20 +385,21 @@ class _SidebarSubItem extends StatelessWidget {
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
+                    horizontal: 8,
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
                     color: isNew 
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     isNew ? 'NEW' : 'PRO',
-                    style: AppTypography.overline.copyWith(
-                      fontSize: 10,
-                      color: isNew ? AppColors.success : AppColors.warning,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: isNew ? Colors.green : Colors.orange,
                     ),
                   ),
                 ),

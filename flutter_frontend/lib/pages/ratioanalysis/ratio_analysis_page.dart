@@ -53,7 +53,7 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -281,17 +281,13 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                             AppRoutes.trendAnalysis,
                           );
                         },
-                        icon: const Icon(Icons.trending_up, size: 18),
-                        label: const Text('View Trends'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
+                        icon: const Icon(Icons.trending_up),
+                        label: const Text('Trend Analysis'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
+                  
                   // Search Bar
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -346,8 +342,9 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                     ),
                   ],
                   const SizedBox(height: 24),
+
                   // Period Grid
-                  if (_filteredPeriods.isEmpty)
+                  if (_periods.isEmpty)
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 48.0),
@@ -356,14 +353,12 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                             Icon(Icons.description_outlined, size: 64, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
                             Text(
-                              _periods.isEmpty ? "No Periods Found" : "No Results Found",
+                              "No Periods Found",
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _periods.isEmpty
-                                  ? "Please upload financial statements to start analyzing ratios."
-                                  : "Try adjusting your search filters.",
+                              "Please upload financial statements to start analyzing ratios.",
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
@@ -371,6 +366,13 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                             ),
                           ],
                         ),
+                      ),
+                    )
+                  else if (_filteredPeriods.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 48.0),
+                        child: Text("No Results Found"),
                       ),
                     )
                   else
