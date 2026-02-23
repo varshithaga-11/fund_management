@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'master_layout.dart';
-import '../routes/app_routes.dart';
+import '../routes/route_constants.dart';
 
 class DashboardShell extends StatefulWidget {
   final Widget child;
@@ -49,20 +49,21 @@ class _DashboardShellState extends State<DashboardShell> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String?>(
-      valueListenable: AppRoutes.currentRoute,
-      builder: (context, currentRoute, _) {
-        if (_shouldShowLayout(currentRoute)) {
-          return Navigator(
-            key: _innerNavigatorKey,
-            onGenerateRoute: (settings) => MaterialPageRoute(
-              settings: RouteSettings(name: currentRoute),
-              builder: (context) => MasterLayout(child: widget.child),
-            ),
-          );
-        }
-        return widget.child;
-      },
+    return Navigator(
+      onGenerateRoute: (settings) => MaterialPageRoute(
+        settings: settings,
+        builder: (context) => ValueListenableBuilder<String?>(
+          valueListenable: AppRoutes.currentRoute,
+          builder: (context, currentRoute, _) {
+            bool showLayout = _shouldShowLayout(currentRoute);
+            
+            return MasterLayout(
+              showLayout: showLayout,
+              child: widget.child,
+            );
+          },
+        ),
+      ),
     );
   }
 }

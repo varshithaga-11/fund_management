@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../layout/master_layout.dart';
+import '../../theme/responsive_helper.dart';
 import 'user_api.dart';
 import 'add_edit_user_dialog.dart';
 
@@ -122,21 +122,13 @@ class _UserManagementPageState extends State<UserManagementPage> {
     // Client-side pagination logic is handled by PaginatedDataTable source
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('User Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchUsers,
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text('Error: $_error'))
               : Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: ResponsiveHelper.getResponsivePadding(context),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

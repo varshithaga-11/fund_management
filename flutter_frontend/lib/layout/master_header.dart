@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_helper.dart';
 import '../providers/theme_provider.dart';
-import '../routes/app_routes.dart';
+import '../routes/route_constants.dart';
 
 class MasterHeader extends StatefulWidget {
   final VoidCallback onMenuPressed;
@@ -39,6 +39,10 @@ class _MasterHeaderState extends State<MasterHeader> {
       elevation: 1,
       color: isDark ? AppColors.darkCard : AppColors.white,
       child: Container(
+        height: 64,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+        ),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -46,13 +50,8 @@ class _MasterHeaderState extends State<MasterHeader> {
             ),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
-          child: Row(
-            children: [
+        child: Row(
+          children: [
               // Menu Button
               IconButton(
                 onPressed: widget.onMenuPressed,
@@ -67,6 +66,7 @@ class _MasterHeaderState extends State<MasterHeader> {
               
               // Right Actions
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Dark Mode Toggle
                   Consumer<ThemeProvider>(
@@ -109,6 +109,8 @@ class _MasterHeaderState extends State<MasterHeader> {
                     onSelected: (value) {
                       if (value == 'logout') {
                         _logout();
+                      } else if (value == 'profile') {
+                        Navigator.pushNamed(context, AppRoutes.profile);
                       }
                     },
                     itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -193,7 +195,6 @@ class _MasterHeaderState extends State<MasterHeader> {
             ],
           ),
         ),
-      ),
-    );
+      );
+    }
   }
-}

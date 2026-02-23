@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/responsive_helper.dart';
 import '../financialstatements/financial_statements_api.dart';
 
 class ProductivityAnalysisPage extends StatefulWidget {
@@ -82,77 +83,66 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_period == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Productivity Analysis')),
-        body: const Center(child: Text('Period not found')),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Productivity Analysis'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _period!.label,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 24),
-            _buildMetricCard(
-              'Per Employee Business',
-              '(Average Deposit + Average Loan) / Staff Count',
-              _perEmployeeBusiness,
-              Colors.blue,
-            ),
-            const SizedBox(height: 16),
-            _buildMetricCard(
-              'Per Employee Contribution',
-              '(Total Income - Interest Expenses) / Staff Count',
-              _perEmployeeContribution,
-              Colors.green,
-            ),
-            const SizedBox(height: 16),
-            _buildMetricCard(
-              'Per Employee Operating Cost',
-              'Establishment & Contingencies / Staff Count',
-              _perEmployeeOperatingCost,
-              Colors.orange,
-            ),
-            const SizedBox(height: 16),
-            _buildEfficiencyCard(),
-            const SizedBox(height: 24),
-            if (_period!.operationalMetrics != null)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+      backgroundColor: Colors.transparent,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _period == null
+              ? const Center(child: Text('Period not found'))
+              : SingleChildScrollView(
+                  padding: ResponsiveHelper.getResponsivePadding(context),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _period!.label,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 24),
+                      _buildMetricCard(
+                        'Per Employee Business',
+                        '(Average Deposit + Average Loan) / Staff Count',
+                        _perEmployeeBusiness,
+                        Colors.blue,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildMetricCard(
+                        'Per Employee Contribution',
+                        '(Total Income - Interest Expenses) / Staff Count',
+                        _perEmployeeContribution,
+                        Colors.green,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildMetricCard(
+                        'Per Employee Operating Cost',
+                        'Establishment & Contingencies / Staff Count',
+                        _perEmployeeOperatingCost,
+                        Colors.orange,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildEfficiencyCard(),
+                      const SizedBox(height: 24),
+                      if (_period!.operationalMetrics != null)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Text('Total Staff Count: ',
+                                  style: TextStyle(color: Colors.grey)),
+                              Text(
+                                '${_period!.operationalMetrics!.staffCount}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    const Text('Total Staff Count: ',
-                        style: TextStyle(color: Colors.grey)),
-                    Text(
-                      '${_period!.operationalMetrics!.staffCount}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 

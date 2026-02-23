@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart'; // import open_filex
 import 'financial_statements_api.dart';
+import '../../theme/responsive_helper.dart';
 import 'financial_period_page.dart'; // To navigate to period page
 
 class UploadDataPage extends StatefulWidget {
@@ -144,16 +145,17 @@ class _UploadDataPageState extends State<UploadDataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50, // Light background for the page
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: ResponsiveHelper.getResponsivePadding(context),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header Section
             Text(
               'Upload Financial Data',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.blueGrey.shade900,
               ),
@@ -166,7 +168,9 @@ class _UploadDataPageState extends State<UploadDataPage> {
             const SizedBox(height: 24),
 
             // Template Buttons
-            Row(
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
               children: [
                 ElevatedButton.icon(
                   onPressed: _downloadingTemplate != null ? null : () => _downloadTemplate('excel'),
@@ -181,7 +185,6 @@ class _UploadDataPageState extends State<UploadDataPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   ),
                 ),
-                const SizedBox(width: 16),
                 ElevatedButton.icon(
                   onPressed: _downloadingTemplate != null ? null : () => _downloadTemplate('word'),
                   icon: _downloadingTemplate == 'word'

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../theme/responsive_helper.dart';
+import '../../routes/route_constants.dart';
 import 'productivity_analysis.dart';
 import 'interpretation_panel.dart';
 import '../financialstatements/financial_statements_api.dart';
@@ -82,81 +84,105 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_ratios == null || _period == null) {
-      return Center(
-        child: Column(
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.amber),
-            const SizedBox(height: 16),
-            const Text('Ratios Not Calculated Yet',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Financial ratio analysis hasn\'t been calculated for this period.',
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Go Back'),
+            Center(
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
             ),
+            SizedBox(height: 16),
+            Text('Loading ratios...', style: TextStyle(fontSize: 14, color: Colors.grey)),
           ],
         ),
       );
     }
 
-    final calculatedDate = DateTime.parse(_ratios!.calculatedAt).toLocal().toString().split(' ')[0];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return SingleChildScrollView(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Section
-                _buildHeader(calculatedDate),
-                const SizedBox(height: 24),
-
-                // View Toggle & Quick Action Buttons
-                _buildViewToggleAndActions(),
-                const SizedBox(height: 20),
-
-                // Working Fund Summary
-                _buildWorkingFundSummary(),
-                const SizedBox(height: 24),
-
-                // Interpretation Section (if available)
-                if (_ratios!.interpretation != null && _ratios!.interpretation!.isNotEmpty && _ratios!.interpretation != 'null')
-                  _buildInterpretationSection(),
-                
-                const SizedBox(height: 24),
-
-                // Main Content based on View Mode
-                if (_viewMode == 'table')
-                  RatioAnalysisTable(ratios: _ratios!, periodLabel: _period?.label ?? '')
-                else
-                  _buildCardsView(),
-
-                const SizedBox(height: 24),
-
-                // Status Legend
-                if (_viewMode == 'cards')
-                  _buildStatusLegend(),
-
-              const SizedBox(height: 32),
-
-              // Edit Period Data Form (Master Role Only)
-              if (_userRole == 'master')
-                _buildEditPeriodDataSection(),
-
+    if (_ratios == null || _period == null) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.amber),
+              const SizedBox(height: 16),
+              const Text('Ratios Not Calculated Yet',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('Financial ratio analysis hasn\'t been calculated for this period.',
+                  textAlign: TextAlign.center),
               const SizedBox(height: 24),
-              ],
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final calculatedDate = DateTime.parse(_ratios!.calculatedAt).toLocal().toString().split(' ')[0];
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Padding(
+              padding: ResponsiveHelper.getResponsivePadding(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  _buildHeader(calculatedDate),
+                  const SizedBox(height: 24),
+  
+                  // View Toggle & Quick Action Buttons
+                  _buildViewToggleAndActions(),
+                  const SizedBox(height: 20),
+  
+                  // Working Fund Summary
+                  _buildWorkingFundSummary(),
+                  const SizedBox(height: 24),
+  
+                  // Interpretation Section (if available)
+                  if (_ratios!.interpretation != null && _ratios!.interpretation!.isNotEmpty && _ratios!.interpretation != 'null')
+                    _buildInterpretationSection(),
+                  
+                  const SizedBox(height: 24),
+  
+                  // Main Content based on View Mode
+                  if (_viewMode == 'table')
+                    RatioAnalysisTable(ratios: _ratios!, periodLabel: _period?.label ?? '')
+                  else
+                    _buildCardsView(),
+  
+                  const SizedBox(height: 24),
+  
+                  // Status Legend
+                  if (_viewMode == 'cards')
+                    _buildStatusLegend(),
+  
+                const SizedBox(height: 32),
+  
+                // Edit Period Data Form (Master Role Only)
+                if (_userRole == 'master')
+                  _buildEditPeriodDataSection(),
+  
+                const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),
@@ -206,11 +232,9 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
           // Quick Action Buttons
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(
+              Navigator.pushNamed(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => ProductivityAnalysisPage(periodId: widget.periodId),
-                ),
+                '${AppRoutes.productivityAnalysis}/${widget.periodId}',
               );
             },
             icon: const Icon(Icons.bar_chart),
@@ -223,11 +247,9 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
           const SizedBox(width: 8),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(
+              Navigator.pushNamed(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => InterpretationPanelPage(periodId: widget.periodId),
-                ),
+                '${AppRoutes.interpretation}/${widget.periodId}',
               );
             },
             icon: const Icon(Icons.message),

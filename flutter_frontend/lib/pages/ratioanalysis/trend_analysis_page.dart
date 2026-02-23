@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/responsive_helper.dart';
 import '../financialstatements/financial_statements_api.dart';
 import 'trend_analysis_chart.dart';
 import 'trend_comparison_cards.dart';
@@ -89,15 +90,13 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trend Analysis'),
-      ),
+      backgroundColor: Colors.transparent,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
               : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: ResponsiveHelper.getResponsivePadding(context),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

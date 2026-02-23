@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'export_stub.dart'
     if (dart.library.html) 'export_web.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/responsive_helper.dart'; // Added
 import 'dashboard_api.dart';
 
 
@@ -629,36 +630,39 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final recent5 = recent.take(5).toList();
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ===== HEADER =====
-            _buildHeader(isDark, isMobile, context),
-            SizedBox(height: AppSpacing.xl),
-
-            // ===== FILTER BAR =====
-            _buildFilterBar(isDark, context),
-            SizedBox(height: AppSpacing.xl),
-
-            // ===== MAIN STAT CARDS (3 cards, responsive) =====
-            _buildMainStatCards(isDark, isMobile, totalRevenue, avgProfitMargin, growthRate),
-            SizedBox(height: AppSpacing.xl),
-
-            // ===== SECONDARY STATS ROW =====
-            _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, totalProfit),
-            SizedBox(height: AppSpacing.xl),
-
-            // ===== CHARTS =====
-            _buildChartsSection(isDark, isMobile, isDesktop, periods),
-            SizedBox(height: AppSpacing.xl),
-
-            // ===== BOTTOM: TOP PERIODS + RECENT ACTIVITY =====
-            _buildBottomSection(isDark, isMobile, top5, recent5, context),
-            SizedBox(height: AppSpacing.xxl),
-          ],
+    return Scaffold(
+      backgroundColor: Colors.transparent, // Let shell handle background
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: ResponsiveHelper.getResponsivePadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ===== HEADER =====
+              _buildHeader(isDark, isMobile, context),
+              SizedBox(height: AppSpacing.xl),
+  
+              // ===== FILTER BAR =====
+              _buildFilterBar(isDark, context),
+              SizedBox(height: AppSpacing.xl),
+  
+              // ===== MAIN STAT CARDS (3 cards, responsive) =====
+              _buildMainStatCards(isDark, isMobile, totalRevenue, avgProfitMargin, growthRate),
+              SizedBox(height: AppSpacing.xl),
+  
+              // ===== SECONDARY STATS ROW =====
+              _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, totalProfit),
+              SizedBox(height: AppSpacing.xl),
+  
+              // ===== CHARTS =====
+              _buildChartsSection(isDark, isMobile, isDesktop, periods),
+              SizedBox(height: AppSpacing.xl),
+  
+              // ===== BOTTOM: TOP PERIODS + RECENT ACTIVITY =====
+              _buildBottomSection(isDark, isMobile, top5, recent5, context),
+              SizedBox(height: AppSpacing.xxl),
+            ],
+          ),
         ),
       ),
     );

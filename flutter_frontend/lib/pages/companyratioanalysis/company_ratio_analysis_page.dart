@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/responsive_helper.dart';
 
 import 'api.dart';
 import 'financial_statements_api.dart' show RatioResultData; // Accessing shared models
@@ -83,14 +84,9 @@ class _CompanyRatioAnalysisPageState extends State<CompanyRatioAnalysisPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ratio Analysis'),
-        leading: (selectedPeriod != null || showTrendAnalysis)
-          ? IconButton(icon: const Icon(Icons.arrow_back), onPressed: _handleBack)
-          : null,
-      ),
+      backgroundColor: Colors.transparent,
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: ResponsiveHelper.getResponsivePadding(context),
         child: _buildContent(),
       ),
     );

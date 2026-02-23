@@ -18,6 +18,7 @@ void main() async {
   
   final activationService = ActivationService();
   final bool isActivated = await activationService.isActivated();
+  AppRoutes.currentRoute.value = isActivated ? AppRoutes.signIn : AppRoutes.activate;
   
   runApp(MyApp(isActivated: isActivated));
 }
@@ -43,7 +44,7 @@ class MyApp extends StatelessWidget {
             darkTheme: AppTheme.buildDarkTheme(),
             themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             initialRoute: isActivated ? AppRoutes.signIn : AppRoutes.activate,
-            onGenerateRoute: AppRoutes.generateRoute,
+            onGenerateRoute: AppRouter.generateRoute,
             navigatorObservers: [ShellRouteObserver()],
             builder: (context, child) {
               return DashboardShell(child: child!);

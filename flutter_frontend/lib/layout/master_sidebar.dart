@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_helper.dart';
-import '../routes/app_routes.dart';
+import '../routes/route_constants.dart';
 
 // Navigation Item Model
 class NavItem {
@@ -100,46 +100,19 @@ class _MasterSidebarState extends State<MasterSidebar> {
     });
   }
 
-  bool _isActive(String? path) {
-    if (path == null) return false;
-    return ModalRoute.of(context)?.settings.name == path;
+  bool _isActive(String? path, String? currentPath) {
+    if (path == null || currentPath == null) return false;
+    return currentPath == path;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isMobile = ResponsiveHelper.isMobile(context);
     
     final sidebarWidth = widget.isExpanded 
         ? ResponsiveBoxConstraints.sidebarWidthExpanded 
         : ResponsiveBoxConstraints.sidebarWidthCollapsed;
 
-    // On mobile, render as drawer overlay
-    if (isMobile && widget.isMobileOpen) {
-      return Stack(
-        children: [
-          // Backdrop
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: widget.onClose,
-              child: Container(color: Colors.black26),
-            ),
-          ),
-          // Sidebar drawer
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: ResponsiveBoxConstraints.sidebarWidthExpanded,
-            child: _buildSidebarContent(isDark, ResponsiveBoxConstraints.sidebarWidthExpanded),
-          ),
-        ],
-      );
-    }
-
-    // Desktop sidebar
-    if (isMobile) return const SizedBox.shrink();
-    
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: sidebarWidth,
@@ -196,69 +169,78 @@ class _MasterSidebarState extends State<MasterSidebar> {
                   ),
           ),
 
-          // Menu Items
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              children: [
-                // Menu Header
-                if (widget.isExpanded)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.md,
-                    ),
-                    child: Text(
-                      "MENU",
-                      style: AppTypography.overline.copyWith(
-                        color: isDark ? AppColors.gray500 : AppColors.gray400,
+            child: ValueListenableBuilder<String?>(
+              valueListenable: AppRoutes.currentRoute,
+              builder: (context, currentRoute, _) {
+                final isMobile = ResponsiveHelper.isMobile(context); // Fixed scope
+                return ListView(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  children: [
+                    // Menu Header
+                    if (widget.isExpanded)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                        child: Text(
+                          "MENU",
+                          style: AppTypography.overline.copyWith(
+                            color: isDark ? AppColors.gray500 : AppColors.gray400,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-
-                // Nav Items
-                ..._navItems.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  final isActive = _isActive(item.path);
-                  final isSubmenuOpen = _openSubmenuIndex == index;
-
-                  return Column(
-                    children: [
-                      _SidebarItem(
-                        icon: item.icon,
-                        title: item.name,
-                        isActive: isActive,
-                        isExpanded: widget.isExpanded,
-                        isDark: isDark,
-                        hasSubmenu: item.subItems != null && item.subItems!.isNotEmpty,
-                        isSubmenuOpen: isSubmenuOpen,
-                        onTap: () {
-                          if (item.subItems != null && item.subItems!.isNotEmpty) {
-                            _toggleSubmenu(index);
-                          } else if (item.path != null) {
-                            AppRoutes.navigatorKey.currentState?.pushNamed(item.path!);
-                          }
-                        },
-                      ),
-                      
-                      // Submenu
-                      if (widget.isExpanded && item.subItems != null && isSubmenuOpen)
-                        ...item.subItems!.map((subItem) {
-                          final isSubActive = _isActive(subItem.path);
-                          return _SidebarSubItem(
-                            title: subItem.name,
-                            isActive: isSubActive,
+    
+                    // Nav Items
+                    ..._navItems.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      final isActive = _isActive(item.path, currentRoute);
+                      final isSubmenuOpen = _openSubmenuIndex == index;
+    
+                      return Column(
+                        children: [
+                          _SidebarItem(
+                            icon: item.icon,
+                            title: item.name,
+                            isActive: isActive,
+                            isExpanded: widget.isExpanded,
                             isDark: isDark,
-                            onTap: () => AppRoutes.navigatorKey.currentState?.pushNamed(subItem.path),
-                            isPro: subItem.pro,
-                            isNew: subItem.isNew,
-                          );
-                        }),
-                    ],
-                  );
-                }),
-              ],
+                            hasSubmenu: item.subItems != null && item.subItems!.isNotEmpty,
+                            isSubmenuOpen: isSubmenuOpen,
+                            onTap: () {
+                              if (item.subItems != null && item.subItems!.isNotEmpty) {
+                                _toggleSubmenu(index);
+                              } else if (item.path != null) {
+                                AppRoutes.navigatorKey.currentState?.pushNamed(item.path!);
+                                if (isMobile) widget.onClose(); // Close mobile drawer on navigation
+                              }
+                            },
+                          ),
+                          
+                          // Submenu
+                          if (widget.isExpanded && item.subItems != null && isSubmenuOpen)
+                            ...item.subItems!.map((subItem) {
+                              final isSubActive = _isActive(subItem.path, currentRoute);
+                              return _SidebarSubItem(
+                                title: subItem.name,
+                                isActive: isSubActive,
+                                isDark: isDark,
+                                onTap: () {
+                                  AppRoutes.navigatorKey.currentState?.pushNamed(subItem.path);
+                                  if (isMobile) widget.onClose();
+                                },
+                                isPro: subItem.pro,
+                                isNew: subItem.isNew,
+                              );
+                            }),
+                        ],
+                      );
+                    }),
+                  ],
+                );
+              }
             ),
           ),
         ],

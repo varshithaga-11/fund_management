@@ -8,12 +8,14 @@ import 'master_header.dart';
 
 class MasterLayout extends StatelessWidget {
   final Widget child;
-  final String title;
+  final String? title;
+  final bool showLayout;
 
   const MasterLayout({
     Key? key,
     required this.child,
-    this.title = 'Fund Management',
+    this.title,
+    this.showLayout = true,
   }) : super(key: key);
 
   @override
@@ -24,26 +26,31 @@ class MasterLayout extends StatelessWidget {
     
     final layoutProvider = Provider.of<LayoutProvider>(context);
 
+    if (!showLayout) return child;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header at the top (full width)
-          MasterHeader(
-            onMenuPressed: () {
-              if (isDesktop) {
-                layoutProvider.toggleSidebar();
-              } else {
-                layoutProvider.toggleMobileSidebar();
-              }
-            },
-            isSidebarExpanded: layoutProvider.isSidebarExpanded,
-          ),
+          if (showLayout)
+            MasterHeader(
+              onMenuPressed: () {
+                if (isDesktop) {
+                  layoutProvider.toggleSidebar();
+                } else {
+                  layoutProvider.toggleMobileSidebar();
+                }
+              },
+              isSidebarExpanded: layoutProvider.isSidebarExpanded,
+            ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Desktop Sidebar below header
-                if (isDesktop)
+                if (showLayout && isDesktop)
                   MasterSidebar(
                     isExpanded: layoutProvider.isSidebarExpanded,
                     isMobileOpen: false,
@@ -52,24 +59,7 @@ class MasterLayout extends StatelessWidget {
 
                 // Main Content
                 Expanded(
-                  child: Column(
-                    children: [
-                      // Content
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: ResponsiveHelper.getResponsivePadding(context),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: ResponsiveBoxConstraints.maxContentWidth,
-                              ),
-                              child: child,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: child,
                 ),
               ],
             ),

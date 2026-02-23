@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'route_constants.dart';
+export 'route_constants.dart';
+
 import '../layout/master_layout.dart';
 import '../pages/dashboard/master_dashboard.dart';
 // Auth Pages
@@ -14,7 +17,6 @@ import '../pages/dashboard/index.dart';
 // Financial Statements Pages
 import '../pages/financialstatements/upload_data_page.dart';
 import '../pages/financialstatements/statement_columns_config_page.dart';
-// Note: FinancialPeriodPage is navigated to dynamically, typically doesn't have a top-level route in this list but could if needed.
 import '../pages/financialstatements/financial_period_page.dart';
 
 // Ratio Analysis Pages
@@ -24,8 +26,6 @@ import '../pages/ratioanalysis/ratio_benchmarks_page.dart';
 import '../pages/ratioanalysis/ratio_dashboard.dart';
 import '../pages/ratioanalysis/productivity_analysis.dart';
 import '../pages/ratioanalysis/interpretation_panel.dart';
-
-// Other Pages
 import '../pages/periodcomparison/period_comparison_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/usermanagement/user_management_page.dart';
@@ -56,48 +56,7 @@ class NotFoundPage extends StatelessWidget {
   }
 }
 
-class AppRoutes {
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  static final ValueNotifier<String?> currentRoute = ValueNotifier<String?>(null);
-
-  static const String signIn = '/';
-  static const String activate = '/activate';
-  static const String signUp = '/signup';
-  static const String masterDashboard = '/master/master-dashboard';
-  static const String companyRatioAnalysis = '/ratio-analysis';
-  static const String resetPassword = '/resetpassword';
-  
-  // Dashboard
-
-
-  // Financial Statements
-  static const String uploadData = '/upload-data';
-  static const String financialStatements = '/financial-statements'; // /:periodId
-  static const String statementColumns = '/statement-columns';
-
-  // Ratio Analysis
-  static const String trendAnalysis = '/ratio-analysis/trends';
-  static const String ratioAnalysis = '/ratio-analysis-list'; // Changed to distinct path
-  static const String ratioDashboard = '/ratio-analysis/dashboard'; // /:periodId
-  static const String ratioBenchmarks = '/ratio-benchmarks';
-  static const String productivityAnalysis = '/productivity-analysis'; // /:periodId
-  static const String interpretation = '/interpretation'; // /:periodId
-  static const String periodComparison = '/period-comparison';
-  static const String userManagement = '/user-management';
-
-  // Others
-  static const String profile = '/profile';
-  static const String calendar = '/calendar';
-  static const String blank = '/blank';
-  static const String alerts = '/alerts';
-  static const String avatars = '/avatars';
-  static const String badges = '/badge';
-  static const String buttons = '/buttons';
-  static const String images = '/images';
-  static const String videos = '/videos';
-  static const String lineChart = '/line-chart';
-  static const String barChart = '/bar-chart';
-
+class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '/');
     final path = uri.path;
@@ -106,106 +65,100 @@ class AppRoutes {
     // For specific period ID routes, we assume a convention or arguments passed via settings.arguments
 
     switch (path) {
-      case masterDashboard:
+      case AppRoutes.masterDashboard:
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const MasterDashboardPage(),
         );
       
-      // Note: companyRatioAnalysis path '/ratio-analysis' conflicts with ratioAnalysisPage if they share the same base.
-      // Adjusting paths:
-      // - Company Ratio Analysis (High Level): '/ratio-analysis'
-      // - Ratio Analysis (Periods List): '/ratio-analysis-list'
-      case companyRatioAnalysis:
+      case AppRoutes.companyRatioAnalysis:
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const CompanyRatioAnalysisPage(),
         );
 
       // Auth Routes
-      case signIn:
+      case AppRoutes.signIn:
         return MaterialPageRoute(settings: settings, builder: (_) => const SignInPage());
-      case signUp:
+      case AppRoutes.signUp:
         return MaterialPageRoute(settings: settings, builder: (_) => const SignUpPage());
 
-      case activate:
+      case AppRoutes.activate:
         return MaterialPageRoute(settings: settings, builder: (_) => const ActivationPage());
-      case resetPassword:
+      case AppRoutes.resetPassword:
         return MaterialPageRoute(settings: settings, builder: (_) => const Scaffold(body: ForgotPasswordForm()));
 
-      // Master Routes (Wrapped in Master Layout where appropriate or just the Page itself if it has scaffolding)
-      
-      case uploadData:
-         // Using the fully implemented UploadDataPage
+      // Master Routes
+      case AppRoutes.uploadData:
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const UploadDataPage(),
         );
       
-      case statementColumns:
+      case AppRoutes.statementColumns:
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const StatementColumnsConfigPage(),
         );
 
-      case trendAnalysis:
+      case AppRoutes.trendAnalysis:
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const TrendAnalysisPage(),
         );
 
-      case ratioAnalysis:
+      case AppRoutes.ratioAnalysis:
          return MaterialPageRoute(
            settings: settings,
            builder: (_) => const RatioAnalysisPage(),
          );
 
-      case ratioBenchmarks:
+      case AppRoutes.ratioBenchmarks:
          return MaterialPageRoute(
            settings: settings,
            builder: (_) => const RatioBenchmarksPage(),
          );
 
-      case periodComparison:
+      case AppRoutes.periodComparison:
          return MaterialPageRoute(
            settings: settings,
            builder: (_) => const PeriodComparisonPage(),
          );
       
-      case userManagement:
+      case AppRoutes.userManagement:
          return MaterialPageRoute(
            settings: settings,
            builder: (_) => const UserManagementPage(),
          );
 
-      case profile:
+      case AppRoutes.profile:
          return MaterialPageRoute(
            settings: settings,
            builder: (_) => const ProfilePage(),
          );
       
-      case calendar:
+      case AppRoutes.calendar:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Calendar'));
       
-      case blank:
+      case AppRoutes.blank:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Blank'));
- 
+
       // UI Elements
-      case alerts:
+      case AppRoutes.alerts:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Alerts'));
-      case avatars:
+      case AppRoutes.avatars:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Avatars'));
-      case badges:
+      case AppRoutes.badges:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Badges'));
-      case buttons:
+      case AppRoutes.buttons:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Buttons'));
-      case images:
+      case AppRoutes.images:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Images'));
-      case videos:
+      case AppRoutes.videos:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Videos'));
-      case lineChart:
+      case AppRoutes.lineChart:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Line Chart'));
-      case barChart:
+      case AppRoutes.barChart:
          return MaterialPageRoute(builder: (_) => const PlaceholderPage('Bar Chart'));
 
 
