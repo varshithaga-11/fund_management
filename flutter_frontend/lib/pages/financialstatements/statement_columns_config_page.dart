@@ -328,6 +328,8 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                         constraints: BoxConstraints(minWidth: constraints.maxWidth),
                         child: DataTable(
                           headingRowColor: WidgetStateProperty.all(Colors.transparent),
+                          dataRowMaxHeight: 80,
+                          dataRowMinHeight: 60,
                           columnSpacing: 24,
                           horizontalMargin: 0,
                           columns: [
@@ -369,6 +371,7 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         TextFormField(
                                           initialValue: row.aliases.join(", "),
