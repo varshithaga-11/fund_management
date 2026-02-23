@@ -1,6 +1,4 @@
-import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:html' as html;
+import '../utils/file_saver.dart';
 import 'dart:convert';
 import '../services/api_service.dart';
 
@@ -17,7 +15,7 @@ class ExportService {
         periodId: periodId,
       );
 
-      _downloadFile(
+      await _downloadFile(
         csvData,
         '$fileName.csv',
         'text/csv;charset=utf-8',
@@ -39,7 +37,7 @@ class ExportService {
         periodId: periodId,
       );
 
-      _downloadFile(
+      await _downloadFile(
         String.fromCharCodes(excelData),
         '$fileName.xlsx',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -61,7 +59,7 @@ class ExportService {
         periodId: periodId,
       );
 
-      _downloadFile(
+      await _downloadFile(
         String.fromCharCodes(pdfData),
         '$fileName.pdf',
         'application/pdf',
@@ -71,19 +69,14 @@ class ExportService {
     }
   }
 
-  // Helper function to download files in browser
-  static void _downloadFile(
+  // Helper function to download files
+  static Future<void> _downloadFile(
     String content,
     String fileName,
     String mimeType,
-  ) {
+  ) async {
     final bytes = utf8.encode(content);
-    final blob = html.Blob([bytes], mimeType);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', fileName)
-      ..click();
-    html.Url.revokeObjectUrl(url);
+    await saveAndOpenFile(bytes, fileName);
   }
 
   // Export dashboard data
