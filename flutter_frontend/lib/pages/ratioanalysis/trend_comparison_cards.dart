@@ -23,11 +23,16 @@ class TrendComparisonCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (ratioData.isEmpty || periods.isEmpty || selectedRatios.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('No data available for comparison'),
+          padding: const EdgeInsets.all(32.0),
+          child: Text(
+            'No data available for comparison',
+            style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade500),
+          ),
         ),
       );
     }
@@ -40,10 +45,8 @@ class TrendComparisonCards extends StatelessWidget {
           .where((r) => _getRatioValue(r, ratioKey) != null)
           .toList()
         ..sort((a, b) {
-          final dateA =
-              DateTime.parse(periodMap[a.period]?.startDate ?? '1970-01-01');
-          final dateB =
-              DateTime.parse(periodMap[b.period]?.startDate ?? '1970-01-01');
+          final dateA = DateTime.tryParse(periodMap[a.period]?.startDate ?? '') ?? DateTime(1970);
+          final dateB = DateTime.tryParse(periodMap[b.period]?.startDate ?? '') ?? DateTime(1970);
           return dateA.compareTo(dateB);
         });
 
@@ -61,15 +64,15 @@ class TrendComparisonCards extends StatelessWidget {
           final previousValue = _getRatioValue(previous, ratioKey) ?? 0.0;
           if (previousValue != 0) {
             changePercent = ((currentValue - previousValue) / previousValue) * 100;
-            if (changePercent > 0) changeDirection = 'up';
-            if (changePercent < 0) changeDirection = 'down';
+            if (changePercent > 0.05) changeDirection = 'up';
+            else if (changePercent < -0.05) changeDirection = 'down';
           }
         }
 
         periodsData.add({
           'periodLabel': currentPeriod?.label ?? 'Unknown',
           'value': currentValue.toStringAsFixed(2),
-          'changePercent': changePercent?.abs().toStringAsFixed(1),
+          'changePercent': changePercent != null ? changePercent.abs().toStringAsFixed(1) : null,
           'changeDirection': changeDirection,
         });
       }
@@ -81,66 +84,103 @@ class TrendComparisonCards extends StatelessWidget {
     }).toList();
 
     return LayoutBuilder(builder: (context, constraints) {
+      final crossAxisCount = constraints.maxWidth > 800 ? 3 : (constraints.maxWidth > 500 ? 2 : 1);
+      
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: constraints.maxWidth > 900
-              ? 3
-              : (constraints.maxWidth > 600 ? 2 : 1),
-          childAspectRatio: 1.2,
-          crossAxisSpacing: 16,
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: 2.2, // Made card shorter
+          crossAxisSpacing: 16,  // Reduced spacing
           mainAxisSpacing: 16,
         ),
         itemCount: comparisonData.length,
         itemBuilder: (context, index) {
           final item = comparisonData[index];
-          return Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item['ratioLabel'] as String,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
-                      letterSpacing: 0.5,
-                    ),
+          final pData = item['periodsData'] as List;
+
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1F2937) : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (item['ratioLabel'] as String).toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11, // Smaller title
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? const Color(0xFFDBEAFE) : const Color(0xFF1E3A8A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Divider(height: 1, thickness: 1),
+                    ],
                   ),
-                  const Divider(),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: (item['periodsData'] as List).length,
-                      itemBuilder: (context, pIndex) {
-                        final data = (item['periodsData'] as List)[pIndex];
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: pData.map((data) {
+                        final direction = data['changeDirection'];
+                        final isUp = direction == 'up';
+                        final isDown = direction == 'down';
+                        final displayDirection = isUp ? 'Up' : isDown ? 'Dip' : 'Stable';
+
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(data['periodLabel'],
-                                  style: const TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                              Text(
+                                data['periodLabel'],
+                                style: TextStyle(
+                                  fontSize: 11, 
+                                  color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               Row(
                                 children: [
-                                  Text(data['value'],
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
+                                  Text(
+                                    data['value'],
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 13,
+                                      color: isDark ? Colors.white : const Color(0xFF111827),
+                                    ),
+                                  ),
                                   if (data['changePercent'] != null) ...[
                                     const SizedBox(width: 4),
                                     Text(
-                                      '(${data['changePercent']}% ${data['changeDirection'] == 'up' ? 'Up' : data['changeDirection'] == 'down' ? 'Dip' : ''})',
+                                      '(${data['changePercent']}% $displayDirection)',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: data['changeDirection'] == 'up'
-                                            ? Colors.green
-                                            : (data['changeDirection'] == 'down'
-                                                ? Colors.red
-                                                : Colors.grey),
+                                        color: isUp 
+                                            ? (isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A))
+                                            : isDown 
+                                                ? (isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626))
+                                                : Colors.grey,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -150,11 +190,11 @@ class TrendComparisonCards extends StatelessWidget {
                             ],
                           ),
                         );
-                      },
+                      }).toList(),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -163,7 +203,6 @@ class TrendComparisonCards extends StatelessWidget {
   }
 
   double? _getRatioValue(RatioResultData data, String key) {
-    // Map string key to property
     switch (key) {
       case 'stock_turnover': return data.stockTurnover;
       case 'gross_profit_ratio': return data.grossProfitRatio;
@@ -174,13 +213,26 @@ class TrendComparisonCards extends StatelessWidget {
       case 'borrowings_to_wf': return data.borrowingsToWf;
       case 'loans_to_wf': return data.loansToWf;
       case 'investments_to_wf': return data.investmentsToWf;
+      case 'earning_assets_to_wf': return data.earningAssetsToWf;
+      case 'interest_tagged_funds_to_wf': return data.interestTaggedFundsToWf;
       case 'cost_of_deposits': return data.costOfDeposits;
       case 'yield_on_loans': return data.yieldOnLoans;
+      case 'yield_on_investments': return data.yieldOnInvestments;
       case 'credit_deposit_ratio': return data.creditDepositRatio;
       case 'avg_cost_of_wf': return data.avgCostOfWf;
+      case 'avg_yield_on_wf': return data.avgYieldOnWf;
+      case 'misc_income_to_wf': return data.miscIncomeToWf;
+      case 'interest_exp_to_interest_income': return data.interestExpToInterestIncome;
       case 'gross_fin_margin': return data.grossFinMargin;
+      case 'operating_cost_to_wf': return data.operatingCostToWf;
+      case 'net_fin_margin': return data.netFinMargin;
+      case 'risk_cost_to_wf': return data.riskCostToWf;
       case 'net_margin': return data.netMargin;
-      // Add more mappings as needed
+      case 'capital_turnover_ratio': return data.capitalTurnoverRatio;
+      case 'per_employee_deposit': return data.perEmployeeDeposit;
+      case 'per_employee_loan': return data.perEmployeeLoan;
+      case 'per_employee_contribution': return data.perEmployeeContribution;
+      case 'per_employee_operating_cost': return data.perEmployeeOperatingCost;
       default: return null;
     }
   }

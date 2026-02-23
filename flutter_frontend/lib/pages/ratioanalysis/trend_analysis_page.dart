@@ -13,7 +13,6 @@ class TrendAnalysisPage extends StatefulWidget {
 
 class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
   List<FinancialPeriodData> _periods = [];
-  List<FinancialPeriodData> _selectedPeriodObjects = [];
   List<RatioResultData> _ratiosData = [];
   List<String> _selectedRatios = [
     'gross_profit_ratio',
@@ -51,13 +50,11 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
       final ratiosFutures = periods.map((p) => getRatioResults(p.id));
       final ratiosResults = await Future.wait(ratiosFutures);
       
-      // Filter out nulls
       final ratiosData = ratiosResults.whereType<RatioResultData>().toList();
 
       if (mounted) {
         setState(() {
           _periods = periods;
-          _selectedPeriodObjects = periods; // Select all by default
           _ratiosData = ratiosData;
           _loading = false;
         });
@@ -72,97 +69,190 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
     }
   }
 
-  void _onPeriodSelectionChanged(bool? selected, FinancialPeriodData period) {
-    if (selected == true) {
-      setState(() {
-        _selectedPeriodObjects.add(period);
-        // Resort based on original list
-        _selectedPeriodObjects.sort((a, b) => 
-            _periods.indexOf(a).compareTo(_periods.indexOf(b)));
-      });
-    } else {
-      setState(() {
-        _selectedPeriodObjects.removeWhere((p) => p.id == period.id);
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-              : SingleChildScrollView(
-                  padding: ResponsiveHelper.getResponsivePadding(context),
+          : SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.isDesktop(context) ? 32 : 16,
+                vertical: 32,
+              ),
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 1200),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Section: Period Selection
-                      Card(
-                        margin: const EdgeInsets.only(bottom: 24),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header Section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.arrow_back,
+                                    color: const Color(0xFF2563EB),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Back',
+                                    style: TextStyle(
+                                      color: Color(0xFF2563EB),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Row(
                             children: [
-                              const Text('Select Periods for Graph', 
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _periods.map((period) {
-                                  final isSelected = _selectedPeriodObjects.any((p) => p.id == period.id);
-                                  return FilterChip(
-                                    label: Text(period.label),
-                                    selected: isSelected,
-                                    onSelected: (val) => _onPeriodSelectionChanged(val, period),
-                                  );
-                                }).toList(),
+                              const Icon(
+                                Icons.trending_up,
+                                size: 32,
+                                color: Color(0xFF2563EB),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Trend Analysis',
+                                style: TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF111827),
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                      
-                      // Chart
-                      if (_ratiosData.isNotEmpty && _selectedPeriodObjects.isNotEmpty)
-                        TrendAnalysisChart(
-                          ratioData: _ratiosData,
-                          periods: _selectedPeriodObjects,
-                          selectedRatios: _selectedRatios,
-                          onSelectedRatiosChange: (ratios) => 
-                              setState(() => _selectedRatios = ratios),
-                        ),
-
                       const SizedBox(height: 32),
-                      
-                      // Comparisons
-                      if (_ratiosData.isNotEmpty && _selectedPeriodObjects.isNotEmpty)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Yearly Comparison', 
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            const Text('Analysis of ratio changes across financial years',
-                                style: TextStyle(color: Colors.grey)),
-                            const SizedBox(height: 16),
-                            TrendComparisonCards(
-                              ratioData: _ratiosData,
-                              periods: _selectedPeriodObjects,
-                              selectedRatios: _selectedRatios,
+
+                      // Error Message
+                      if (_error != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.red.withOpacity(0.1) : Colors.red.shade50,
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(
+                              color: isDark ? Colors.redAccent : Colors.red.shade600,
+                              fontSize: 14,
                             ),
-                          ],
+                          ),
                         ),
 
-                      if (_ratiosData.isEmpty)
-                         const Center(child: Text('No ratio data available for the selected periods')),
+                      if (_error == null) ...[
+                        if (_ratiosData.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.2) : const Color(0xFFEFF6FF),
+                              border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'No Periods Available',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF1E3A8A),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Upload financial data to see trend analysis.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark ? Colors.grey.shade400 : const Color(0xFF4B5563),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          // Main Chart and Controls
+                          TrendAnalysisChart(
+                            ratioData: _ratiosData,
+                            periods: _periods,
+                            selectedRatios: _selectedRatios,
+                            onSelectedRatiosChange: (ratios) => 
+                                setState(() => _selectedRatios = ratios),
+                          ),
+                          const SizedBox(height: 48),
+
+                          // Yearly Comparison Section
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Yearly Comparison',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF1F2937),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Analysis of ratio changes across financial years',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                TrendComparisonCards(
+                                  ratioData: _ratiosData,
+                                  periods: _periods,
+                                  selectedRatios: _selectedRatios,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
+              ),
+            ),
     );
   }
 }
