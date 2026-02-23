@@ -155,28 +155,34 @@ class _MasterSidebarState extends State<MasterSidebar> {
             padding: EdgeInsets.symmetric(
               horizontal: widget.isExpanded ? 24 : 0,
             ),
-            child: widget.isExpanded
-                ? const Text(
-                    "FM",
-                    style: TextStyle(
-                      color: Color(0xFF6366F1),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: widget.isExpanded
+                  ? const Text(
+                      "Fund Management",
+                      key: ValueKey('expanded_logo'),
+                      style: TextStyle(
+                        color: Color(0xFF6366F1),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                    )
+                  : const Text(
+                      "FM",
+                      key: ValueKey('collapsed_logo'),
+                      style: TextStyle(
+                        color: Color(0xFF6366F1),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      softWrap: false,
                     ),
-                  )
-                : Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.trending_up,
-                      color: Color(0xFF6366F1),
-                      size: 20,
-                    ),
-                  ),
+            ),
           ),
 
           Expanded(
@@ -311,26 +317,36 @@ class _SidebarItem extends StatelessWidget {
                 color: isActive ? activeColor : inactiveColor,
                 size: 20,
               ),
-              if (isExpanded) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isActive ? activeColor : inactiveColor,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: isExpanded ? 1.0 : 0.0,
+                child: isExpanded
+                    ? Row(
+                        children: [
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 160, // Fixed width during transition prevents jitter
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isActive ? activeColor : inactiveColor,
+                                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              if (isExpanded && hasSubmenu)
+                Icon(
+                  isSubmenuOpen ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  color: isActive ? activeColor : inactiveColor,
                 ),
-                if (hasSubmenu)
-                  Icon(
-                    isSubmenuOpen ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: isActive ? activeColor : inactiveColor,
-                  ),
-              ],
             ],
           ),
         ),

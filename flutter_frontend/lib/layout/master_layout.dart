@@ -30,33 +30,35 @@ class MasterLayout extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
-      body: Column(
+      body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header at the top (full width)
-          if (showLayout)
-            MasterHeader(
-              onMenuPressed: () {
-                if (isDesktop) {
-                  layoutProvider.toggleSidebar();
-                } else {
-                  layoutProvider.toggleMobileSidebar();
-                }
-              },
-              isSidebarExpanded: layoutProvider.isSidebarExpanded,
+          // Desktop Sidebar (left side)
+          if (showLayout && isDesktop)
+            MasterSidebar(
+              isExpanded: layoutProvider.isSidebarExpanded,
+              isMobileOpen: false,
+              onClose: layoutProvider.closeMobileSidebar,
             ),
+
+          // Header and Content Column (right side, expanded)
           Expanded(
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Desktop Sidebar below header
-                if (showLayout && isDesktop)
-                  MasterSidebar(
-                    isExpanded: layoutProvider.isSidebarExpanded,
-                    isMobileOpen: false,
-                    onClose: layoutProvider.closeMobileSidebar,
+                // Header at the top
+                if (showLayout)
+                  MasterHeader(
+                    onMenuPressed: () {
+                      if (isDesktop) {
+                        layoutProvider.toggleSidebar();
+                      } else {
+                        layoutProvider.toggleMobileSidebar();
+                      }
+                    },
+                    isSidebarExpanded: layoutProvider.isSidebarExpanded,
                   ),
-
+                
                 // Main Content
                 Expanded(
                   child: child,
