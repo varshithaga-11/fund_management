@@ -332,108 +332,114 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                   ),
                 )
               else
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  child: Scrollbar(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                        columnSpacing: 24,
-                        horizontalMargin: 20,
-                        columns: [
-                          const DataColumn(label: Text('Canonical Field (Model)', style: TextStyle(fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Display Name (UI / PDF)', style: TextStyle(fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Alternative Names / Aliases', style: TextStyle(fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Required', style: TextStyle(fontWeight: FontWeight.bold))),
-                          if (_canUpdate) const DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-                        ],
-                        rows: _rows.map((row) {
-                          return DataRow(
-                            key: ValueKey('row_${row.id}'),
-                            cells: [
-                              DataCell(Text(row.canonicalField, style: const TextStyle(fontWeight: FontWeight.w500))),
-                              DataCell(
-                                SizedBox(
-                                  width: 250,
-                                  child: TextFormField(
-                                    key: ValueKey('dn_${_statementType}_${row.id}_${row.displayName}'),
-                                    initialValue: row.displayName,
-                                    enabled: _canUpdate,
-                                    decoration: InputDecoration(
-                                      isDense: true,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                    ),
-                                    onChanged: (val) => _handleFieldChange(row.id, 'display_name', val),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Container(
-                                  width: 350,
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      TextFormField(
-                                        key: ValueKey('al_${_statementType}_${row.id}_${row.aliases.join("_")}'),
-                                        initialValue: row.aliases.join(", "),
-                                        enabled: _canUpdate,
-                                        decoration: InputDecoration(
-                                          isDense: true,
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                        ),
-                                        onChanged: (val) => _handleFieldChange(row.id, 'aliases', val),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Comma-separated names to match during upload',
-                                        style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Checkbox(
-                                  value: row.isRequired,
-                                  onChanged: _canUpdate ? (val) => _handleFieldChange(row.id, 'is_required', val) : null,
-                                ),
-                              ),
-                              if (_canUpdate)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    child: Scrollbar(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                          dataRowMinHeight: 90,
+                          dataRowMaxHeight: 120,
+                          columnSpacing: 24,
+                          horizontalMargin: 16,
+                          columns: [
+                            const DataColumn(label: Text('Canonical Field (Model)', style: TextStyle(fontWeight: FontWeight.bold))),
+                            const DataColumn(label: Text('Display Name (UI / PDF)', style: TextStyle(fontWeight: FontWeight.bold))),
+                            const DataColumn(label: Text('Alternative Names / Aliases', style: TextStyle(fontWeight: FontWeight.bold))),
+                            const DataColumn(label: Text('Required', style: TextStyle(fontWeight: FontWeight.bold))),
+                            if (_canUpdate) const DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                          ],
+                          rows: _rows.map((row) {
+                            return DataRow(
+                              key: ValueKey('row_${row.id}'),
+                              cells: [
+                                DataCell(Text(row.canonicalField, style: const TextStyle(fontWeight: FontWeight.w500))),
                                 DataCell(
-                                  OutlinedButton(
-                                    onPressed: () => _handleEditConfig(row),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      minimumSize: Size.zero,
-                                      side: BorderSide(color: Colors.grey.shade300),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  SizedBox(
+                                    width: 250,
+                                    child: TextFormField(
+                                      key: ValueKey('dn_${_statementType}_${row.id}'),
+                                      initialValue: row.displayName,
+                                      enabled: _canUpdate,
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                      ),
+                                      onChanged: (val) => _handleFieldChange(row.id, 'display_name', val),
                                     ),
-                                    child: const Text('Edit', style: TextStyle(fontSize: 13, color: Colors.black87)),
                                   ),
                                 ),
-                            ],
-                          );
-                        }).toList(),
+                                DataCell(
+                                  Container(
+                                    width: 350,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        TextFormField(
+                                          key: ValueKey('al_${_statementType}_${row.id}'),
+                                          initialValue: row.aliases.join(", "),
+                                          enabled: _canUpdate,
+                                          decoration: InputDecoration(
+                                            isDense: true,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                          ),
+                                          onChanged: (val) => _handleFieldChange(row.id, 'aliases', val),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Comma-separated names to match during upload',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Checkbox(
+                                    value: row.isRequired,
+                                    onChanged: _canUpdate ? (val) => _handleFieldChange(row.id, 'is_required', val) : null,
+                                  ),
+                                ),
+                                if (_canUpdate)
+                                  DataCell(
+                                    OutlinedButton(
+                                      onPressed: () => _handleEditConfig(row),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        minimumSize: Size.zero,
+                                        side: BorderSide(color: Colors.grey.shade300),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                      ),
+                                      child: const Text('Edit', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
                       ),
                     ),
                   ),
                 ),
-            ],
+                const SizedBox(height: 40), // Spacing at the very bottom
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
