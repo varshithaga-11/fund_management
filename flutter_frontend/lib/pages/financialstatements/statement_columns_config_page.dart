@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'financial_statements_api.dart';
 
 class StatementColumnsConfigPage extends StatefulWidget {
@@ -14,7 +15,8 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
   List<StatementColumnConfig> _rows = [];
   bool _loading = false;
   bool _saving = false;
-  bool _canUpdate = true; // Mocked as true, similar to current state
+  bool _canUpdate = true;
+  static const String _prefKey = 'selected_statement_type';
 
   final Map<String, String> _statementTypeOptions = {
     'TRADING': 'Trading Account',
@@ -40,8 +42,20 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
   @override
   void initState() {
     super.initState();
-    // _checkUserRole(); // TODO: Implement real role check
-    _loadConfigs();
+    _initAndLoad();
+  }
+
+  Future<void> _initAndLoad() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedType = prefs.getString(_prefKey);
+    if (savedType != null && _statementTypeOptions.containsKey(savedType)) {
+      if (mounted) {
+        setState(() {
+          _statementType = savedType;
+        });
+      }
+    }
+    await _loadConfigs();
   }
 
   Future<void> _loadConfigs() async {
@@ -138,7 +152,7 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                 const SnackBar(content: Text('Configuration added.'), backgroundColor: Colors.green),
               );
             }
-            _loadConfigs();
+            await _loadConfigs();
           } catch (e) {
              if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +189,7 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                 const SnackBar(content: Text('Configuration updated.'), backgroundColor: Colors.green),
               );
             }
-            _loadConfigs();
+            await _loadConfigs();
           } catch (e) {
              if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -282,10 +296,12 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                               child: Text(e.value),
                             );
                           }).toList(),
-                          onChanged: (value) {
+                          onChanged: (value) async {
                             if (value != null) {
                               setState(() => _statementType = value);
-                              _loadConfigs();
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setString(_prefKey, value);
+                              await _loadConfigs();
                             }
                           },
                         ),
@@ -361,7 +377,7 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                                 SizedBox(
                                   width: 250,
                                   child: TextFormField(
-                                    key: ValueKey('dn_${_statementType}_${row.id}'),
+                                    key: ValueKey('dn_${_statementType}_${row.id}_${row.displayName}'),
                                     initialValue: row.displayName,
                                     enabled: _canUpdate,
                                     decoration: InputDecoration(
@@ -385,7 +401,7 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       TextFormField(
-                                        key: ValueKey('al_${_statementType}_${row.id}'),
+                                        key: ValueKey('al_${_statementType}_${row.id}_${row.aliases.join("_")}'),
                                         initialValue: row.aliases.join(", "),
                                         enabled: _canUpdate,
                                         decoration: InputDecoration(

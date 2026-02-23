@@ -85,7 +85,7 @@ Future<List<UserRegister>> getUserList({int? createdBy}) async {
 }
 
 Future<UserRegister> createUser(UserRegister user) async {
-  final url = createApiUrl('app/usermanagement/');
+  final url = createApiUrl('api/usermanagement/');
   final response = await http.post(
     Uri.parse(url),
     headers: await getAuthHeaders(),
