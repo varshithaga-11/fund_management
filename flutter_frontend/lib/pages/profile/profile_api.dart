@@ -67,12 +67,17 @@ Future<UserProfileData> getUserProfile() async {
   if (userId == null) throw Exception('User is not logged in');
 
   final url = createApiUrl('api/profile/$userId/');
+  print('Fetching profile from: $url');
+  
   final response = await http.get(Uri.parse(url), headers: await getAuthHeaders());
 
   if (response.statusCode == 200) {
-    return UserProfileData.fromJson(jsonDecode(response.body));
+    final data = UserProfileData.fromJson(jsonDecode(response.body));
+    print('Profile loaded successfully: ${data.username}');
+    return data;
   } else {
-    throw Exception('Failed to load profile');
+    print('Profile fetch failed with status ${response.statusCode}: ${response.body}');
+    throw Exception('Failed to load profile: ${response.statusCode} - ${response.body}');
   }
 }
 

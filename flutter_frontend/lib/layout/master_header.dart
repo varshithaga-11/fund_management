@@ -212,7 +212,7 @@ class _MasterHeaderState extends State<MasterHeader> {
         if (value == 'logout') {
           _logout();
         } else if (value == 'profile') {
-          Navigator.pushNamed(context, AppRoutes.profile);
+          AppRoutes.navigatorKey.currentState?.pushNamed(AppRoutes.profile);
         }
       },
       itemBuilder: (context) => <PopupMenuEntry<String>>[

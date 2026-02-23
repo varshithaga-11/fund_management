@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/responsive_helper.dart';
+import '../../theme/app_theme.dart';
 import 'profile_api.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -21,7 +21,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadProfile() async {
     try {
+      print('Loading profile...');
       final profile = await getUserProfile();
+      print('Profile loaded: $profile');
       if (mounted) {
         setState(() {
           _profile = profile;
@@ -29,9 +31,14 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     } catch (e) {
+      print('Error loading profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load profile: $e')),
+          SnackBar(
+            content: Text('Failed to load profile: $e'),
+            backgroundColor: Colors.red[600],
+            duration: const Duration(seconds: 5),
+          ),
         );
         setState(() => _loading = false);
       }
@@ -54,138 +61,175 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_profile == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(child: Text("Profile not found")),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Profile not found",
+                style: TextStyle(
+                  color: isDark ? AppColors.gray100 : AppColors.gray800,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton(
+                onPressed: _loadProfile,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: ResponsiveHelper.getResponsivePadding(context),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Page Title (Breadcrumb equivalent)
-            const Text(
+            // Page Title
+            Text(
               'Profile',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.gray100 : AppColors.gray800,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
 
-            // Main Content Area (Matches the white container in UserProfiles.tsx)
+            // Main Content Card
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
+                color: isDark ? AppColors.darkCard : AppColors.white,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(
+                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                ),
               ),
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Profile Information',
-                     style: TextStyle(
+                  Text(
+                    'Profile',
+                    style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.gray100 : AppColors.gray800,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   
-                  // UserMetaCard equivalent
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Profile Info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${_profile!.firstName.isEmpty ? _profile!.username : _profile!.firstName} ${_profile!.lastName}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    crossAxisAlignment: WrapCrossAlignment.center,
-                                    spacing: 12,
-                                    children: [
-                                      Text(
-                                        _profile!.username,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      Container(
-                                        height: 14,
-                                        width: 1,
-                                        color: Colors.grey[300],
-                                      ),
-                                      Text(
-                                        _profile!.email,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            
-                            // Edit Button
-                            OutlinedButton.icon(
-                              onPressed: _showEditDialog,
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text('Edit'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.grey[700],
-                                side: BorderSide(color: Colors.grey.shade300),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Profile Card
+                  _buildProfileCard(isDark),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+        ),
+        color: isDark ? AppColors.darkBg : AppColors.gray50,
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Profile Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_profile!.firstName.isEmpty ? _profile!.username : _profile!.firstName} ${_profile!.lastName}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.gray100 : AppColors.gray800,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AppSpacing.md,
+                      children: [
+                        Text(
+                          _profile!.username,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? AppColors.gray400 : AppColors.gray500,
+                          ),
+                        ),
+                        Container(
+                          height: 14,
+                          width: 1,
+                          color: isDark ? AppColors.gray700 : AppColors.gray300,
+                        ),
+                        Text(
+                          _profile!.email,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? AppColors.gray400 : AppColors.gray500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Edit Button
+              OutlinedButton.icon(
+                onPressed: _showEditDialog,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Edit'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppColors.gray400 : AppColors.gray700,
+                  side: BorderSide(
+                    color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -240,22 +284,27 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         email: _emailController.text.trim(),
-        // Username usually read-only in this context based on frontend
       );
       
       try {
         final result = await updateUserProfile(updatedData);
         widget.onSave(result);
         if (mounted) {
-           Navigator.of(context).pop();
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Profile updated successfully')),
-           );
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Profile updated successfully'),
+              backgroundColor: Colors.green[600],
+            ),
+          );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to update profile: $e')),
+            SnackBar(
+              content: Text('Failed to update profile: $e'),
+              backgroundColor: Colors.red[600],
+            ),
           );
         }
       } finally {
@@ -266,166 +315,224 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dialog(
-       backgroundColor: Colors.white,
-       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-       child: Container(
-         width: 600,
-         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
-         padding: const EdgeInsets.all(32),
-         child: Form(
-           key: _formKey,
-           child: SingleChildScrollView(
-             child: Column(
-               mainAxisSize: MainAxisSize.min,
-               crossAxisAlignment: CrossAxisAlignment.start,
-               children: [
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                   children: [
-                     Text(
-                       'Edit Profile',
-                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                         fontWeight: FontWeight.bold,
-                         color: Colors.black,
-                       ),
-                     ),
-                     IconButton(
-                       icon: const Icon(Icons.close),
-                       onPressed: () => Navigator.of(context).pop(),
-                     ),
-                   ],
-                 ),
-                 const SizedBox(height: 8),
-                 Text(
-                   'Update your details to keep your profile up-to-date.',
-                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                 ),
-                 const SizedBox(height: 32),
-                 
-                 const Text('Personal Information', 
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                 const SizedBox(height: 24),
-                 
-                 Row(
-                   children: [
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           const Text('First Name', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                           const SizedBox(height: 8),
-                           TextFormField(
-                             controller: _firstNameController,
-                             decoration: InputDecoration(
-                               hintText: 'First Name',
-                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                     const SizedBox(width: 16),
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           const Text('Last Name', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                           const SizedBox(height: 8),
-                           TextFormField(
-                             controller: _lastNameController,
-                             decoration: InputDecoration(
-                               hintText: 'Last Name',
-                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                   ],
-                 ),
-                 const SizedBox(height: 20),
-                 Row(
-                   children: [
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           const Text('Email Address', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                           const SizedBox(height: 8),
-                           TextFormField(
-                             controller: _emailController,
-                             decoration: InputDecoration(
-                               hintText: 'Email Address',
-                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                     const SizedBox(width: 16),
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           const Text('Username', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                           const SizedBox(height: 8),
-                           TextFormField(
-                             controller: _usernameController,
-                             readOnly: true,
-                             decoration: InputDecoration(
-                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                               fillColor: const Color(0xFFF9FAFB),
-                               filled: true,
-                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                   ],
-                 ),
-                 
-                 const SizedBox(height: 48),
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.end,
-                   children: [
-                     TextButton(
-                       onPressed: () => Navigator.of(context).pop(),
-                       style: TextButton.styleFrom(
-                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                         foregroundColor: Colors.grey[700],
-                       ),
-                       child: const Text('Close'),
-                     ),
-                     const SizedBox(width: 12),
-                     ElevatedButton(
-                       onPressed: _saving ? null : _handleSubmit,
-                       style: ElevatedButton.styleFrom(
-                         backgroundColor: Colors.blue[600],
-                         foregroundColor: Colors.white,
-                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                         elevation: 0,
-                       ),
-                       child: _saving 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-                     ),
-                   ],
-                 ),
-               ],
-             ),
-           ),
-         ),
-       ),
+      backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+      insetPadding: const EdgeInsets.all(AppSpacing.md),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: 700,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Edit Profile',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.gray100 : AppColors.gray800,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        color: isDark ? AppColors.gray400 : AppColors.gray500,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Update your details to keep your profile up-to-date.',
+                  style: TextStyle(
+                    color: isDark ? AppColors.gray400 : AppColors.gray500,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                
+                Text(
+                  'Personal Information',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.gray100 : AppColors.gray800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                
+                // First Name and Last Name Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildFormField(
+                        label: 'First Name',
+                        controller: _firstNameController,
+                        isDark: isDark,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: _buildFormField(
+                        label: 'Last Name',
+                        controller: _lastNameController,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                
+                // Email and Username Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildFormField(
+                        label: 'Email Address',
+                        controller: _emailController,
+                        isDark: isDark,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: _buildFormField(
+                        label: 'Username',
+                        controller: _usernameController,
+                        isDark: isDark,
+                        readOnly: true,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                        side: BorderSide(
+                          color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                        ),
+                        foregroundColor: isDark ? AppColors.gray400 : AppColors.gray700,
+                      ),
+                      child: const Text('Close'),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    ElevatedButton(
+                      onPressed: _saving ? null : _handleSubmit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.md,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Save Changes',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    required bool isDark,
+    bool readOnly = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isDark ? AppColors.gray300 : AppColors.gray700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        TextFormField(
+          controller: controller,
+          readOnly: readOnly,
+          decoration: InputDecoration(
+            hintText: label,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+            filled: readOnly,
+            fillColor: readOnly
+              ? (isDark ? AppColors.darkBg : AppColors.gray50)
+              : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkBorder : AppColors.gray200,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkBorder : AppColors.gray200,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 2,
+              ),
+            ),
+          ),
+          style: TextStyle(
+            color: isDark ? AppColors.gray100 : AppColors.gray900,
+          ),
+        ),
+      ],
     );
   }
 }
