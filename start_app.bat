@@ -16,24 +16,35 @@ if %errorlevel% neq 0 (
 )
 
 :: 2. Wait for backend to be ready
-echo [+] Waiting for backend to initialize...
-timeout /t 10 /nobreak > nul
+echo [+] Waiting for backend to initialize (checking localhost:8000)...
+:WaitLoop
+timeout /t 2 /nobreak > nul
+curl -s http://localhost:8000/api/ > nul
+if %errorlevel% neq 0 (
+    echo [.] Still waiting for backend...
+    goto WaitLoop
+)
+echo [√] Backend is ready!
 
 :: 3. Start the Frontend
-echo [+] Launching Flutter Desktop Application...
-cd flutter_frontend
+echo [+] Launching Flutter Application...
 
-:: Check if Windows support is enabled, if not enable it
-if not exist "windows" (
-    echo [!] Windows folder missing. Enabling Windows platform...
-    flutter create --platforms=windows .
+set EXE_PATH=flutter_frontend\build\windows\x64\runner\Release\flutter_frontend.exe
+
+if exist "%EXE_PATH%" (
+    echo [√] Found compiled executable. Launching...
+    start "" "%EXE_PATH%"
+) else (
+    echo [!] Compiled executable not found. 
+    echo [!] Running in debug mode via 'flutter run' instead...
+    cd flutter_frontend
+    flutter run -d windows
 )
-
-:: Run the app
-flutter run -d windows
 
 echo.
 echo ==========================================
-echo    Application Closed
+echo    Application Started
 echo ==========================================
+echo [i] You can close this window now, or leave it open to monitor backend logs.
+echo [i] Note: Closing this window will NOT automatically stop Docker containers.
 pause
