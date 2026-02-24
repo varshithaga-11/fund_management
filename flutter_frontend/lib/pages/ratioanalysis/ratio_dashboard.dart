@@ -28,6 +28,7 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
   bool _loading = true;
   String _viewMode = 'cards'; // 'cards' | 'table'
   String _userRole = '';
+  bool _showExportMenu = false;
 
   @override
   void initState() {
@@ -516,70 +517,71 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
                     ),
                     const SizedBox(width: 8),
                     // Export button with popup menu
-                    GestureDetector(
-                      onTap: () async {
-                        final RenderBox button = context.findRenderObject() as RenderBox;
-                        final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-                        final RelativeRect position = RelativeRect.fromRect(
-                          Rect.fromPoints(
-                            button.localToGlobal(Offset.zero, ancestor: overlay),
-                            button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
-                          ),
-                          Offset.zero & overlay.size,
-                        );
-                        
-                        final String? result = await showMenu<String>(
-                          context: context,
-                          position: position,
-                          items: [
-                            PopupMenuItem<String>(
-                              value: 'excel',
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.table_chart, size: 18, color: Color(0xFF16A34A)),
-                                  SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Excel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                      Text('All details in xlsx', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                    Builder(
+                      builder: (buttonContext) => _HoverableButton(
+                        onTap: () async {
+                          final RenderBox button = buttonContext.findRenderObject() as RenderBox;
+                          final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+                          final RelativeRect position = RelativeRect.fromRect(
+                            Rect.fromPoints(
+                              button.localToGlobal(button.size.bottomLeft(Offset.zero), ancestor: overlay),
+                              button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
                             ),
-                            PopupMenuItem<String>(
-                              value: 'pdf',
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.description, size: 18, color: Color(0xFFDC2626)),
-                                  SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('PDF', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                      Text('Formatted report pdf', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                    ],
-                                  ),
-                                ],
+                            Offset.zero & overlay.size,
+                          );
+                          setState(() => _showExportMenu = true);
+                          final String? result = await showMenu<String>(
+                            context: context,
+                            position: position,
+                            items: [
+                              PopupMenuItem<String>(
+                                value: 'excel',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.table_chart, size: 18, color: Color(0xFF16A34A)),
+                                    SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Excel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                        Text('All details in xlsx', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                        
-                        if (result == 'excel') {
-                          _exportToExcel();
-                        } else if (result == 'pdf') {
-                          _exportToPDF();
-                        }
-                      },
-                      child: _HoverableButton(
-                        onTap: () {},
+                              PopupMenuItem<String>(
+                                value: 'pdf',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.description, size: 18, color: Color(0xFFDC2626)),
+                                    SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('PDF', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                        Text('Formatted report pdf', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                          setState(() => _showExportMenu = false);
+                          
+                          if (result == 'excel') {
+                            _exportToExcel();
+                          } else if (result == 'pdf') {
+                            _exportToPDF();
+                          }
+                        },
                         baseColor: const Color(0xFF4F46E5),
                         hoverColor: const Color(0xFF4338CA),
                         label: 'Export',
                         icon: Icons.download,
-                        showChevron: false,
+                        showChevron: true,
+                        isRotated: _showExportMenu,
                       ),
                     ),
                   ],
