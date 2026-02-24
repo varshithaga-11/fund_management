@@ -164,11 +164,18 @@ class _TrendCard extends StatefulWidget {
 }
 
 class _TrendCardState extends State<_TrendCard> {
-  bool _isHovered = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.hardEdge,
       padding: const EdgeInsets.all(20), // p-5 in React
       decoration: BoxDecoration(
         color: widget.isDark ? const Color(0xFF1F2937) : Colors.white,
@@ -208,20 +215,24 @@ class _TrendCardState extends State<_TrendCard> {
           // Data List
           Expanded(
             child: widget.pData.length > 5
-                ? Theme(
-                    data: Theme.of(context).copyWith(
-                      scrollbarTheme: ScrollbarThemeData(
-                        thumbColor: WidgetStateProperty.all(
-                          widget.isDark ? Colors.white10 : Colors.black12,
-                        ),
-                        radius: const Radius.circular(10),
-                        thickness: WidgetStateProperty.all(3),
-                      ),
-                    ),
-                    child: Scrollbar(
+                ? ScrollConfiguration(
+                    behavior: const ScrollBehavior().copyWith(scrollbars: false),
+                    child: RawScrollbar(
+                      controller: _scrollController,
                       thumbVisibility: true,
+                      radius: const Radius.circular(10),
+                      thickness: 4,
+                      thumbColor: widget.isDark 
+                          ? Colors.white.withOpacity(0.2) 
+                          : Colors.black.withOpacity(0.12),
+                      minThumbLength: 24,
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.only(right: 12),
+                        key: ValueKey('scroll_${widget.item['ratioLabel']}'),
+                        controller: _scrollController,
+                        primary: false,
+                        physics: const ClampingScrollPhysics(),
+                        clipBehavior: Clip.hardEdge,
+                        padding: const EdgeInsets.only(right: 20),
                         child: _buildDataColumn(),
                       ),
                     ),

@@ -280,61 +280,46 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
 
   Widget _buildChartTypeSelector() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return PopupMenuButton<String>(
-      onSelected: (val) => setState(() => _chartType = val),
-      offset: const Offset(0, 50),
-      position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      elevation: 8,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF374151) : Colors.white,
-          border: Border.all(
-            color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB),
-            width: 1,
-          ),
-          borderRadius: BorderRadius.circular(8),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF374151) : Colors.white,
+        border: Border.all(
+          color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB),
+          width: 1,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              _chartType[0].toUpperCase() + _chartType.substring(1),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : const Color(0xFF111827),
-              ),
-            ),
-            Icon(
-              Icons.keyboard_arrow_down,
-              size: 20,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-            ),
-          ],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _chartType,
+          isExpanded: true,
+          dropdownColor: isDark ? const Color(0xFF2D3748) : Colors.white,
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? Colors.white : const Color(0xFF111827),
+            fontWeight: FontWeight.w500,
+          ),
+          items: _chartTypes
+              .map((t) => DropdownMenuItem(
+                    value: t,
+                    child: Text(
+                      t[0].toUpperCase() + t.substring(1),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
+                  ))
+              .toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => _chartType = val);
+            }
+          },
         ),
       ),
-      itemBuilder: (context) => _chartTypes.map((type) {
-        final isSelected = _chartType == type;
-        return PopupMenuItem<String>(
-          value: type,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                type[0].toUpperCase() + type.substring(1),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-              if (isSelected) const Icon(Icons.check, size: 18, color: Color(0xFF2563EB)),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -1146,11 +1131,14 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
             reservedSize: 32,
             interval: 1,
             getTitlesWidget: (value, meta) {
+              if (value < 0 || value >= xLabels.length || value % 1 != 0) return const SizedBox();
+              
               final index = value.toInt();
               if (index >= 0 && index < xLabels.length) {
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   space: 8,
+                  fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
                   child: Text(
                     xLabels[index],
                     style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w500),
@@ -1185,7 +1173,7 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
         ),
       ),
       minX: 0 + _xOffset,
-      maxX: ((xLabels.length - 1) * _zoomScale) + _xOffset,
+      maxX: ((xLabels.length - 1) * _zoomScale) + _xOffset + 0.15,
       minY: minY,
       maxY: maxY,
     );
@@ -1237,6 +1225,7 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
                     space: 8,
+                    fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
                     child: Text(
                       xLabels[index],
                       style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
@@ -1472,11 +1461,13 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
           showTitles: true,
           reservedSize: 32,
           getTitlesWidget: (value, meta) {
+            if (value < 0 || value >= xLabels.length || value % 1 != 0) return const SizedBox();
             final index = value.toInt();
             if (index >= 0 && index < xLabels.length) {
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 8,
+                fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
                 child: Text(
                   xLabels[index],
                   style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
