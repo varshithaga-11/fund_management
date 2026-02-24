@@ -978,10 +978,12 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
             )
           ],
         ),
-        child: Stack(
-          clipBehavior: Clip.antiAlias,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
           children: [
-            // Background gradient circle - top right (React style, clipped to card)
+            // Background gradient circle - top right (React style)
             Positioned(
               top: -40,
               right: -40,
@@ -1070,9 +1072,10 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
+        ), // Stack
+        ), // ClipRRect
+      ), // AnimatedContainer
+    ); // MouseRegion
   }
 
   // ============ SECONDARY STATS ============
