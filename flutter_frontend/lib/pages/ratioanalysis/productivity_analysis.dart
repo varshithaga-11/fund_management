@@ -129,61 +129,68 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SingleChildScrollView(
-          padding: ResponsiveHelper.getResponsivePadding(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with Back Button
-              _buildHeader(isDark),
-              const SizedBox(height: 24),
-    
-              // Metrics Grid
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final crossAxisCount = constraints.maxWidth > 800 ? 2 : 1;
-                  return GridView.count(
-                    crossAxisCount: crossAxisCount,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 24,
-                    crossAxisSpacing: 24,
-                    childAspectRatio: constraints.maxWidth > 800 ? 2.2 : 1.8,
-                    children: [
-                      _buildMetricCard(
-                        'Per Employee Business',
-                        '(Average Deposit + Average Loan) / Staff Count',
-                        _perEmployeeBusiness,
-                        AppColors.info,
-                        isDark,
-                      ),
-                      _buildMetricCard(
-                        'Per Employee Contribution',
-                        '(Total Income - Interest Expenses) / Staff Count',
-                        _perEmployeeContribution,
-                        AppColors.success,
-                        isDark,
-                      ),
-                      _buildMetricCard(
-                        'Per Employee Operating Cost',
-                        'Establishment & Contingencies / Staff Count',
-                        _perEmployeeOperatingCost,
-                        AppColors.warning,
-                        isDark,
-                      ),
-                      _buildEfficiencyCard(isDark),
-                    ],
-                  );
-                },
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with Back Button
+                    _buildHeader(isDark),
+                    const SizedBox(height: 32),
+        
+                    // Metrics Grid
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount = constraints.maxWidth > 800 ? 2 : 1;
+                        return GridView.count(
+                          crossAxisCount: crossAxisCount,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 24,
+                          childAspectRatio: constraints.maxWidth > 800 ? 3.0 : 1.8,
+                          children: [
+                            _buildMetricCard(
+                              'Per Employee Business',
+                              '(Average Deposit + Average Loan) / Staff Count',
+                              _perEmployeeBusiness,
+                              isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                              isDark,
+                            ),
+                            _buildMetricCard(
+                              'Per Employee Contribution',
+                              '(Total Income - Interest Expenses) / Staff Count',
+                              _perEmployeeContribution,
+                              isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
+                              isDark,
+                            ),
+                            _buildMetricCard(
+                              'Per Employee Operating Cost',
+                              'Establishment & Contingencies / Staff Count',
+                              _perEmployeeOperatingCost,
+                              isDark ? const Color(0xFFFB923C) : const Color(0xFFEA580C),
+                              isDark,
+                            ),
+                            _buildEfficiencyCard(isDark),
+                          ],
+                        );
+                      },
+                    ),
+        
+                    const SizedBox(height: 32),
+        
+                    // Staff Count Footer
+                    if (_period!.operationalMetrics != null)
+                      _buildStaffCountFooter(isDark),
+                    
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
-    
-              const SizedBox(height: 32),
-    
-              // Staff Count Footer
-              if (_period!.operationalMetrics != null)
-                _buildStaffCountFooter(isDark),
-              
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         ),
       ),
@@ -194,30 +201,34 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF1E293B) : AppColors.white,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.gray200),
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: Icon(Icons.arrow_back,
-                color: isDark ? AppColors.white : AppColors.gray700),
-            tooltip: 'Back to Dashboard',
-            style: IconButton.styleFrom(
-              hoverColor: isDark ? AppColors.gray700 : AppColors.gray100,
-              padding: const EdgeInsets.all(12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.arrow_back,
+                    size: 20,
+                    color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151)),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -227,16 +238,17 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
               children: [
                 Text(
                   'Productivity Analysis',
-                  style: (isDark
-                          ? AppTypography.h3.copyWith(color: AppColors.white)
-                          : AppTypography.h3.copyWith(color: AppTypography.h3.color))
-                      .copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF111827),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _period!.label,
                   style: TextStyle(
-                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF4B5563),
                     fontSize: 14,
                   ),
                 ),
@@ -251,15 +263,15 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
   Widget _buildMetricCard(
       String title, String subtitle, double value, Color color, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.gray200),
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -272,26 +284,27 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.white : AppColors.gray900,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF111827),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 12,
-              color: isDark ? AppColors.gray400 : AppColors.gray600,
+              fontSize: 11,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
           ),
           const SizedBox(height: 16),
           Text(
             _currencyFormat.format(value),
             style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+              fontSize: 34,
+              fontWeight: FontWeight.w900, // Extra bold
               color: color,
+              letterSpacing: -0.8,
             ),
           ),
         ],
@@ -300,16 +313,20 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
   }
 
   Widget _buildEfficiencyCard(bool isDark) {
-    final baseColor = _isEfficient ? AppColors.success : AppColors.danger;
+    final successColor = isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A);
+    final dangerColor = isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626);
+    final baseColor = _isEfficient ? successColor : dangerColor;
+    
+    final borderColor = _isEfficient ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
         color: _isEfficient
-            ? (isDark ? baseColor.withOpacity(0.1) : Colors.green.shade50)
-            : (isDark ? baseColor.withOpacity(0.1) : Colors.red.shade50),
+            ? (isDark ? const Color(0xFF16A34A).withOpacity(0.15) : const Color(0xFFF0FDF4))
+            : (isDark ? const Color(0xFFDC2626).withOpacity(0.15) : const Color(0xFFFEF2F2)),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: baseColor.withOpacity(0.5), width: 2),
+        border: Border.all(color: borderColor, width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,49 +335,50 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
           Text(
             'Efficiency Status',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.white : AppColors.gray900,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF111827),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             'Contribution vs Operating Cost',
             style: TextStyle(
-              fontSize: 12,
-              color: isDark ? AppColors.gray400 : AppColors.gray600,
+              fontSize: 11,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Container(
-                width: 12,
-                height: 12,
+                width: 14,
+                height: 14,
                 decoration: BoxDecoration(
-                  color: baseColor,
+                  color: borderColor,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 _isEfficient ? 'Efficient' : 'Inefficient',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
                   color: baseColor,
+                  letterSpacing: -0.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             _isEfficient
                 ? 'Employee contribution exceeds operating costs'
                 : 'Operating costs exceed employee contribution',
             style: TextStyle(
-              fontSize: 13,
-              color: isDark ? AppColors.gray300 : AppColors.gray700,
+              fontSize: 11,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
           ),
         ],
@@ -370,12 +388,10 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
 
   Widget _buildStaffCountFooter(bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.gray100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.gray200),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -383,15 +399,15 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
           Text(
             'Total Staff Count: ',
             style: TextStyle(
-              color: isDark ? AppColors.gray400 : AppColors.gray600,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF4B5563),
               fontSize: 14,
             ),
           ),
           Text(
             '${_period!.operationalMetrics!.staffCount}',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.white : AppColors.gray900,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF111827),
               fontSize: 14,
             ),
           ),
