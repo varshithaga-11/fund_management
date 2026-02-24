@@ -61,7 +61,10 @@ class MasterLayout extends StatelessWidget {
                 
                 // Main Content
                 Expanded(
-                  child: child,
+                  child: Padding(
+                    padding: ResponsiveHelper.getResponsivePadding(context),
+                    child: child,
+                  ),
                 ),
               ],
             ),

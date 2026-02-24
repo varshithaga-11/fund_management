@@ -640,27 +640,27 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
             children: [
               // ===== HEADER =====
               _buildHeader(isDark, isMobile, context),
-              SizedBox(height: AppSpacing.xl),
+              SizedBox(height: AppSpacing.xxl),
   
               // ===== FILTER BAR =====
               _buildFilterBar(isDark, context),
-              SizedBox(height: AppSpacing.xl),
+              SizedBox(height: AppSpacing.xxl),
   
               // ===== MAIN STAT CARDS (3 cards, responsive) =====
               _buildMainStatCards(isDark, isMobile, totalRevenue, avgProfitMargin, growthRate),
-              SizedBox(height: AppSpacing.xl),
+              SizedBox(height: AppSpacing.xxl),
   
               // ===== SECONDARY STATS ROW =====
               _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, totalProfit),
-              SizedBox(height: AppSpacing.xl),
+              SizedBox(height: AppSpacing.xxl),
   
               // ===== CHARTS =====
               _buildChartsSection(isDark, isMobile, isDesktop, periods),
-              SizedBox(height: AppSpacing.xl),
+              SizedBox(height: AppSpacing.xxl),
   
               // ===== BOTTOM: TOP PERIODS + RECENT ACTIVITY =====
               _buildBottomSection(isDark, isMobile, top5, recent5, context),
-              SizedBox(height: AppSpacing.xxl),
+              SizedBox(height: AppSpacing.xxxl),
             ],
           ),
         ),
@@ -803,7 +803,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
 
   Widget _buildFilterBar(bool isDark, BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.white,
         border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
@@ -942,7 +942,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       hoverElevation: 16,
       borderRadius: BorderRadius.circular(AppRadius.xl),
       child: Container(
-        padding: EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : AppColors.white,
           border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
@@ -1072,7 +1072,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       hoverElevation: 12,
       borderRadius: BorderRadius.circular(AppRadius.xl),
       child: Container(
-        padding: EdgeInsets.all(AppSpacing.xl),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.xl),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isDark ? darkGradientColors : gradientColors,
@@ -1180,7 +1180,12 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       hoverElevation: 14,
       borderRadius: BorderRadius.circular(AppRadius.xl),
       child: Container(
-        padding: EdgeInsets.all(AppSpacing.xl),
+        padding: EdgeInsets.only(
+          top: 30,
+          bottom: 20,
+          left: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+          right: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+        ),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : AppColors.white,
           border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
@@ -1459,7 +1464,12 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
 
   Widget _buildTopPeriodsCard(bool isDark, List<DashboardPeriodData> top5, BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(AppSpacing.xl),
+      padding: EdgeInsets.only(
+        top: 24,
+        bottom: 20,
+        left: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+        right: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.white,
         border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
@@ -1575,7 +1585,12 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
 
   Widget _buildRecentActivityCard(bool isDark, List<DashboardPeriodData> recent5, BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(AppSpacing.xl),
+      padding: EdgeInsets.only(
+        top: 24,
+        bottom: 20,
+        left: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+        right: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.white,
         border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),

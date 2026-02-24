@@ -126,8 +126,8 @@ class _MasterSidebarState extends State<MasterSidebar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     final sidebarWidth = widget.isExpanded 
-        ? 260.0 // AppConstants-like width
-        : 80.0;
+        ? 290.0 // Matches React w-[290px]
+        : 90.0; // Matches React w-[90px]
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -146,14 +146,15 @@ class _MasterSidebarState extends State<MasterSidebar> {
           ),
         ),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
           // Logo Area
           Container(
-            height: 70,
             alignment: widget.isExpanded ? Alignment.centerLeft : Alignment.center,
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.isExpanded ? 24 : 0,
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.xxxl, // Matches React py-8 (32px)
+              horizontal: 0,
             ),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
@@ -196,9 +197,8 @@ class _MasterSidebarState extends State<MasterSidebar> {
                     // Menu Header
                     if (widget.isExpanded)
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                        padding: const EdgeInsets.only(
+                          bottom: 16, // Matches React mb-4
                         ),
                         child: Text(
                           "MENU",
@@ -303,7 +303,7 @@ class _SidebarItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: 48,
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: bgColor,

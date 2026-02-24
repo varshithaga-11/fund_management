@@ -499,9 +499,9 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                       crossAxisCount: count,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 1.8,
+                      mainAxisSpacing: 12, // Reduced from 16
+                      crossAxisSpacing: 12, // Reduced from 16
+                      childAspectRatio: 2.6, // Increased from 2.2 to reduce height
                       children: [
                         _buildSummaryCard(
                           'Improved Ratios',
@@ -814,32 +814,33 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
   Widget _buildSummaryCard(String title, String value, Color color, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced from 12
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.05), color.withOpacity(0.1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: isDark ? color.withOpacity(0.1) : color.withOpacity(0.05),
+        border: Border.all(color: color.withOpacity(0.2)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             title.toUpperCase(),
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
               color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2), // Reduced from 4
           Text(
             value,
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 22, // Reduced from 24
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -848,34 +849,26 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
   Widget _buildToggleButton(String label, bool isTable, bool isDark) {
     final isSelected = _showTableView == isTable;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => setState(() => _showTableView = isTable),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isSelected ? Colors.blue.shade600 : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (isSelected)
-                Container(
-                  height: 2,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade600,
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-            ],
+    return GestureDetector(
+      onTap: () => setState(() => _showTableView = isTable),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? (isDark ? Colors.blue.withOpacity(0.2) : Colors.blue.shade50) : Colors.transparent,
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? Colors.blue.shade600 : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: isSelected ? (isDark ? Colors.blue.shade400 : Colors.blue.shade700) : (isDark ? Colors.grey.shade500 : Colors.grey.shade600),
           ),
         ),
       ),
@@ -1079,9 +1072,9 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
           crossAxisCount: count,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 1.3,
+          mainAxisSpacing: 10, // Reduced from 12
+          crossAxisSpacing: 10, // Reduced from 12
+          childAspectRatio: 2.1, // Increased from 1.8 to reduce height
           children: _comparisonData!.data.ratios.entries.map((entry) {
             final ratio = entry.value;
             final changePercentage = ratio.percentageChange ?? 0;
@@ -1096,10 +1089,10 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
               borderColor = Colors.green.shade200;
               dividerColor = Colors.green.shade200;
               if (isDark) {
-                bgGradientStart = Colors.green.shade900.withOpacity(0.2);
-                bgGradientEnd = Colors.green.shade800.withOpacity(0.2);
-                borderColor = Colors.green.shade800;
-                dividerColor = Colors.green.shade800;
+                bgGradientStart = Colors.green.shade900.withOpacity(0.15);
+                bgGradientEnd = Colors.green.shade800.withOpacity(0.15);
+                borderColor = Colors.green.shade800.withOpacity(0.5);
+                dividerColor = Colors.green.shade800.withOpacity(0.5);
               }
             } else if (isNeutral) {
               bgGradientStart = Colors.grey.shade50;
@@ -1107,10 +1100,10 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
               borderColor = Colors.grey.shade200;
               dividerColor = Colors.grey.shade200;
               if (isDark) {
-                bgGradientStart = Colors.grey.shade900.withOpacity(0.2);
-                bgGradientEnd = Colors.grey.shade800.withOpacity(0.2);
-                borderColor = Colors.grey.shade700;
-                dividerColor = Colors.grey.shade700;
+                bgGradientStart = Colors.grey.shade900.withOpacity(0.15);
+                bgGradientEnd = Colors.grey.shade800.withOpacity(0.15);
+                borderColor = Colors.grey.shade700.withOpacity(0.5);
+                dividerColor = Colors.grey.shade700.withOpacity(0.5);
               }
             } else {
               bgGradientStart = Colors.red.shade50;
@@ -1118,10 +1111,10 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
               borderColor = Colors.red.shade200;
               dividerColor = Colors.red.shade200;
               if (isDark) {
-                bgGradientStart = Colors.red.shade900.withOpacity(0.2);
-                bgGradientEnd = Colors.red.shade800.withOpacity(0.2);
-                borderColor = Colors.red.shade800;
-                dividerColor = Colors.red.shade800;
+                bgGradientStart = Colors.red.shade900.withOpacity(0.15);
+                bgGradientEnd = Colors.red.shade800.withOpacity(0.15);
+                borderColor = Colors.red.shade800.withOpacity(0.5);
+                dividerColor = Colors.red.shade800.withOpacity(0.5);
               }
             }
 
@@ -1132,10 +1125,10 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                   end: Alignment.bottomRight,
                   colors: [bgGradientStart, bgGradientEnd],
                 ),
-                border: Border.all(color: borderColor, width: 2),
-                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: borderColor, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Reduced from 16
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1143,25 +1136,24 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                   Text(
                     _formatRatioName(entry.key),
                     style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
                       color: isDark ? Colors.white : Colors.black,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.3,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8), // Reduced from 12
 
                   // Period 1 Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         _comparisonData!.data.period1,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
@@ -1169,23 +1161,22 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                         ratio.period1?.toStringAsFixed(2) ?? '-',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 14,
                           color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // Period 2 Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         _comparisonData!.data.period2,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
@@ -1193,34 +1184,40 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                         ratio.period2?.toStringAsFixed(2) ?? '-',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 14,
                           color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // Divider
-                  Divider(
-                    height: 1,
-                    thickness: 2,
-                    color: dividerColor,
-                  ),
-                  const SizedBox(height: 12),
+                  
+                  const Spacer(),
+                  Divider(height: 8, thickness: 1, color: dividerColor.withOpacity(0.3)), // Reduced height from 16
 
                   // Change Section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Change',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          letterSpacing: 0.3,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'Change: ',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                          if (ratio.difference != null)
+                            Text(
+                              '${ratio.difference! > 0 ? "+" : ""}${ratio.difference!.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: _getChangeColor(ratio.difference),
+                              ),
+                            ),
+                        ],
                       ),
                       Text(
                         ratio.percentageChange != null
@@ -1228,24 +1225,12 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                             : '-',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 12,
                           color: _getChangeColor(ratio.percentageChange),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-
-                  // Difference Value
-                  if (ratio.difference != null)
-                    Text(
-                      '${ratio.difference! > 0 ? "+" : ""}${ratio.difference!.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _getChangeColor(ratio.difference),
-                      ),
-                    ),
                 ],
               ),
             );

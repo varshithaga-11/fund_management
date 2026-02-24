@@ -58,9 +58,19 @@ class _MasterHeaderState extends State<MasterHeader> {
           children: [
             // Main Header Row
             Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
+              height: ResponsiveHelper.getResponsiveValue(
+                context,
+                mobile: 64, // React mobile height
+                tablet: 76, // React desktop height
+                desktop: 76,
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.getResponsiveValue(
+                  context,
+                  mobile: AppSpacing.md, // 12px
+                  tablet: AppSpacing.xxl, // 24px
+                  desktop: AppSpacing.xxl, // 24px
+                ),
               ),
               child: Row(
                 children: [
