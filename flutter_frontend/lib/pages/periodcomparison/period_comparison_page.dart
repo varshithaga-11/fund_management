@@ -220,9 +220,9 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    // Dropdowns Row
+                    // Dropdowns Row with Swap Button in the middle
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
                           child: _buildCustomDropdownSimple(
@@ -243,7 +243,46 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                             label: 'Period 1',
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        
+                        // Swap Button in the middle
+                        if (_selectedPeriod1 != null && _selectedPeriod2 != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            child: AnimatedBuilder(
+                              animation: _spinController,
+                              builder: (context, child) {
+                                final angle = (_spinCount - 1 + _spinController.value) * 3.14159;
+                                return GestureDetector(
+                                  onTap: _handleSwap,
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.blue.shade400, width: 1.5),
+                                      color: isDark ? Colors.grey.shade800 : Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Transform.rotate(
+                                        angle: angle,
+                                        child: Icon(Icons.compare_arrows, color: Colors.blue.shade600, size: 18),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 12),
+
                         Expanded(
                           child: _buildCustomDropdownSimple(
                             isDark: isDark,
@@ -266,127 +305,17 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                       ],
                     ),
 
-                    // Selected Periods Display with Swap Icon
-                    if (_selectedPeriod1 != null || _selectedPeriod2 != null) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.blue.shade50,
-                              Colors.indigo.shade50,
-                            ],
-                          ),
-                          border: Border.all(color: Colors.blue.shade200),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_selectedPeriod1 != null)
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Period 1',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade600,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _selectedPeriod1!.label,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _selectedPeriod1!.periodType,
-                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            if (_selectedPeriod1 != null && _selectedPeriod2 != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: AnimatedBuilder(
-                                  animation: _spinController,
-                                  builder: (context, child) {
-                                    // Animate 180 degrees (π radians) per click
-                                    final angle = (_spinCount - 1 + _spinController.value) * 3.14159;
-                                    return GestureDetector(
-                                      onTap: _handleSwap,
-                                      child: Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.blue.shade400, width: 2),
-                                          color: isDark ? Colors.grey.shade800 : Colors.white,
-                                        ),
-                                        child: Center(
-                                          child: Transform.rotate(
-                                            angle: angle,
-                                            child: Icon(Icons.compare_arrows, color: Colors.blue.shade600, size: 20),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            if (_selectedPeriod2 != null)
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Period 2',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade600,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _selectedPeriod2!.label,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _selectedPeriod2!.periodType,
-                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
                           onPressed: _loadingComparison ? null : _handleCompare,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue.shade600,
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 32),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 2,
                           ),
                           child: _loadingComparison
                               ? const SizedBox(
@@ -397,7 +326,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                              : const Text('Compare Periods', style: TextStyle(color: Colors.white, fontSize: 14)),
+                              : const Text('Compare Periods', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
