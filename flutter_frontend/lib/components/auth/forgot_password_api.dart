@@ -29,7 +29,7 @@ class ResetPasswordResponse {
 Future<OtpResponse> sendOtp(String email) async {
   try {
     final response = await http.post(
-      Uri.parse(createApiUrl('sendotp/')), // Adjusted path based on original file, removing leading slash if needed in createApiUrl logic, but here following TS
+      Uri.parse(createApiUrl('api/sendotp/')),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
     );
@@ -45,7 +45,7 @@ Future<OtpResponse> sendOtp(String email) async {
 Future<VerifyOtpResponse> verifyOtp(String email, String otp) async {
   try {
     final response = await http.post(
-      Uri.parse(createApiUrl('verifyotp/')),
+      Uri.parse(createApiUrl('api/verifyotp/')),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'otp': otp}),
     );
@@ -76,7 +76,7 @@ Future<ResetPasswordResponse> resetPassword(
 ) async {
   try {
     final response = await http.post(
-      Uri.parse(createApiUrl('resetpassword/')),
+      Uri.parse(createApiUrl('api/resetpassword/')),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,

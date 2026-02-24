@@ -3309,10 +3309,8 @@ class ResetPasswordView(APIView):
             user = UserRegister.objects.get(email=email)
             user.password = make_password(new_password)
             user.save()
-            otp_obj.verified = False
-            otp_obj.save()
+            otp_obj.delete()
             return Response({"message": "Password reset successful."})
-
         except UserRegister.DoesNotExist:
             return Response({"error": "User not found."})
 

@@ -105,15 +105,7 @@ class _MasterHeaderState extends State<MasterHeader> {
                             );
                           },
                         ),
-                        
-                        // Notifications
-                        IconButton(
-                          icon: Icon(
-                            Icons.notifications_outlined,
-                            color: isDark ? AppColors.gray400 : AppColors.gray500,
-                          ),
-                          onPressed: () {},
-                        ),
+
                         
                         const SizedBox(width: AppSpacing.md),
                         
@@ -178,19 +170,7 @@ class _MasterHeaderState extends State<MasterHeader> {
                               );
                             },
                           ),
-                          
-                          // Notifications
-                          IconButton(
-                            icon: Icon(
-                              Icons.notifications_outlined,
-                              color: isDark ? AppColors.gray400 : AppColors.gray500,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isApplicationMenuOpen = false;
-                              });
-                            },
-                          ),
+
                         ],
                       ),
                       
@@ -245,25 +225,7 @@ class _MasterHeaderState extends State<MasterHeader> {
             ],
           ),
         ),
-        PopupMenuItem(
-          value: 'settings',
-          child: Row(
-            children: [
-              Icon(
-                Icons.settings_outlined, 
-                size: 20,
-                color: isDark ? AppColors.gray300 : AppColors.gray700,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                'Settings', 
-                style: AppTypography.body2.copyWith(
-                  color: isDark ? AppColors.gray300 : AppColors.gray700,
-                ),
-              ),
-            ],
-          ),
-        ),
+
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'logout',
