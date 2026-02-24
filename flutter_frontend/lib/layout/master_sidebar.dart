@@ -268,7 +268,7 @@ class _MasterSidebarState extends State<MasterSidebar> {
   }
 }
 
-class _SidebarItem extends StatelessWidget {
+class _SidebarItem extends StatefulWidget {
   final IconData icon;
   final String title;
   final bool isActive;
@@ -290,48 +290,74 @@ class _SidebarItem extends StatelessWidget {
   });
 
   @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _isHovering = false;
+
+  @override
   Widget build(BuildContext context) {
     const activeColor = Color(0xFF6366F1);
-    final inactiveColor = isDark ? Colors.grey.shade500 : Colors.grey.shade600;
-    final bgColor = isActive 
-        ? activeColor.withOpacity(0.1)
-        : Colors.transparent;
+    final inactiveColor =
+        widget.isDark ? Colors.grey.shade500 : Colors.grey.shade600;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
+    // Single background: active > hover > transparent
+    Color bgColor;
+    if (widget.isActive) {
+      bgColor = activeColor.withOpacity(0.1);
+    } else if (_isHovering) {
+      bgColor = widget.isDark
+          ? Colors.white.withOpacity(0.06)
+          : Colors.black.withOpacity(0.04);
+    } else {
+      bgColor = Colors.transparent;
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
           height: 48,
-          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
-            mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+            mainAxisAlignment: widget.isExpanded
+                ? MainAxisAlignment.start
+                : MainAxisAlignment.center,
             children: [
               Icon(
-                icon,
-                color: isActive ? activeColor : inactiveColor,
+                widget.icon,
+                color: widget.isActive ? activeColor : inactiveColor,
                 size: 20,
               ),
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
-                opacity: isExpanded ? 1.0 : 0.0,
-                child: isExpanded
+                opacity: widget.isExpanded ? 1.0 : 0.0,
+                child: widget.isExpanded
                     ? Row(
                         children: [
                           const SizedBox(width: 12),
                           SizedBox(
-                            width: 160, // Fixed width during transition prevents jitter
+                            width: 160,
                             child: Text(
-                              title,
+                              widget.title,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: isActive ? activeColor : inactiveColor,
-                                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                color: widget.isActive
+                                    ? activeColor
+                                    : inactiveColor,
+                                fontWeight: widget.isActive
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
                               ),
                               overflow: TextOverflow.ellipsis,
                               softWrap: false,
@@ -341,11 +367,13 @@ class _SidebarItem extends StatelessWidget {
                       )
                     : const SizedBox.shrink(),
               ),
-              if (isExpanded && hasSubmenu)
+              if (widget.isExpanded && widget.hasSubmenu)
                 Icon(
-                  isSubmenuOpen ? Icons.expand_less : Icons.expand_more,
+                  widget.isSubmenuOpen
+                      ? Icons.expand_less
+                      : Icons.expand_more,
                   size: 18,
-                  color: isActive ? activeColor : inactiveColor,
+                  color: widget.isActive ? activeColor : inactiveColor,
                 ),
             ],
           ),

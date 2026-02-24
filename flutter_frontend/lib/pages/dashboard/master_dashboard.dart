@@ -510,11 +510,17 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                                 else
                                   ...filtered.map((p) => _buildYearDropdownItem(
                                         label: p.label,
-                                        isSelected: false,
+                                        isSelected: _selectedYear == p.label,
                                         isDark: isDark,
                                         onTap: () {
                                           _removeYearOverlay();
-                                          Navigator.pushNamed(context, '/ratio-analysis/dashboard/${p.id}');
+                                          setState(() {
+                                            _showYearDropdown = false;
+                                            _selectedYear = p.label;
+                                          });
+                                          // Optionally, if selecting a period should immediately refresh data
+                                          // from the API specifically for that period, you might call _loadDashboardData() here.
+                                          // Currently, `_filteredPeriods` handles this client-side based on `_selectedYear`.
                                         },
                                       )),
                               ],
@@ -609,22 +615,35 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     final isMobile = width < 768;
     final isDesktop = width >= 1024;
 
-    final periods = _dashboardData?.periods ?? []; 
+    // Use filtered periods so selecting a year filters the UI
+    final List<DashboardPeriodData> periods = _filteredPeriods;
     
-    // Use API-provided stats for the dashboard overview (parity with React)
-    final double revenueValue = _dashboardData?.totalRevenue ?? 0.0;
-    final double marginValue = _dashboardData?.avgProfitMargin ?? 0.0;
-    final double growthValue = _dashboardData?.growthRate ?? 0.0;
+    // When filtered to a single period, use its specific stats; otherwise use global stats
+    final double revenueValue = _selectedYear != null && periods.isNotEmpty
+        ? periods.fold(0.0, (sum, p) => sum + p.revenue)
+        : _dashboardData?.totalRevenue ?? 0.0;
+        
+    final double marginValue = _selectedYear != null && periods.isNotEmpty
+        ? periods.fold(0.0, (sum, p) => sum + (p.revenue != 0 ? (p.netProfit / p.revenue * 100) : 0.0)) / periods.length
+        : _dashboardData?.avgProfitMargin ?? 0.0;
+        
+    final double growthValue = _selectedYear != null 
+        ? 0.0 // Can't easily calculate growth for a single period without previous data context
+        : _dashboardData?.growthRate ?? 0.0;
+        
+    final double totalProfitValue = _selectedYear != null && periods.isNotEmpty
+        ? periods.fold(0.0, (sum, p) => sum + p.netProfit)
+        : _dashboardData?.totalProfit ?? 0.0;
     
     final totalPeriods = periods.length;
     final finalizedPeriods = periods.where((p) => p.isFinalized).length;
 
-    // Top periods by profit (always from all periods)
+    // Top periods by profit (from filtered list)
     final topPeriodsList = List<DashboardPeriodData>.from(periods)
       ..sort((a, b) => b.netProfit.compareTo(a.netProfit));
     final top5 = topPeriodsList.take(5).toList();
 
-    // Recent by created_at desc (always from all periods)
+    // Recent by created_at desc (from filtered list)
     final recent = List<DashboardPeriodData>.from(periods)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final recent5 = recent.take(5).toList();
@@ -663,7 +682,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                 SizedBox(height: AppSpacing.xxl),
     
                 // ===== SECONDARY STATS ROW =====
-                _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, _dashboardData?.totalProfit ?? 0.0),
+                _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, totalProfitValue),
                 SizedBox(height: AppSpacing.xxl),
     
                 // ===== CHARTS =====
@@ -873,7 +892,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Select Period',
+                        _selectedYear ?? 'Select Period',
                         style: AppTypography.body3.copyWith(
                             color: isDark ? AppColors.white : AppColors.black,
                             fontWeight: FontWeight.normal),
