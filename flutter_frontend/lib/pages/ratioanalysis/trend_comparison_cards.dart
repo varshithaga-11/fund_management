@@ -84,16 +84,18 @@ class TrendComparisonCards extends StatelessWidget {
     }).toList();
 
     return LayoutBuilder(builder: (context, constraints) {
-      final crossAxisCount = constraints.maxWidth > 800 ? 3 : (constraints.maxWidth > 500 ? 2 : 1);
+      final crossAxisCount = constraints.maxWidth > 1000 
+          ? 3 
+          : (constraints.maxWidth > 700 ? 2 : 1);
       
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
-          childAspectRatio: 2.2, // Made card shorter
-          crossAxisSpacing: 16,  // Reduced spacing
-          mainAxisSpacing: 16,
+          childAspectRatio: 1.6, // Increased height
+          crossAxisSpacing: 24,  // gap-6
+          mainAxisSpacing: 24,   // gap-6
         ),
         itemCount: comparisonData.length,
         itemBuilder: (context, index) {
@@ -166,129 +168,126 @@ class _TrendCardState extends State<_TrendCard> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        transform: Matrix4.identity()
-          ..translate(0.0, _isHovered ? -4.0 : 0.0),
-        decoration: BoxDecoration(
-          color: widget.isDark ? const Color(0xFF1F2937) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _isHovered 
-                ? const Color(0xFF3B82F6) 
-                : (widget.isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6)),
-            width: _isHovered ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _isHovered 
-                  ? Colors.black.withOpacity(0.12) 
-                  : Colors.black.withOpacity(0.05),
-              blurRadius: _isHovered ? 16 : 4,
-              offset: _isHovered ? const Offset(0, 8) : const Offset(0, 1),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(20), // p-5 in React
+      decoration: BoxDecoration(
+        color: widget.isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: widget.isDark ? const Color(0xFF374151) : const Color(0xFFF1F5F9), // border-gray-100
+          width: 1,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    (widget.item['ratioLabel'] as String).toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: widget.isDark ? const Color(0xFFDBEAFE) : const Color(0xFF1E3A8A),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 1, 
-                    color: widget.isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
-                  ),
-                ],
-              ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04), // shadow-sm
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title Section
+          Text(
+            (widget.item['ratioLabel'] as String).toUpperCase(),
+            style: TextStyle(
+              fontSize: 11, // Smaller title
+              fontWeight: FontWeight.w900,
+              color: widget.isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E3A8A),
+              letterSpacing: 0.5,
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: widget.pData.map((data) {
-                    final direction = data['changeDirection'];
-                    final isUp = direction == 'up';
-                    final isDown = direction == 'down';
-                    final displayDirection = isUp ? 'Up' : isDown ? 'Dip' : 'Stable';
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            data['periodLabel'],
-                            style: TextStyle(
-                              fontSize: 11, 
-                              color: widget.isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                data['value'],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
-                                  color: widget.isDark ? Colors.white : const Color(0xFF111827),
-                                ),
-                              ),
-                              if (data['changePercent'] != null) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isUp 
-                                        ? Colors.green.withOpacity(0.1)
-                                        : isDown 
-                                            ? Colors.red.withOpacity(0.1)
-                                            : Colors.grey.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '${data['changePercent']}% $displayDirection',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      color: isUp 
-                                          ? (widget.isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A))
-                                          : isDown 
-                                              ? (widget.isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626))
-                                              : Colors.grey,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 1, 
+            color: widget.isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF9FAFB),
+          ),
+          const SizedBox(height: 16), // Tighter spacing
+          
+          // Data List
+          Expanded(
+            child: widget.pData.length > 5
+                ? Theme(
+                    data: Theme.of(context).copyWith(
+                      scrollbarTheme: ScrollbarThemeData(
+                        thumbColor: WidgetStateProperty.all(
+                          widget.isDark ? Colors.white10 : Colors.black12,
+                        ),
+                        radius: const Radius.circular(10),
+                        thickness: WidgetStateProperty.all(3),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    child: Scrollbar(
+                      thumbVisibility: true,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: _buildDataColumn(),
+                      ),
+                    ),
+                  )
+                : _buildDataColumn(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataColumn() {
+    return Column(
+      children: widget.pData.map((data) {
+        final direction = data['changeDirection'];
+        final isUp = direction == 'up';
+        final isDown = direction == 'down';
+        final displayDirection = isUp ? 'Up' : isDown ? 'Dip' : 'Stable';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12), // Tighter vertical spacing
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                data['periodLabel'],
+                style: TextStyle(
+                  fontSize: 10, // Smaller period label
+                  color: widget.isDark 
+                      ? const Color(0xFF9CA3AF) 
+                      : const Color(0xFF6B7280),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    data['value'],
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12, // Smaller value
+                      color: widget.isDark ? Colors.white : const Color(0xFF111827),
+                    ),
+                  ),
+                  if (data['changePercent'] != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '(${data['changePercent']}% $displayDirection)',
+                      style: TextStyle(
+                        fontSize: 9, // Smaller trend text
+                        color: isUp 
+                            ? (widget.isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A))
+                            : isDown 
+                                ? (widget.isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626))
+                                : (widget.isDark ? Colors.grey.shade500 : const Color(0xFF9CA3AF)),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

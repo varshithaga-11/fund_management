@@ -175,10 +175,10 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
                           if (_ratiosData.isEmpty)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24), // p-6
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.2) : const Color(0xFFEFF6FF),
-                                border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
+                                color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.1) : const Color(0xFFEFF6FF), // blue-50
+                                border: Border.all(color: isDark ? const Color(0xFF1E40AF).withOpacity(0.3) : const Color(0xFFBFDBFE)), // blue-200
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Column(
@@ -186,17 +186,18 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
                                   Text(
                                     'No Periods Available',
                                     style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : const Color(0xFF1E3A8A),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white : const Color(0xFF111827), // text-gray-900
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 8), // mb-2
                                   Text(
                                     'Upload financial data to see trend analysis.',
+                                    textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: isDark ? Colors.grey.shade400 : const Color(0xFF4B5563),
+                                      color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563), // text-gray-600
                                     ),
                                   ),
                                 ],
@@ -211,33 +212,34 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
                               onSelectedRatiosChange: (ratios) => 
                                   setState(() => _selectedRatios = ratios),
                             ),
-                            const SizedBox(height: 48),
+                            const SizedBox(height: 48), // mt-12
     
                             // Yearly Comparison Section
                             Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 color: isDark ? const Color(0xFF1F2937) : Colors.white,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(8), // rounded-lg
                                 border: Border.all(
-                                  color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                                  color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6), // border-gray-100
+                                  width: 1,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.05),
                                     blurRadius: 4,
-                                    offset: const Offset(0, 1),
+                                    offset: const Offset(0, 1), // shadow-sm
                                   ),
                                 ],
                               ),
-                              padding: const EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24), // p-6
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Yearly Comparison',
                                     style: TextStyle(
-                                      fontSize: 20,
+                                      fontSize: 20, // text-xl
                                       fontWeight: FontWeight.bold,
                                       color: isDark ? Colors.white : const Color(0xFF1F2937),
                                     ),
@@ -246,11 +248,12 @@ class _TrendAnalysisPageState extends State<TrendAnalysisPage> {
                                   Text(
                                     'Analysis of ratio changes across financial years',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                                      fontSize: 12, // text-xs
+                                      color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w400,
                                     ),
                                   ),
-                                  const SizedBox(height: 24),
+                                  const SizedBox(height: 32),
                                   TrendComparisonCards(
                                     ratioData: _ratiosData,
                                     periods: _periods,

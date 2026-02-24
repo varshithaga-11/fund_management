@@ -75,12 +75,12 @@ class _MasterSidebarState extends State<MasterSidebar> {
       path: AppRoutes.ratioAnalysis,
     ),
     NavItem(
-      icon: Icons.trending_up,
+      icon: Icons.compare_arrows,
       name: "Period Comparison",
       path: AppRoutes.periodComparison,
     ),
     NavItem(
-      icon: Icons.show_chart,
+      icon: Icons.speed,
       name: "Ratio Benchmarks",
       path: AppRoutes.ratioBenchmarks,
     ),

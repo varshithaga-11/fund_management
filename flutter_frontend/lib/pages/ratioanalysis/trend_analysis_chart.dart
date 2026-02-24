@@ -1,6 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'dart:typed_data';
+import 'dart:convert';
 import '../financialstatements/financial_statements_api.dart';
+import '../../utils/file_saver.dart';
 
 class TrendAnalysisChart extends StatefulWidget {
   final List<RatioResultData> ratioData;
@@ -24,6 +29,9 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
   String _selectedCategory = 'Trading Ratios';
   String _chartType = 'line';
   List<int> _selectedPeriodIds = [];
+  double _zoomScale = 1.0;
+  double _xOffset = 0.0;
+  final GlobalKey _chartKey = GlobalKey();
 
   static const Map<String, List<String>> _categories = {
     'Trading Ratios': [
@@ -31,7 +39,7 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       'gross_profit_ratio',
       'net_profit_ratio',
     ],
-    'Equity Analysis': [
+    'Capital Ratios': [
       'net_own_funds',
     ],
     'Fund Structure': [
@@ -104,6 +112,10 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
         _buildPeriodSelectionCard(),
         const SizedBox(height: 24),
         _buildChartCard(),
+        if (widget.selectedRatios.isNotEmpty && _selectedPeriodIds.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          // Statistics Summary removed as per request to avoid duplicate cards below graph
+        ],
       ],
     );
   }
@@ -114,28 +126,42 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Ratio Trend Analysis',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
               color: isDark ? Colors.white : const Color(0xFF111827),
+              letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
+          Text(
+            'Select ratios and chart type to visualize trends',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth > 700;
@@ -148,8 +174,15 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Category', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 8),
+                        Text(
+                          'Category',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         _buildCategoryDropdown(),
                       ],
                     ),
@@ -159,8 +192,15 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Chart Type', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 8),
+                        Text(
+                          'Chart Type',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         _buildChartTypeSelector(),
                       ],
                     ),
@@ -169,11 +209,21 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
               );
             },
           ),
-          const SizedBox(height: 24),
-          const Divider(),
+          const SizedBox(height: 28),
+          Divider(
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            height: 1,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Select Ratios to Display',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
+            ),
+          ),
           const SizedBox(height: 16),
-          const Text('Select Ratios to Display', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
           _buildRatioSelectionGrid(),
         ],
       ),
@@ -184,21 +234,35 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF374151) : Colors.white,
-        border: Border.all(color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB),
+          width: 1,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedCategory,
           isExpanded: true,
-          dropdownColor: isDark ? const Color(0xFF374151) : Colors.white,
+          dropdownColor: isDark ? const Color(0xFF2D3748) : Colors.white,
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? Colors.white : const Color(0xFF111827),
+            fontWeight: FontWeight.w500,
+          ),
           items: _categories.keys
               .map((c) => DropdownMenuItem(
                     value: c,
-                    child: Text(c, style: const TextStyle(fontSize: 14)),
+                    child: Text(
+                      c,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
                   ))
               .toList(),
           onChanged: (val) {
@@ -218,14 +282,19 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return PopupMenuButton<String>(
       onSelected: (val) => setState(() => _chartType = val),
-      offset: const Offset(0, 45),
+      offset: const Offset(0, 50),
       position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      elevation: 8,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF374151) : Colors.white,
-          border: Border.all(color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
+          border: Border.all(
+            color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB),
+            width: 1,
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -233,9 +302,17 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
           children: [
             Text(
               _chartType[0].toUpperCase() + _chartType.substring(1),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white : const Color(0xFF111827),
+              ),
             ),
-            const Icon(Icons.keyboard_arrow_down, size: 20),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 20,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
           ],
         ),
       ),
@@ -246,8 +323,14 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(type[0].toUpperCase() + type.substring(1)),
-              if (isSelected) Icon(Icons.check, size: 16, color: isDark ? Colors.blueAccent : Colors.blue),
+              Text(
+                type[0].toUpperCase() + type.substring(1),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+              if (isSelected) const Icon(Icons.check, size: 18, color: Color(0xFF2563EB)),
             ],
           ),
         );
@@ -257,6 +340,8 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
 
   Widget _buildRatioSelectionGrid() {
     final ratios = _categories[_selectedCategory] ?? [];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 600 ? 2 : 1);
@@ -265,15 +350,14 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 5.5, // Much flatter
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+            childAspectRatio: 4.8,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
           itemCount: ratios.length,
           itemBuilder: (context, index) {
             final ratio = ratios[index];
             final isSelected = widget.selectedRatios.contains(ratio);
-            final isDark = Theme.of(context).brightness == Brightness.dark;
             
             return InkWell(
               onTap: () {
@@ -286,17 +370,26 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                 widget.onSelectedRatiosChange(newSelection);
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8), // Reduced padding
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: isSelected 
-                      ? (isDark ? const Color(0xFF1E3A8A).withOpacity(0.3) : const Color(0xFFEFF6FF))
-                      : (isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB)),
+                      ? (isDark 
+                          ? const Color(0xFF1E3A8A).withOpacity(0.25) 
+                          : const Color(0xFFEFF6FF))
+                      : (isDark 
+                          ? const Color(0xFF374151).withOpacity(0.3) 
+                          : const Color(0xFFFAFAFA)),
                   border: Border.all(
                     color: isSelected 
-                        ? (isDark ? const Color(0xFF2563EB) : const Color(0xFFBFDBFE))
-                        : (isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
+                        ? (isDark 
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFFBFDBFE))
+                        : (isDark 
+                            ? const Color(0xFF4B5563)
+                            : const Color(0xFFE5E7EB)),
+                    width: isSelected ? 2 : 1,
                   ),
-                  borderRadius: BorderRadius.circular(6), // Slightly tighter radius
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
@@ -318,11 +411,15 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                         activeColor: const Color(0xFF2563EB),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _formatRatioName(ratio),
-                        style: const TextStyle(fontSize: 11), // Smaller text
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isDark ? Colors.white : const Color(0xFF111827),
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -343,24 +440,41 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Select Periods for Graph',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold), // Smaller title
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF111827),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
+          Text(
+            'Choose which financial periods to include in your trend analysis',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 20),
           LayoutBuilder(
             builder: (context, constraints) {
               final crossAxisCount = constraints.maxWidth > 1000 ? 6 : (constraints.maxWidth > 600 ? 3 : 2);
@@ -369,9 +483,9 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
-                  childAspectRatio: 4.5, // Flatter for periods
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+                  childAspectRatio: 4.5,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
                 ),
                 itemCount: widget.periods.length,
                 itemBuilder: (context, index) {
@@ -389,17 +503,32 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1F2937) : Colors.white,
-                        border: Border.all(color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
-                        borderRadius: BorderRadius.circular(6),
+                        color: isSelected
+                            ? (isDark 
+                                ? const Color(0xFF1E3A8A).withOpacity(0.4)
+                                : const Color(0xFFEFF6FF))
+                            : (isDark 
+                                ? const Color(0xFF374151).withOpacity(0.3)
+                                : Colors.white),
+                        border: Border.all(
+                          color: isSelected
+                              ? (isDark 
+                                  ? const Color(0xFF2563EB)
+                                  : const Color(0xFFBFDBFE))
+                              : (isDark 
+                                  ? const Color(0xFF4B5563)
+                                  : const Color(0xFFE5E7EB)),
+                          width: isSelected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
                           SizedBox(
-                            height: 16, // Smaller checkbox area
-                            width: 16,
+                            height: 18,
+                            width: 18,
                             child: Checkbox(
                               value: isSelected,
                               onChanged: (val) {
@@ -415,11 +544,15 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                               activeColor: const Color(0xFF2563EB),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               period.label,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : const Color(0xFF111827),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -432,11 +565,27 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
             },
           ),
           if (_selectedPeriodIds.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Text(
-                'Please select at least one period to display the chart',
-                style: TextStyle(color: Colors.redAccent, fontSize: 13),
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  border: Border.all(color: const Color(0xFFFECACE)),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Color(0xFFDC2626)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Please select at least one period to display the chart',
+                        style: TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -460,55 +609,315 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.2) : const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
-            ),
-            child: Text(
-              chartDescriptions[_chartType] ?? "",
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? const Color(0xFFBFDBFE) : const Color(0xFF1E40AF),
-              ),
+          Text(
+            'Chart View',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF111827),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? const Color(0xFF1E3A8A).withOpacity(0.1)
+                  : const Color(0xFFF1F5F9).withOpacity(0.5),
+              border: Border.all(
+                color: isDark 
+                    ? const Color(0xFF1E40AF).withOpacity(0.3)
+                    : const Color(0xFFE2E8F0),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF334155),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    chartDescriptions[_chartType] ?? "",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? const Color(0xFFBFDBFE) : const Color(0xFF334155),
+                      fontWeight: FontWeight.w400,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          _buildChartHeader(),
+          const SizedBox(height: 16),
           if (widget.selectedRatios.isNotEmpty && _selectedPeriodIds.isNotEmpty)
             SizedBox(
-              height: 400,
-              child: _buildActiveChart(),
+              height: 460,
+              child: RepaintBoundary(
+                key: _chartKey,
+                child: _buildActiveChart(),
+              ),
             )
           else
             Container(
-              height: 400,
+              height: 420,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF111827) : const Color(0xFFFAFAFA),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
               alignment: Alignment.center,
-              child: Text(
-                widget.selectedRatios.isEmpty 
-                    ? "Please select at least one ratio to display" 
-                    : "Please select at least one period to display",
-                style: const TextStyle(color: Colors.grey),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.bar_chart_outlined,
+                    size: 48,
+                    color: isDark 
+                        ? Colors.grey.shade700
+                        : Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.selectedRatios.isEmpty 
+                        ? "Please select at least one ratio to display" 
+                        : "Please select at least one period to display",
+                    style: TextStyle(
+                      color: isDark 
+                          ? Colors.grey.shade500
+                          : Colors.grey.shade500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
       ),
     );
+  }
+
+  Widget _buildChartHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(child: _buildLegend()),
+        _buildChartTools(),
+      ],
+    );
+  }
+
+  Widget _buildLegend() {
+    final colors = [
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF10B981), // Green
+      const Color(0xFFF59E0B), // Orange
+      const Color(0xFFEF4444),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+    ];
+    
+    final sortedUniqueRatios = widget.selectedRatios.toSet().toList();
+    
+    return Wrap(
+      spacing: 20,
+      runSpacing: 10,
+      children: sortedUniqueRatios.map((ratio) {
+        final index = widget.selectedRatios.indexOf(ratio);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: colors[index % colors.length],
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _formatRatioName(ratio),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white.withOpacity(0.9) 
+                    : const Color(0xFF334155),
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildChartTools() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.grey.shade400 : const Color(0xFF64748B);
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildToolIcon(Icons.add_circle_outline, () => _handleZoom(0.8), iconColor),
+        const SizedBox(width: 10),
+        _buildToolIcon(Icons.remove_circle_outline, () => _handleZoom(1.2), iconColor),
+        const SizedBox(width: 10),
+        _buildToolIcon(Icons.home_outlined, _handleReset, iconColor),
+        const SizedBox(width: 10),
+        PopupMenuButton<String>(
+          icon: Icon(Icons.menu, size: 18, color: iconColor),
+          padding: EdgeInsets.zero,
+          offset: const Offset(0, 30),
+          constraints: const BoxConstraints(minWidth: 160),
+          onSelected: (value) => _handleDownload(value),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'png',
+              child: Text('Download PNG', style: TextStyle(fontSize: 13)),
+            ),
+            const PopupMenuItem(
+              value: 'csv',
+              child: Text('Download CSV', style: TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToolIcon(IconData icon, VoidCallback onTap, Color color) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Icon(icon, size: 18, color: color),
+      ),
+    );
+  }
+
+  void _handleZoom(double factor) {
+    setState(() {
+      _zoomScale *= factor;
+      if (_zoomScale < 0.1) _zoomScale = 0.1;
+      if (_zoomScale > 1.0) {
+        _zoomScale = 1.0;
+        _xOffset = 0.0;
+      }
+    });
+  }
+
+  void _handleReset() {
+    setState(() {
+      _zoomScale = 1.0;
+      _xOffset = 0.0;
+    });
+  }
+
+  Future<void> _handleDownload(String type) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Preparing ${type.toUpperCase()} download...')),
+    );
+
+    try {
+      if (type == 'csv') {
+        final filteredData = _getFilteredSortedData();
+        if (filteredData.isEmpty) throw "No data available to export";
+
+        final xLabels = _getXLabels(filteredData);
+        final buffer = StringBuffer();
+
+        // Header
+        buffer.write('Period');
+        for (var ratio in widget.selectedRatios) {
+          buffer.write(',${_formatRatioName(ratio)}');
+        }
+        buffer.writeln();
+
+        // Data rows
+        for (int i = 0; i < filteredData.length; i++) {
+          buffer.write(xLabels[i]);
+          final data = filteredData[i];
+          for (var ratio in widget.selectedRatios) {
+            final val = _getRatioValue(data, ratio);
+            buffer.write(',${val?.toStringAsFixed(4) ?? '0.00'}');
+          }
+          buffer.writeln();
+        }
+
+        final bytes = utf8.encode(buffer.toString());
+        await saveAndOpenFile(bytes, 'trend_analysis_${DateTime.now().millisecondsSinceEpoch}.csv');
+      } else {
+        // PNG or SVG (fallback to PNG capture from RepaintBoundary)
+        final bytes = await _captureChart();
+        if (bytes != null) {
+          await saveAndOpenFile(bytes, 'trend_analysis_${DateTime.now().millisecondsSinceEpoch}.${type == 'svg' ? 'png' : type}');
+        } else {
+          throw "Could not capture chart image";
+        }
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${type.toUpperCase()} downloaded successfully!'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to download ${type.toUpperCase()}: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<Uint8List?> _captureChart() async {
+    try {
+      RenderRepaintBoundary? boundary = _chartKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Capture error: $e');
+      return null;
+    }
   }
 
   Widget _buildActiveChart() {
@@ -562,10 +971,17 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
           color: colors[i % colors.length],
           barWidth: 2,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: true),
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+              radius: 4,
+              color: colors[i % colors.length],
+              strokeWidth: 0,
+            ),
+          ),
           belowBarData: BarAreaData(
             show: isArea,
-            color: colors[i % colors.length].withOpacity(0.1),
+            color: colors[i % colors.length].withOpacity(0.05),
           ),
         ));
       }
@@ -575,16 +991,149 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
   }
 
   LineChartData _getLineChartData(List<LineChartBarData> lineBars, List<String> xLabels) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Calculate dynamic range
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+    bool hasData = false;
+
+    for (var bar in lineBars) {
+      for (var spot in bar.spots) {
+        if (spot.y < minY) minY = spot.y;
+        if (spot.y > maxY) maxY = spot.y;
+        hasData = true;
+      }
+    }
+
+    if (!hasData) {
+      minY = 0;
+      maxY = 100;
+    } else {
+      double range = maxY - minY;
+      if (range == 0) {
+        minY -= 5;
+        maxY += 5;
+      } else {
+        // Add 15% padding to bottom and 25% to top for tooltip space
+        minY -= range * 0.15;
+        maxY += range * 0.25;
+      }
+    }
+
+    // Dynamic interval: try to have about 5 horizontal lines
+    double interval = (maxY - minY) / 5;
+    if (interval <= 0) interval = 1;
+
     return LineChartData(
+      clipData: FlClipData.all(),
       lineBarsData: lineBars,
+      lineTouchData: LineTouchData(
+        handleBuiltInTouches: true,
+        touchTooltipData: LineTouchTooltipData(
+          tooltipBgColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+          tooltipRoundedRadius: 8,
+          tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // Tighter padding
+          maxContentWidth: 150, // More fit width
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
+          tooltipBorder: BorderSide(
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          getTooltipItems: (touchedSpots) {
+            if (touchedSpots.isEmpty) return [];
+            
+            // Get the period label for the header
+            final periodIndex = touchedSpots.first.x.toInt();
+            String headerText = '';
+            if (periodIndex >= 0 && periodIndex < xLabels.length) {
+              headerText = xLabels[periodIndex];
+            }
+
+            // Consolidate all values into the first item
+            final consolidatedItem = LineTooltipItem(
+              '$headerText\n', 
+              TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+              children: touchedSpots.map((spot) {
+                final ratio = widget.selectedRatios[spot.barIndex];
+                final colors = [
+                  const Color(0xFF3B82F6),
+                  const Color(0xFF10B981),
+                  const Color(0xFFF59E0B),
+                  const Color(0xFFEF4444),
+                  const Color(0xFF8B5CF6),
+                  const Color(0xFFEC4899),
+                ];
+                final color = colors[spot.barIndex % colors.length];
+                final isLast = touchedSpots.indexOf(spot) == touchedSpots.length - 1;
+
+                return TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '● ',
+                      style: TextStyle(color: color, fontSize: 10),
+                    ),
+                    TextSpan(
+                      text: '${_formatRatioName(ratio)}: ',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    TextSpan(
+                      text: spot.y.toStringAsFixed(2),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (!isLast) const TextSpan(text: '\n'),
+                  ],
+                );
+              }).toList(),
+            );
+
+            // Important: Return exactly the same number of items as touchedSpots.
+            // Only the first one has the actual content; others are empty to suppress default pop-ups.
+            return List.generate(touchedSpots.length, (i) => i == 0 ? consolidatedItem : null);
+          },
+        ),
+        getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+          return spotIndexes.map((index) {
+            return TouchedSpotIndicatorData(
+              const FlLine(
+                color: Color(0xFFCBD5E1),
+                strokeWidth: 1,
+                dashArray: [4, 4],
+              ),
+              FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 5,
+                  color: barData.color ?? Colors.blue,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                ),
+              ),
+            );
+          }).toList();
+        },
+      ),
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
-        horizontalInterval: 10,
+        horizontalInterval: interval,
         getDrawingHorizontalLine: (value) => const FlLine(
-          color: Color(0xFFE5E7EB),
+          color: Color(0xFFF1F5F9),
           strokeWidth: 1,
-          dashArray: [3, 3],
+          dashArray: [4, 4],
         ),
       ),
       titlesData: FlTitlesData(
@@ -604,7 +1153,7 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                   space: 8,
                   child: Text(
                     xLabels[index],
-                    style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
+                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w500),
                   ),
                 );
               }
@@ -615,13 +1164,14 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 45,
+            reservedSize: 60,
+            interval: interval,
             getTitlesWidget: (value, meta) => SideTitleWidget(
               axisSide: meta.axisSide,
-              space: 8,
+              space: 12,
               child: Text(
-                value.toStringAsFixed(1),
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
+                value.toStringAsFixed(2),
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w500),
               ),
             ),
           ),
@@ -629,13 +1179,15 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       ),
       borderData: FlBorderData(
         show: true,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-          left: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+          left: const BorderSide(color: Colors.transparent), 
         ),
       ),
-      minX: 0,
-      maxX: (xLabels.length - 1).toDouble(),
+      minX: 0 + _xOffset,
+      maxX: ((xLabels.length - 1) * _zoomScale) + _xOffset,
+      minY: minY,
+      maxY: maxY,
     );
   }
 
@@ -1032,6 +1584,117 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
       case 'per_employee_operating_cost': return data.perEmployeeOperatingCost;
       default: return null;
     }
+  }
+
+  Widget _buildStatsSummary() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final filteredData = _getFilteredSortedData();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
+        
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 2.2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: widget.selectedRatios.length,
+          itemBuilder: (context, index) {
+            final ratioKey = widget.selectedRatios[index];
+            final values = filteredData
+                .map((d) => _getRatioValue(d, ratioKey))
+                .where((v) => v != null && v.isFinite)
+                .cast<double>()
+                .toList();
+
+            if (values.isEmpty) return const SizedBox();
+
+            final latest = values.last;
+            final initial = values.first;
+            final change = latest - initial;
+            final percentChange = initial != 0 ? (change / initial) * 100 : 0.0;
+            final avg = values.isEmpty ? 0.0 : values.reduce((a, b) => a + b) / values.length;
+            final max = values.isEmpty ? 0.0 : values.reduce((a, b) => a > b ? a : b);
+            final min = values.isEmpty ? 0.0 : values.reduce((a, b) => a < b ? a : b);
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _formatRatioName(ratioKey),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  _buildStatRow("Latest:", latest.toStringAsFixed(2), isDark, isBoldValue: true),
+                  _buildStatRow(
+                    "Change:", 
+                    "${change >= 0 ? "+" : ""}${change.toStringAsFixed(2)} (${percentChange.toStringAsFixed(1)}%)",
+                    isDark,
+                    valueColor: change >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                  ),
+                  _buildStatRow("Avg:", avg.toStringAsFixed(2), isDark),
+                  _buildStatRow("Min-Max:", "${min.toStringAsFixed(2)} - ${max.toStringAsFixed(2)}", isDark),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStatRow(String label, String value, bool isDark, {Color? valueColor, bool isBoldValue = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF64748B),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              color: valueColor ?? (isDark ? Colors.white : const Color(0xFF111827)),
+              fontWeight: isBoldValue ? FontWeight.w700 : FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

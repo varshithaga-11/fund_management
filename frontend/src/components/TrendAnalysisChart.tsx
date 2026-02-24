@@ -45,7 +45,7 @@ const RATIO_CATEGORIES = {
         "gross_profit_ratio",
         "net_profit_ratio",
     ],
-    "Equity Analysis": [
+    "Capital Ratios": [
         "net_own_funds",
     ],
     "Fund Structure": [
@@ -104,7 +104,6 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
         "Trading Ratios"
     );
     const [chartType, setChartType] = useState<"line" | "bar" | "area" | "radar" | "scatter" | "candlestick" | "waterfall">("line");
-    const [expandedDropdown, setExpandedDropdown] = useState(false);
     const [expandedChartTypeDropdown, setExpandedChartTypeDropdown] = useState(false);
     const [selectedPeriods, setSelectedPeriods] = useState<number[]>(
         periods?.map((p: any) => p.id) || []
@@ -122,7 +121,6 @@ const TrendAnalysisChart: React.FC<TrendAnalysisChartProps> = ({
         const handleClickOutside = (event: any) => {
             const target = event.target as HTMLElement;
             if (!target.closest('[data-chart-controls]')) {
-                setExpandedDropdown(false);
                 setExpandedChartTypeDropdown(false);
             }
         };
