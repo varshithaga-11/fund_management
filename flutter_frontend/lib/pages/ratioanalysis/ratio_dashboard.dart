@@ -312,12 +312,12 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: const [
               CircularProgressIndicator(strokeWidth: 3),
               SizedBox(height: 16),
               Text('Loading ratios…',
@@ -408,383 +408,325 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
       RatioCard(name: 'Per Employee Operating Cost', value: _ratios!.perEmployeeOperatingCost ?? 0, unit: ' Lakhs', status: _ratios!.trafficLightStatus['per_employee_operating_cost']),
     ];
 
-    // ── top-level scaffold with p-6 space-y-6 ────────────────────────────────
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24), // p-6
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            // ── HEADER ─────────────────────────────────────────────────────
-            // React: flex justify-between items-start gap-4
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left column: back button + title + subtitle
-                Expanded(
-                  child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Back button — text link style (like React <button>)
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.arrow_back,
-                                size: 20,
-                                color: isDark
-                                    ? const Color(0xFF60A5FA)
-                                    : const Color(0xFF2563EB)),
-                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.arrow_back,
+                                      size: 20,
+                                      color: isDark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Back to Periods',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             Text(
-                              'Back to Periods',
+                              'Ratio Analysis Dashboard',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF111827),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_period!.label} — Calculated on $calculatedDate',
                               style: TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w500,
                                 color: isDark
-                                    ? const Color(0xFF60A5FA)
-                                    : const Color(0xFF2563EB),
+                                    ? const Color(0xFF9CA3AF)
+                                    : const Color(0xFF4B5563),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8), // mb-2
-                      // text-2xl font-bold
-                      Text(
-                        'Ratio Analysis Dashboard',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF111827),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // text-sm text-gray-600
-                      Text(
-                        '${_period!.label} — Calculated on $calculatedDate',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark
-                              ? const Color(0xFF9CA3AF)
-                              : const Color(0xFF4B5563),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1F2937)
+                                  : const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _tabBtn('Cards', Icons.grid_view_rounded, 'cards', isDark),
+                                _tabBtn('Table', Icons.table_chart_outlined, 'table', isDark),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _actionBtn(
+                            icon: Icons.bar_chart_rounded,
+                            label: 'Productivity',
+                            color: const Color(0xFF16A34A),
+                            onTap: () => Navigator.pushNamed(context, '${AppRoutes.productivityAnalysis}/${widget.periodId}'),
+                          ),
+                          const SizedBox(width: 8),
+                          _actionBtn(
+                            icon: Icons.message_outlined,
+                            label: 'Interpretation',
+                            color: const Color(0xFF9333EA),
+                            onTap: () => Navigator.pushNamed(context, '${AppRoutes.interpretation}/${widget.periodId}'),
+                          ),
+                          const SizedBox(width: 8),
+                          Builder(
+                            builder: (buttonContext) => _HoverableButton(
+                              onTap: () async {
+                                final RenderBox button = buttonContext.findRenderObject() as RenderBox;
+                                final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+                                final RelativeRect position = RelativeRect.fromRect(
+                                  Rect.fromPoints(
+                                    button.localToGlobal(button.size.bottomLeft(Offset.zero), ancestor: overlay),
+                                    button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+                                  ),
+                                  Offset.zero & overlay.size,
+                                );
+                                setState(() => _showExportMenu = true);
+                                final String? result = await showMenu<String>(
+                                  context: context,
+                                  position: position,
+                                  items: [
+                                    PopupMenuItem<String>(
+                                      value: 'excel',
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.table_chart,
+                                              size: 18,
+                                              color: Color(0xFF16A34A)),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: const [
+                                              Text('Excel',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 14)),
+                                              Text('All details in xlsx',
+                                                  style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'pdf',
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.description,
+                                              size: 18,
+                                              color: Color(0xFFDC2626)),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: const [
+                                              Text('PDF',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 14)),
+                                              Text('Formatted report pdf',
+                                                  style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                                setState(() => _showExportMenu = false);
+                                
+                                if (result == 'excel') {
+                                  _exportToExcel();
+                                } else if (result == 'pdf') {
+                                  _exportToPDF();
+                                }
+                              },
+                              baseColor: const Color(0xFF4F46E5),
+                              hoverColor: const Color(0xFF4338CA),
+                              label: 'Export',
+                              icon: Icons.download,
+                              showChevron: true,
+                              isRotated: _showExportMenu,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-
-                // Right column: view toggle + action buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // View Toggle  (bg-gray-100 rounded-lg p-1)
+                  const SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.2) : const Color(0xFFEFF6FF),
+                      border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Working Fund',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF111827))),
+                        const SizedBox(height: 8),
+                        Text('₹${_ratios!.workingFund.toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (_ratios!.interpretation != null &&
+                      _ratios!.interpretation!.isNotEmpty &&
+                      _ratios!.interpretation != 'null')
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF1F2937)
-                            : const Color(0xFFF3F4F6),
+                            ? const Color(0xFF1E3A8A).withOpacity(0.15)
+                            : const Color(0xFFEFF6FF),
+                        border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E40AF)
+                                : const Color(0xFFBFDBFE)),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _tabBtn('Cards', Icons.grid_view_rounded, 'cards', isDark),
-                          _tabBtn('Table', Icons.table_chart_outlined, 'table', isDark),
+                          Text('Interpretation',
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF111827))),
+                          const SizedBox(height: 8),
+                          Text(_ratios!.interpretation!,
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.6,
+                                  color: isDark
+                                      ? const Color(0xFFD1D5DB)
+                                      : const Color(0xFF374151))),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Productivity button (bg-green-600)
-                    _actionBtn(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Productivity',
-                      color: const Color(0xFF16A34A),
-                      onTap: () => Navigator.pushNamed(context, '${AppRoutes.productivityAnalysis}/${widget.periodId}'),
-                    ),
-                    const SizedBox(width: 8),
-                    // Interpretation button (bg-purple-600)
-                    _actionBtn(
-                      icon: Icons.message_outlined,
-                      label: 'Interpretation',
-                      color: const Color(0xFF9333EA),
-                      onTap: () => Navigator.pushNamed(context, '${AppRoutes.interpretation}/${widget.periodId}'),
-                    ),
-                    const SizedBox(width: 8),
-                    // Export button with popup menu
-                    Builder(
-                      builder: (buttonContext) => _HoverableButton(
-                        onTap: () async {
-                          final RenderBox button = buttonContext.findRenderObject() as RenderBox;
-                          final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-                          final RelativeRect position = RelativeRect.fromRect(
-                            Rect.fromPoints(
-                              button.localToGlobal(button.size.bottomLeft(Offset.zero), ancestor: overlay),
-                              button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
-                            ),
-                            Offset.zero & overlay.size,
-                          );
-                          setState(() => _showExportMenu = true);
-                          final String? result = await showMenu<String>(
-                            context: context,
-                            position: position,
-                            items: [
-                              PopupMenuItem<String>(
-                                value: 'excel',
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.table_chart, size: 18, color: Color(0xFF16A34A)),
-                                    SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Excel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                        Text('All details in xlsx', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'pdf',
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.description, size: 18, color: Color(0xFFDC2626)),
-                                    SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('PDF', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                        Text('Formatted report pdf', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                  if (_ratios!.interpretation != null &&
+                      _ratios!.interpretation!.isNotEmpty &&
+                      _ratios!.interpretation != 'null')
+                    const SizedBox(height: 24),
+                  if (_viewMode == 'table')
+                    RatioAnalysisTable(ratios: _ratios!, periodLabel: _period?.label ?? '')
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _section('Trading Ratios', tradingRatios),
+                        _section('Capital Efficiency', capitalEfficiencyRatios),
+                        _section('Fund Structure Ratios', fundStructureRatios),
+                        _section('Yield & Cost Ratios', yieldCostRatios),
+                        _section('Margin Ratios', marginRatios),
+                        _section('Productivity Ratios', productivityRatios),
+                        Container(
+                          margin: const EdgeInsets.only(top: 8, bottom: 48),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('STATUS LEGEND',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 32,
+                                runSpacing: 12,
+                                children: [
+                                  _legendItem(const Color(0xFF22C55E), 'Meets or exceeds ideal', isDark),
+                                  _legendItem(const Color(0xFFEAB308), 'Sub-optimal but acceptable', isDark),
+                                  _legendItem(const Color(0xFFEF4444), 'Critical - requires attention', isDark),
+                                ],
                               ),
                             ],
-                          );
-                          setState(() => _showExportMenu = false);
-                          
-                          if (result == 'excel') {
-                            _exportToExcel();
-                          } else if (result == 'pdf') {
-                            _exportToPDF();
-                          }
-                        },
-                        baseColor: const Color(0xFF4F46E5),
-                        hoverColor: const Color(0xFF4338CA),
-                        label: 'Export',
-                        icon: Icons.download,
-                        showChevron: true,
-                        isRotated: _showExportMenu,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24), // space-y-6
-
-            // ── WORKING FUND  (p-4 bg-blue-50 rounded-lg border) ───────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E3A8A).withOpacity(0.2)
-                    : const Color(0xFFEFF6FF),
-                border: Border.all(
-                  color: isDark
-                      ? const Color(0xFF1E40AF)
-                      : const Color(0xFFBFDBFE),
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // text-lg font-semibold
-                  Text(
-                    'Working Fund',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // text-3xl font-bold text-blue-600
-                  Text(
-                    '₹${_ratios!.workingFund.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? const Color(0xFF60A5FA)
-                          : const Color(0xFF2563EB),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ── INTERPRETATION (if available) ────────────────────────────
-            if (_ratios!.interpretation != null &&
-                _ratios!.interpretation!.isNotEmpty &&
-                _ratios!.interpretation != 'null') ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E3A8A).withOpacity(0.15)
-                      : const Color(0xFFEFF6FF),
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF1E40AF)
-                        : const Color(0xFFBFDBFE),
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Interpretation',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _ratios!.interpretation!,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.6,
-                        color: isDark
-                            ? const Color(0xFFD1D5DB)
-                            : const Color(0xFF374151),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // ── MAIN CONTENT: cards or table ─────────────────────────────
-            if (_viewMode == 'table')
-              RatioAnalysisTable(
-                  ratios: _ratios!, periodLabel: _period?.label ?? '')
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _section('Trading Ratios', tradingRatios),
-                  _section('Capital Efficiency', capitalEfficiencyRatios),
-                  _section('Fund Structure Ratios', fundStructureRatios),
-                  _section('Yield & Cost Ratios', yieldCostRatios),
-                  _section('Margin Ratios', marginRatios),
-                  _section('Productivity Ratios', productivityRatios),
-                ],
-              ),
-
-            const SizedBox(height: 24),
-
-            // ── STATUS LEGEND (cards view only) ──────────────────────────
-            if (_viewMode == 'cards')
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1F2937)
-                      : const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Status Legend',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 24,
-                      runSpacing: 8,
-                      children: [
-                        _legendItem(const Color(0xFF22C55E), 'Meets or exceeds ideal', isDark),
-                        _legendItem(const Color(0xFFEAB308), 'Sub-optimal but acceptable', isDark),
-                        _legendItem(const Color(0xFFEF4444), 'Critical - requires attention', isDark),
+                          ),
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 32),
-
-            // ── EDIT PERIOD DATA (master role only) ──────────────────────
-            if (_userRole == 'master') ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.darkCard
-                      : AppColors.white,
-                  border: Border.all(
-                    color: isDark
-                        ? AppColors.darkBorder
-                        : const Color(0xFFE5E7EB),
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Edit period data & recalculate ratios',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF111827),
+                  if (_userRole == 'master')
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(top: 24),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkCard : AppColors.white,
+                        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Edit period data & recalculate ratios',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF111827))),
+                          const SizedBox(height: 8),
+                          Text('Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click "Update data & recalculate ratios" to save and store updated ratio results.',
+                              style: TextStyle(fontSize: 13, color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563))),
+                          const SizedBox(height: 16),
+                          PeriodDataEditForm(periodId: widget.periodId, onSuccess: _loadData),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. '
-                      'Then click "Update data & recalculate ratios" to save and store updated ratio results.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? const Color(0xFF9CA3AF)
-                            : const Color(0xFF4B5563),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    PeriodDataEditForm(
-                        periodId: widget.periodId, onSuccess: _loadData),
-                  ],
-                ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -869,34 +811,33 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // text-xl font-semibold  mb-4
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: 16, top: 12),
           child: Text(
             title,
             style: TextStyle(
               fontSize: 20,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w900,
               color: Theme.of(context).brightness == Brightness.dark
                   ? Colors.white
-                  : const Color(0xFF111827),
+                  : const Color(0xFF0F172A),
+              letterSpacing: -0.5,
             ),
           ),
         ),
-        // grid grid-cols-1 md:grid-cols-3 gap-4
         LayoutBuilder(builder: (ctx, bc) {
-          final cols = bc.maxWidth > 900 ? 3 : (bc.maxWidth > 580 ? 2 : 1);
+          final cols = bc.maxWidth > 900 ? 3 : (bc.maxWidth > 600 ? 2 : 1);
           return GridView.count(
             crossAxisCount: cols,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 16, // gap-4
+            crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: cols == 1 ? 2.0 : (cols == 2 ? 1.6 : 1.4),
+            childAspectRatio: cols == 1 ? 3.2 : 2.8,
             children: cards,
           );
         }),
-        const SizedBox(height: 24), // space-y-6
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -978,15 +919,15 @@ class _HoverableButtonState extends State<_HoverableButton> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              if (widget.showChevron) ...[
+              if (widget.showChevron)
                 const SizedBox(width: 4),
+              if (widget.showChevron)
                 AnimatedRotation(
                   turns: widget.isRotated ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
                   child: const Icon(Icons.expand_more,
                       size: 16, color: Colors.white),
                 ),
-              ],
             ],
           ),
         ),
