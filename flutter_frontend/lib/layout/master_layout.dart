@@ -30,21 +30,28 @@ class MasterLayout extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          // Desktop Sidebar (left side)
+          // Desktop Sidebar (absolutely positioned - doesn't affect layout)
           if (showLayout && isDesktop)
-            MasterSidebar(
-              isExpanded: layoutProvider.isSidebarExpanded,
-              isMobileOpen: false,
-              onClose: layoutProvider.closeMobileSidebar,
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: MasterSidebar(
+                isExpanded: layoutProvider.isSidebarExpanded,
+                isMobileOpen: false,
+                onClose: layoutProvider.closeMobileSidebar,
+              ),
             ),
 
-          // Header and Content Column (right side, expanded)
-          Expanded(
+          // Main content with animated left margin
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header at the top
                 if (showLayout)
@@ -59,11 +66,20 @@ class MasterLayout extends StatelessWidget {
                     isSidebarExpanded: layoutProvider.isSidebarExpanded,
                   ),
                 
-                // Main Content
+                // Main Content with animated left margin
                 Expanded(
-                  child: Padding(
-                    padding: ResponsiveHelper.getResponsivePadding(context),
-                    child: child,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    margin: EdgeInsets.only(
+                      left: isDesktop && showLayout
+                        ? (layoutProvider.isSidebarExpanded ? 290 : 90)
+                        : 0,
+                    ),
+                    child: Padding(
+                      padding: ResponsiveHelper.getResponsivePadding(context),
+                      child: child,
+                    ),
                   ),
                 ),
               ],

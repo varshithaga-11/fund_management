@@ -100,102 +100,10 @@ class TrendComparisonCards extends StatelessWidget {
           final item = comparisonData[index];
           final pData = item['periodsData'] as List;
 
-          return Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1F2937) : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        (item['ratioLabel'] as String).toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11, // Smaller title
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? const Color(0xFFDBEAFE) : const Color(0xFF1E3A8A),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Divider(height: 1, thickness: 1),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Column(
-                      children: pData.map((data) {
-                        final direction = data['changeDirection'];
-                        final isUp = direction == 'up';
-                        final isDown = direction == 'down';
-                        final displayDirection = isUp ? 'Up' : isDown ? 'Dip' : 'Stable';
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                data['periodLabel'],
-                                style: TextStyle(
-                                  fontSize: 11, 
-                                  color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    data['value'],
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 13,
-                                      color: isDark ? Colors.white : const Color(0xFF111827),
-                                    ),
-                                  ),
-                                  if (data['changePercent'] != null) ...[
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '(${data['changePercent']}% $displayDirection)',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: isUp 
-                                            ? (isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A))
-                                            : isDown 
-                                                ? (isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626))
-                                                : Colors.grey,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          return _TrendCard(
+            isDark: isDark,
+            item: item,
+            pData: pData,
           );
         },
       );
@@ -235,5 +143,152 @@ class TrendComparisonCards extends StatelessWidget {
       case 'per_employee_operating_cost': return data.perEmployeeOperatingCost;
       default: return null;
     }
+  }
+}
+
+class _TrendCard extends StatefulWidget {
+  final bool isDark;
+  final Map<String, dynamic> item;
+  final List pData;
+
+  const _TrendCard({
+    required this.isDark,
+    required this.item,
+    required this.pData,
+  });
+
+  @override
+  State<_TrendCard> createState() => _TrendCardState();
+}
+
+class _TrendCardState extends State<_TrendCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.identity()
+          ..translate(0.0, _isHovered ? -4.0 : 0.0),
+        decoration: BoxDecoration(
+          color: widget.isDark ? const Color(0xFF1F2937) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _isHovered 
+                ? const Color(0xFF3B82F6) 
+                : (widget.isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6)),
+            width: _isHovered ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isHovered 
+                  ? Colors.black.withOpacity(0.12) 
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: _isHovered ? 16 : 4,
+              offset: _isHovered ? const Offset(0, 8) : const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (widget.item['ratioLabel'] as String).toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: widget.isDark ? const Color(0xFFDBEAFE) : const Color(0xFF1E3A8A),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 1, 
+                    color: widget.isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: widget.pData.map((data) {
+                    final direction = data['changeDirection'];
+                    final isUp = direction == 'up';
+                    final isDown = direction == 'down';
+                    final displayDirection = isUp ? 'Up' : isDown ? 'Dip' : 'Stable';
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            data['periodLabel'],
+                            style: TextStyle(
+                              fontSize: 11, 
+                              color: widget.isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                data['value'],
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                  color: widget.isDark ? Colors.white : const Color(0xFF111827),
+                                ),
+                              ),
+                              if (data['changePercent'] != null) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isUp 
+                                        ? Colors.green.withOpacity(0.1)
+                                        : isDown 
+                                            ? Colors.red.withOpacity(0.1)
+                                            : Colors.grey.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${data['changePercent']}% $displayDirection',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: isUp 
+                                          ? (widget.isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A))
+                                          : isDown 
+                                              ? (widget.isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626))
+                                              : Colors.grey,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

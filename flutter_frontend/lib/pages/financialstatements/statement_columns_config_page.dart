@@ -209,7 +209,7 @@ class _StatementColumnsConfigPageState extends State<StatementColumnsConfigPage>
         .length;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 32.0),

@@ -147,6 +147,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
     if (_loading) {
       return Scaffold(
+        backgroundColor: Colors.transparent,
         body: Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
@@ -157,6 +158,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
     if (_error != null) {
       return Scaffold(
+        backgroundColor: Colors.transparent,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -176,6 +178,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),

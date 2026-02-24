@@ -138,166 +138,216 @@ class _InterpretationPanelPageState extends State<InterpretationPanelPage> {
     final recommendations =
         _ratios != null ? _getRecommendations(_ratios!) : <String>[];
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _ratios == null
-              ? const Center(
-                  child: Text(
-                    'No ratio data found. Please calculate ratios first.',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: ResponsiveHelper.getResponsivePadding(context),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_period != null)
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _ratios == null
+                ? const Center(
+                    child: Text(
+                      'No ratio data found. Please calculate ratios first.',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: ResponsiveHelper.getResponsivePadding(context),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Back button header
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Text(
-                            _period!.label,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-
-                      // AI Interpretation
-                      if (_ratios!.interpretation != null &&
-                          _ratios!.interpretation!.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              const Text('Summary Interpretation',
-                                  style: TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-                              Text(
-                                _ratios!.interpretation!,
-                                style: const TextStyle(fontSize: 14, height: 1.5),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => Navigator.pop(context),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Icon(
+                                      Icons.arrow_back,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Interpretation Analysis',
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                  if (_period != null)
+                                    Text(
+                                      _period!.label,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-
-                      // Key Insights
-                      if (insights.isNotEmpty)
-                        Card(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
+  
+                        // AI Interpretation
+                        if (_ratios!.interpretation != null &&
+                            _ratios!.interpretation!.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Key Insights',
+                                const Text('Summary Interpretation',
+                                    style: TextStyle(
+                                        fontSize: 18, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _ratios!.interpretation!,
+                                  style: const TextStyle(fontSize: 14, height: 1.5),
+                                ),
+                              ],
+                            ),
+                          ),
+  
+                        // Key Insights
+                        if (insights.isNotEmpty)
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            elevation: 2,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Key Insights',
+                                      style: TextStyle(
+                                          fontSize: 18, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 12),
+                                  ...insights.map((insight) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 8.0),
+                                        child: Text(insight, style: const TextStyle(fontSize: 14)),
+                                      )),
+                                ],
+                              ),
+                            ),
+                          ),
+  
+                        // Recommendations
+                        if (recommendations.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.amber.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Recommendations',
                                     style: TextStyle(
                                         fontSize: 18, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 12),
-                                ...insights.map((insight) => Padding(
+                                ...recommendations.map((rec) => Padding(
                                       padding: const EdgeInsets.only(bottom: 8.0),
-                                      child: Text(insight, style: const TextStyle(fontSize: 14)),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('• ',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16)),
+                                          Expanded(
+                                              child: Text(rec,
+                                                  style: const TextStyle(fontSize: 14))),
+                                        ],
+                                      ),
                                     )),
                               ],
                             ),
                           ),
-                        ),
-
-                      // Recommendations
-                      if (recommendations.isNotEmpty)
+  
+                        // Risk Warnings
                         Container(
-                          margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.amber.shade50,
+                            color: Colors.red.shade50,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.amber.shade200),
+                            border: Border.all(color: Colors.red.shade200),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Recommendations',
+                              const Text('Risk Warnings',
                                   style: TextStyle(
                                       fontSize: 18, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 12),
-                              ...recommendations.map((rec) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('• ',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16)),
-                                        Expanded(
-                                            child: Text(rec,
-                                                style: const TextStyle(fontSize: 14))),
-                                      ],
-                                    ),
-                                  )),
+                              if (_ratios!.riskCostToWf > 0.25)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Text(
+                                    '⚠ High risk cost (${_ratios!.riskCostToWf.toStringAsFixed(2)}%) exceeds ideal threshold (0.25%)',
+                                    style: TextStyle(color: Colors.red.shade900),
+                                  ),
+                                ),
+                              if (_ratios!.netMargin < 0.5)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Text(
+                                    '⚠ Net margin (${_ratios!.netMargin.toStringAsFixed(2)}%) is critically low',
+                                    style: TextStyle(color: Colors.red.shade900),
+                                  ),
+                                ),
+                              if (_ratios!.creditDepositRatio < 50)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Text(
+                                    '⚠ Very low credit deposit ratio (${_ratios!.creditDepositRatio.toStringAsFixed(2)}%) indicates poor resource utilization',
+                                    style: TextStyle(color: Colors.red.shade900),
+                                  ),
+                                ),
+                              if (!(_ratios!.riskCostToWf > 0.25 ||
+                                  _ratios!.netMargin < 0.5 ||
+                                  _ratios!.creditDepositRatio < 50))
+                                const Text('No critical risk warnings at this time',
+                                    style: TextStyle(color: Colors.black54)),
                             ],
                           ),
                         ),
-
-                      // Risk Warnings
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Risk Warnings',
-                                style: TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 12),
-                            if (_ratios!.riskCostToWf > 0.25)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Text(
-                                  '⚠ High risk cost (${_ratios!.riskCostToWf.toStringAsFixed(2)}%) exceeds ideal threshold (0.25%)',
-                                  style: TextStyle(color: Colors.red.shade900),
-                                ),
-                              ),
-                            if (_ratios!.netMargin < 0.5)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Text(
-                                  '⚠ Net margin (${_ratios!.netMargin.toStringAsFixed(2)}%) is critically low',
-                                  style: TextStyle(color: Colors.red.shade900),
-                                ),
-                              ),
-                            if (_ratios!.creditDepositRatio < 50)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Text(
-                                  '⚠ Very low credit deposit ratio (${_ratios!.creditDepositRatio.toStringAsFixed(2)}%) indicates poor resource utilization',
-                                  style: TextStyle(color: Colors.red.shade900),
-                                ),
-                              ),
-                            if (!(_ratios!.riskCostToWf > 0.25 ||
-                                _ratios!.netMargin < 0.5 ||
-                                _ratios!.creditDepositRatio < 50))
-                              const Text('No critical risk warnings at this time',
-                                  style: TextStyle(color: Colors.black54)),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+      ),
     );
   }
 }

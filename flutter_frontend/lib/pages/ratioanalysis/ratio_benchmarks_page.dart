@@ -214,14 +214,14 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_data == null) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         body: Center(child: Text('Failed to load data')),
       );
     }
@@ -234,7 +234,7 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     final otherKeys = allKeys.where((k) => !handledKeys.contains(k)).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 32.0),

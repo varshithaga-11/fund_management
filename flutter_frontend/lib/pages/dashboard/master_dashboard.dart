@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 // Platform helpers: dart:io on native, dart:html on web — isolated via conditional import
@@ -32,6 +33,8 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   final LayerLink _yearLayerLink = LayerLink();
   OverlayEntry? _exportOverlay;
   OverlayEntry? _yearOverlay;
+
+  int _donutTouchedIndex = -1;
 
   @override
   void initState() {
@@ -507,14 +510,11 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                                 else
                                   ...filtered.map((p) => _buildYearDropdownItem(
                                         label: p.label,
-                                        isSelected: _selectedYear == p.label,
+                                        isSelected: false,
                                         isDark: isDark,
                                         onTap: () {
                                           _removeYearOverlay();
-                                          setState(() {
-                                            _showYearDropdown = false;
-                                            _selectedYear = p.label;
-                                          });
+                                          Navigator.pushNamed(context, '/ratio-analysis/dashboard/${p.id}');
                                         },
                                       )),
                               ],
@@ -540,34 +540,40 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     required VoidCallback onTap,
     bool isReset = false,
   }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
-        child: Row(
-          children: [
-            if (isReset)
-              Icon(Icons.clear_all, size: 16, color: isSelected ? AppColors.primary : AppColors.gray400)
-            else if (isSelected)
-              const Icon(Icons.check, size: 16, color: AppColors.primary)
-            else
-              const Icon(Icons.calendar_today, size: 14, color: Colors.transparent), // Placeholder for alignment
-            
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTypography.body3.copyWith(
-                  color: isSelected 
-                    ? AppColors.primary 
-                    : (isDark ? AppColors.white : AppColors.black),
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+    return _HoverEffect(
+      hoverScale: 1.0,
+      hoverElevation: 0,
+      builder: (isHovered) => InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          color: isSelected 
+            ? AppColors.primary.withOpacity(0.12) 
+            : (isHovered ? (isDark ? AppColors.gray700 : AppColors.gray100) : Colors.transparent),
+          child: Row(
+            children: [
+              if (isReset)
+                Icon(Icons.clear_all, size: 16, color: isSelected ? AppColors.primary : AppColors.gray400)
+              else if (isSelected)
+                const Icon(Icons.check, size: 16, color: AppColors.primary)
+              else
+                Icon(Icons.calendar_today, size: 14, color: isHovered ? AppColors.primary : AppColors.gray400), 
+              
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.body3.copyWith(
+                    color: isSelected 
+                      ? AppColors.primary 
+                      : (isDark ? AppColors.white : AppColors.black),
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -603,65 +609,72 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     final isMobile = width < 768;
     final isDesktop = width >= 1024;
 
-    final periods = _filteredPeriods; // respects the selected year filter
-    // Recompute top-level stats from filtered periods (not the full API summary)
-    final totalRevenue = periods.fold<double>(0, (sum, p) => sum + p.revenue);
-    final totalProfit = periods.fold<double>(0, (sum, p) => sum + p.netProfit);
-    final avgProfitMargin = periods.isEmpty
-        ? 0.0
-        : periods.fold<double>(0, (s, p) => s + (p.revenue > 0 ? p.netProfit / p.revenue * 100 : 0)) / periods.length;
-    // Growth rate: compare first and last period revenue
-    double growthRate = 0;
-    if (periods.length >= 2) {
-      final first = periods.first.revenue;
-      final last = periods.last.revenue;
-      if (first != 0) growthRate = ((last - first) / first) * 100;
-    }
+    final periods = _dashboardData?.periods ?? []; 
+    
+    // Use API-provided stats for the dashboard overview (parity with React)
+    final double revenueValue = _dashboardData?.totalRevenue ?? 0.0;
+    final double marginValue = _dashboardData?.avgProfitMargin ?? 0.0;
+    final double growthValue = _dashboardData?.growthRate ?? 0.0;
+    
     final totalPeriods = periods.length;
     final finalizedPeriods = periods.where((p) => p.isFinalized).length;
 
-    // Top periods by profit
-    final topPeriods = List<DashboardPeriodData>.from(periods)
+    // Top periods by profit (always from all periods)
+    final topPeriodsList = List<DashboardPeriodData>.from(periods)
       ..sort((a, b) => b.netProfit.compareTo(a.netProfit));
-    final top5 = topPeriods.take(5).toList();
+    final top5 = topPeriodsList.take(5).toList();
 
-    // Recent by created_at desc
+    // Recent by created_at desc (always from all periods)
     final recent = List<DashboardPeriodData>.from(periods)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final recent5 = recent.take(5).toList();
 
-    return Scaffold(
-      backgroundColor: Colors.transparent, // Let shell handle background
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: ResponsiveHelper.getResponsivePadding(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ===== HEADER =====
-              _buildHeader(isDark, isMobile, context),
-              SizedBox(height: AppSpacing.xxl),
-  
-              // ===== FILTER BAR =====
-              _buildFilterBar(isDark, context),
-              SizedBox(height: AppSpacing.xxl),
-  
-              // ===== MAIN STAT CARDS (3 cards, responsive) =====
-              _buildMainStatCards(isDark, isMobile, totalRevenue, avgProfitMargin, growthRate),
-              SizedBox(height: AppSpacing.xxl),
-  
-              // ===== SECONDARY STATS ROW =====
-              _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, totalProfit),
-              SizedBox(height: AppSpacing.xxl),
-  
-              // ===== CHARTS =====
-              _buildChartsSection(isDark, isMobile, isDesktop, periods),
-              SizedBox(height: AppSpacing.xxl),
-  
-              // ===== BOTTOM: TOP PERIODS + RECENT ACTIVITY =====
-              _buildBottomSection(isDark, isMobile, top5, recent5, context),
-              SizedBox(height: AppSpacing.xxxl),
-            ],
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Let shell handle background
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: ResponsiveHelper.getResponsivePadding(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ===== HEADER =====
+                _buildHeader(isDark, isMobile, context),
+                SizedBox(height: AppSpacing.xxl),
+    
+                // ===== FILTER BAR =====
+                _buildFilterBar(isDark, context),
+                SizedBox(height: AppSpacing.xxl),
+    
+                // ===== MAIN STAT CARDS (3 cards, responsive) =====
+                _buildMainStatCards(isDark, isMobile, revenueValue, marginValue, growthValue),
+                SizedBox(height: AppSpacing.xxl),
+    
+                // ===== SECONDARY STATS ROW =====
+                _buildSecondaryStats(isDark, isMobile, totalPeriods, finalizedPeriods, _dashboardData?.totalProfit ?? 0.0),
+                SizedBox(height: AppSpacing.xxl),
+    
+                // ===== CHARTS =====
+                _buildChartsSection(isDark, isMobile, isDesktop, periods),
+                SizedBox(height: AppSpacing.xxl),
+    
+                // ===== BOTTOM: TOP PERIODS + RECENT ACTIVITY =====
+                _buildBottomSection(isDark, isMobile, top5, recent5, context),
+                SizedBox(height: AppSpacing.xxxl),
+              ],
+            ),
           ),
         ),
       ),
@@ -759,15 +772,24 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       hoverScale: 1.03,
       hoverElevation: 8,
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: GestureDetector(
+      builder: (isHovered) => GestureDetector(
         onTap: onTap,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.white,
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
+            color: isHovered 
+              ? (isDark ? AppColors.gray700 : AppColors.gray50) 
+              : (isDark ? AppColors.darkCard : AppColors.white),
+            border: Border.all(
+              color: isHovered ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.gray200),
+            ),
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.06), blurRadius: 4)],
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(isHovered ? 0.12 : 0.06), 
+                blurRadius: isHovered ? 8 : 4,
+              )
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -779,17 +801,20 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                   child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.gray500)),
                 )
               else
-                Icon(icon, size: 16, color: isDark ? AppColors.gray300 : AppColors.gray700),
+                Icon(icon, size: 16, color: isHovered ? AppColors.primary : (isDark ? AppColors.gray300 : AppColors.gray700)),
               SizedBox(width: AppSpacing.sm),
               Text(label,
                   style: AppTypography.body3
-                      .copyWith(fontWeight: FontWeight.w500, color: isDark ? AppColors.gray300 : AppColors.gray700)),
+                      .copyWith(
+                        fontWeight: isHovered ? FontWeight.w600 : FontWeight.w500, 
+                        color: isHovered ? AppColors.primary : (isDark ? AppColors.gray300 : AppColors.gray700),
+                      )),
               if (trailingIcon != null) ...[
                 SizedBox(width: AppSpacing.xs),
                 AnimatedRotation(
                   turns: trailingRotated ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
-                  child: Icon(trailingIcon, size: 16, color: isDark ? AppColors.gray400 : AppColors.gray500),
+                  child: Icon(trailingIcon, size: 16, color: isHovered ? AppColors.primary : (isDark ? AppColors.gray400 : AppColors.gray500)),
                 ),
               ],
             ],
@@ -828,38 +853,35 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
           const Spacer(),
           // Period filter dropdown — shows active label + clear button when filtered
           CompositedTransformTarget(link: _yearLayerLink,
-            child: GestureDetector(
-              onTap: () => _toggleYearDropdown(context),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: _selectedYear != null
-                      ? AppColors.primary.withOpacity(0.1)
-                      : (isDark ? AppColors.darkBg : AppColors.gray50),
-                  border: Border.all(
-                      color: _selectedYear != null ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.gray300)),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _selectedYear ?? 'Select Period',
-                      style: AppTypography.body3.copyWith(
-                          color: _selectedYear != null
-                              ? AppColors.primary
-                              : (isDark ? AppColors.white : AppColors.black),
-                          fontWeight: _selectedYear != null ? FontWeight.w600 : FontWeight.normal),
-                    ),
-                    SizedBox(width: AppSpacing.sm),
-                    if (_selectedYear != null)
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedYear = null),
-                        child: Icon(Icons.close, size: 14, color: AppColors.primary),
-                      )
-                    else
+            child: _HoverEffect(
+              hoverScale: 1.02,
+              hoverElevation: 4,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              builder: (isHovered) => GestureDetector(
+                onTap: () => _toggleYearDropdown(context),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: isHovered 
+                        ? (isDark ? AppColors.gray700 : AppColors.gray100)
+                        : (isDark ? AppColors.darkBg : AppColors.gray50),
+                    border: Border.all(
+                        color: isHovered ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.gray300)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Select Period',
+                        style: AppTypography.body3.copyWith(
+                            color: isDark ? AppColors.white : AppColors.black,
+                            fontWeight: FontWeight.normal),
+                      ),
+                      SizedBox(width: AppSpacing.sm),
                       Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.gray400),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -937,75 +959,115 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     IconData? trailingIcon,
     Color? trailingColor,
   }) {
-    return _HoverEffect(
-      hoverScale: 1.03,
-      hoverElevation: 16,
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : AppColors.white,
-          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.08), blurRadius: 12)],
+          border: Border.all(
+            color: isDark ? AppColors.darkBorder : AppColors.gray200,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            )
+          ],
         ),
         child: Stack(
-          clipBehavior: Clip.hardEdge,
+          clipBehavior: Clip.antiAlias,
           children: [
-            // Background circle
+            // Background gradient circle - top right (React style, clipped to card)
             Positioned(
               top: -40,
               right: -40,
               child: Container(
-                width: 128,
-                height: 128,
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [gradientStart.withOpacity(0.12), gradientEnd.withOpacity(0.12)],
+                    colors: [
+                      gradientStart.withOpacity(0.15),
+                      gradientEnd.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Icon badge
-                Container(
-                  padding: EdgeInsets.all(AppSpacing.sm + 2),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [gradientStart, gradientEnd]),
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    boxShadow: [BoxShadow(color: gradientEnd.withOpacity(0.3), blurRadius: 8)],
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Icon badge (React style: h-12 w-12)
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [gradientStart, gradientEnd],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: gradientEnd.withOpacity(0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 24),
                   ),
-                  child: Icon(icon, color: AppColors.white, size: 24),
-                ),
-                SizedBox(height: AppSpacing.lg),
-                // Value with optional trailing icon
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        value,
-                        style: AppTypography.h3.copyWith(
-                          color: isDark ? AppColors.white : AppColors.black,
-                          fontWeight: FontWeight.bold,
+                  const SizedBox(height: 16),
+                  // Metric value (React text-3xl font-bold)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            color: isDark ? AppColors.white : AppColors.black,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 32,
+                            letterSpacing: -0.8,
+                            height: 1.2,
+                          ),
                         ),
                       ),
-                    ),
-                    if (trailingIcon != null) ...[
-                      SizedBox(width: AppSpacing.xs),
-                      Icon(trailingIcon, size: 20, color: trailingColor ?? AppColors.success),
+                      if (trailingIcon != null) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          trailingIcon,
+                          size: 24,
+                          color: trailingColor ?? AppColors.success,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                SizedBox(height: AppSpacing.xs),
-                Text(
-                  title,
-                  style: AppTypography.body3.copyWith(color: isDark ? AppColors.gray400 : AppColors.gray600),
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Label text (React text-sm)
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1067,75 +1129,86 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     String? badgeText,
     IconData? badgeIcon,
   }) {
-    return _HoverEffect(
-      hoverScale: 1.02,
-      hoverElevation: 12,
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.xl),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark ? darkGradientColors : gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.06), blurRadius: 8)],
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.xl),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark ? darkGradientColors : gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label,
-                        style: AppTypography.body3
-                            .copyWith(color: isDark ? AppColors.gray400 : AppColors.gray600, fontWeight: FontWeight.w500)),
-                    SizedBox(height: AppSpacing.sm),
-                    Text(value,
-                        style: AppTypography.h3.copyWith(
-                            color: isDark ? AppColors.white : AppColors.black, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(isDark ? 0.1 : 0.8),
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.08), blurRadius: 8)],
-                  ),
-                  child: Center(child: Icon(icon, color: iconColor, size: 28)),
-                ),
-              ],
-            ),
-            if (badgeText != null) ...[
-              SizedBox(height: AppSpacing.md),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: AppTypography.body3
+                          .copyWith(color: isDark ? AppColors.gray400 : AppColors.gray600, fontWeight: FontWeight.w500)),
+                  SizedBox(height: AppSpacing.sm),
+                  Text(value,
+                      style: AppTypography.h3.copyWith(
+                          color: isDark ? AppColors.white : AppColors.black, fontWeight: FontWeight.bold)),
+                ],
+              ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.circle),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (badgeIcon != null) ...[
-                      Icon(badgeIcon, size: 12, color: AppColors.primary),
-                      SizedBox(width: AppSpacing.xs),
-                    ],
-                    Text(badgeText,
-                        style: AppTypography.body3.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  color: AppColors.white.withOpacity(isDark ? 0.1 : 0.8),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                    )
                   ],
+                ),
+                child: Center(
+                  child: Icon(icon, color: iconColor, size: 28),
                 ),
               ),
             ],
+          ),
+          if (badgeText != null) ...[
+            SizedBox(height: AppSpacing.md),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppRadius.circle),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (badgeIcon != null) ...[
+                    Icon(badgeIcon, size: 12, color: AppColors.primary),
+                    SizedBox(width: AppSpacing.xs),
+                  ],
+                  Text(badgeText,
+                      style: AppTypography.body3.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1164,44 +1237,45 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       );
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(flex: 8, child: barChart),
-        SizedBox(width: AppSpacing.lg),
-        Expanded(flex: 4, child: donutChart),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(flex: 8, child: barChart),
+          SizedBox(width: AppSpacing.lg),
+          Expanded(flex: 4, child: donutChart),
+        ],
+      ),
     );
   }
 
   Widget _buildChartCard({required bool isDark, required String title, required Widget child}) {
-    return _HoverEffect(
-      hoverScale: 1.01,
-      hoverElevation: 14,
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      child: Container(
-        padding: EdgeInsets.only(
-          top: 30,
-          bottom: 20,
-          left: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
-          right: ResponsiveHelper.getResponsiveValue(context, mobile: 20, tablet: 30, desktop: 30),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.white,
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+          width: 1,
         ),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.white,
-          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.08), blurRadius: 12)],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: AppTypography.h5.copyWith(
-                    color: isDark ? AppColors.white : AppColors.black, fontWeight: FontWeight.bold)),
-            SizedBox(height: AppSpacing.lg),
-            child,
-          ],
-        ),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: AppTypography.h5.copyWith(
+                  color: isDark ? AppColors.white : AppColors.black, fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 24),
+          Expanded(child: child),
+        ],
       ),
     );
   }
@@ -1209,7 +1283,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   Widget _buildBarChart(List<DashboardPeriodData> periods, bool isDark) {
     // Sort by createdAt and take last 10
     final sorted = List<DashboardPeriodData>.from(periods)
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      ..sort((a, b) => DateTime.parse(a.createdAt).compareTo(DateTime.parse(b.createdAt)));
     final last10 = sorted.length > 10 ? sorted.sublist(sorted.length - 10) : sorted;
 
     if (last10.isEmpty) {
@@ -1221,37 +1295,54 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       );
     }
 
-    double maxY = 0;
+    final currencyFmt = NumberFormat.compactSimpleCurrency(locale: 'en_IN', name: '₹');
+    final fullCurrencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹ ', decimalDigits: 0);
+
+    double maxDataValue = 0;
     for (final p in last10) {
-      if (p.revenue > maxY) maxY = p.revenue;
-      if (p.netProfit > maxY) maxY = p.netProfit;
+      if (p.revenue > maxDataValue) maxDataValue = p.revenue;
+      if (p.netProfit > maxDataValue) maxDataValue = p.netProfit;
     }
-    maxY = maxY == 0 ? 100000 : (maxY * 1.2);
+    
+    // Match React Image scale: 0 to 8000K in steps of 2000K
+    double interval = 2000000; 
+    double maxY = 8000000;
+    
+    // Check if data actually exceeds 8M, adjust if necessary to prevent overflow
+    if (maxDataValue > maxY) {
+      maxY = ((maxDataValue / interval).ceil() * interval).toDouble();
+    }
 
     return Column(
       children: [
-        SizedBox(
-          height: 300,
-          child: BarChart(
-            BarChartData(
-              maxY: maxY,
-              barGroups: last10.asMap().entries.map((entry) {
+        Expanded(
+          child: ClipRect(
+            child: BarChart(
+              BarChartData(
+                minY: 0,
+                maxY: maxY,
+                barGroups: last10.asMap().entries.map((entry) {
                 return BarChartGroupData(
                   x: entry.key,
+                  barsSpace: 6,
                   barRods: [
                     BarChartRodData(
                       toY: entry.value.netProfit,
-                      color: const Color(0xFF3C50E0),
-                      width: 10,
+                      color: const Color(0xFF3B82F6), // Vibrant Blue from image
+                      width: 45,
                       borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
+                      ),
                     ),
                     BarChartRodData(
                       toY: entry.value.revenue,
-                      color: const Color(0xFF80CAEE),
-                      width: 10,
+                      color: const Color(0xFF7DD3FC), // Soft Sky Blue from image
+                      width: 45,
                       borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
+                      ),
                     ),
                   ],
                 );
@@ -1263,19 +1354,16 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 52,
+                    reservedSize: 40,
                     getTitlesWidget: (val, meta) {
                       final i = val.toInt();
                       if (i < last10.length) {
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Transform.rotate(
-                            angle: -0.785,
-                            child: Text(
-                              last10[i].label,
-                              style: AppTypography.caption.copyWith(
-                                  color: isDark ? AppColors.gray400 : AppColors.gray500, fontSize: 10),
-                            ),
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            last10[i].label,
+                            style: AppTypography.caption.copyWith(
+                                color: AppColors.gray500, fontSize: 11),
                           ),
                         );
                       }
@@ -1284,17 +1372,24 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                   ),
                 ),
                 leftTitles: AxisTitles(
-                  axisNameWidget: Text('Amount (₹)',
-                      style: AppTypography.caption
-                          .copyWith(color: isDark ? AppColors.gray400 : AppColors.gray500)),
+                  axisNameWidget: Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0, right: 8),
+                    child: Text('Amount (₹)',
+                        style: TextStyle(
+                            color: isDark ? AppColors.gray400 : AppColors.gray500, 
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
+                  ),
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 52,
+                    reservedSize: 64, 
+                    interval: interval, 
                     getTitlesWidget: (val, meta) {
+                      final kValue = (val / 1000).toInt();
                       return Text(
-                        '₹${(val / 1000).toStringAsFixed(0)}K',
+                        '₹${kValue}K',
                         style: AppTypography.caption.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray500, fontSize: 9),
+                            color: AppColors.gray500, fontSize: 10, fontWeight: FontWeight.normal),
                       );
                     },
                   ),
@@ -1303,23 +1398,37 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
-                horizontalInterval: maxY / 4,
+                horizontalInterval: interval,
                 getDrawingHorizontalLine: (v) => FlLine(
-                  color: isDark ? AppColors.gray700 : AppColors.gray200,
-                  strokeWidth: 1,
+                  color: isDark ? AppColors.gray700.withOpacity(0.5) : AppColors.gray200,
+                  strokeWidth: 0.5,
                   dashArray: [4, 4],
                 ),
               ),
-              borderData: FlBorderData(show: false),
+              borderData: FlBorderData(
+                show: true,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? AppColors.gray700 : AppColors.gray200,
+                    width: 1,
+                  ),
+                ),
+              ),
               barTouchData: BarTouchData(
                 touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: isDark ? AppColors.gray800 : AppColors.gray700,
+                  tooltipBgColor: isDark ? AppColors.darkCard : AppColors.gray800,
+                  tooltipRoundedRadius: 8,
                   getTooltipItem: (group, gi, rod, ri) {
-                    final p = last10[group.x.toInt()];
-                    final isProfit = ri == 0;
+                    final label = ri == 0 ? 'Net Profit' : 'Revenue';
                     return BarTooltipItem(
-                      '${isProfit ? 'Profit' : 'Revenue'}: ₹${rod.toY.toStringAsFixed(0)}',
-                      AppTypography.caption.copyWith(color: AppColors.white),
+                      '$label\n',
+                      AppTypography.body3.copyWith(color: AppColors.white, fontWeight: FontWeight.bold),
+                      children: [
+                        TextSpan(
+                          text: '₹ ${fullCurrencyFmt.format(rod.toY).replaceAll('₹', '').trim()}',
+                          style: AppTypography.body3.copyWith(color: rod.color, fontWeight: FontWeight.w900, fontSize: 13),
+                        ),
+                      ],
                     );
                   },
                 ),
@@ -1327,12 +1436,13 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
             ),
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+      ),
+        const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildLegendItem('Net Profit', const Color(0xFF3C50E0), isDark),
-            SizedBox(width: AppSpacing.xl),
+            const SizedBox(width: 24),
             _buildLegendItem('Revenue', const Color(0xFF80CAEE), isDark),
           ],
         ),
@@ -1397,11 +1507,52 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              PieChart(PieChartData(
-                sections: sections,
-                sectionsSpace: 2,
-                centerSpaceRadius: 65,
-              )),
+              PieChart(
+                PieChartData(
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          _donutTouchedIndex = -1;
+                          return;
+                        }
+                        _donutTouchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                      });
+                    },
+                  ),
+                  sections: counts.entries.toList().asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final e = entry.value;
+                    final isTouched = i == _donutTouchedIndex;
+                    final pct = (e.value / total) * 100;
+                    final double radius = isTouched ? 60 : 50;
+                    final double fontSize = isTouched ? 12 : 9;
+
+                    return PieChartSectionData(
+                      color: colors[i % colors.length],
+                      value: pct,
+                      title: pct > 5 ? '${pct.toStringAsFixed(0)}%' : '',
+                      titleStyle: AppTypography.caption.copyWith(
+                          color: AppColors.white, fontWeight: FontWeight.bold, fontSize: fontSize),
+                      radius: radius,
+                      badgeWidget: isTouched ? Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.gray800 : AppColors.white,
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                        ),
+                        child: Text(e.key, style: AppTypography.body3.copyWith(fontWeight: FontWeight.bold, fontSize: 10)),
+                      ) : null,
+                      badgePositionPercentageOffset: 1.2,
+                    );
+                  }).toList(),
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 65,
+                ),
+              ),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1450,13 +1601,15 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       );
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: topCard),
-        SizedBox(width: AppSpacing.lg),
-        Expanded(child: activityCard),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: topCard),
+          SizedBox(width: AppSpacing.lg),
+          Expanded(child: activityCard),
+        ],
+      ),
     );
   }
 
@@ -1507,79 +1660,82 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
               ),
             )
           else
-            ...top5.asMap().entries.map((entry) {
-              final rank = entry.key + 1;
-              final period = entry.value;
-              return GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/financial-statements/${period.id}'),
-                child: _buildTopPeriodItem(isDark, rank, period),
-              );
-            }),
+            Column(
+              children: top5.asMap().entries.map((entry) {
+                final index = entry.key;
+                final period = entry.value;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _HoverEffect(
+                    hoverScale: 1.02,
+                    hoverElevation: 4,
+                    builder: (isHovered) => GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/financial-statements/${period.id}'),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? (isHovered ? AppColors.gray700 : AppColors.black.withOpacity(0.1)) : (isHovered ? AppColors.gray50 : AppColors.white),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(isHovered ? 0.1 : 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: index == 0
+                                          ? [const Color(0xFFFBBF24), const Color(0xFFF59E0B)]
+                                          : index == 1
+                                              ? [const Color(0xFFD1D5DB), const Color(0xFF9CA3AF)]
+                                              : [const Color(0xFF93C5FD), const Color(0xFF3B82F6)],
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text('${index + 1}',
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(period.label,
+                                        style: AppTypography.body1.copyWith(
+                                            fontWeight: FontWeight.bold, color: isDark ? AppColors.white : AppColors.gray900)),
+                                    Text(period.periodType.replaceAll('_', ' '),
+                                        style: AppTypography.body3.copyWith(color: AppColors.gray400, fontSize: 11)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '₹${_formatCurrency(period.netProfit)}M',
+                              style: AppTypography.body1.copyWith(
+                                  fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildTopPeriodItem(bool isDark, int rank, DashboardPeriodData period) {
-    final rankColors = [
-      const Color(0xFFD4AF37), // gold
-      const Color(0xFFC0C0C0), // silver
-      const Color(0xFFCD7F32), // bronze
-    ];
-    final rankLabels = ['🥇', '🥈', '🥉'];
-
-    final rankColor = rank <= 3 ? rankColors[rank - 1] : AppColors.primary;
-    final rankLabel = rank <= 3 ? rankLabels[rank - 1] : '$rank';
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.md),
-      child: _HoverEffect(
-        hoverScale: 1.02,
-        hoverElevation: 6,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          padding: EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.black.withOpacity(0.2) : AppColors.gray50,
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.gray200),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: rankColor.withOpacity(0.2),
-                ),
-                child: Center(
-                  child: Text(rankLabel,
-                      style: TextStyle(fontSize: rank <= 3 ? 16 : 12, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(period.label,
-                        style: AppTypography.body2
-                            .copyWith(fontWeight: FontWeight.w600, color: isDark ? AppColors.white : AppColors.black)),
-                    Text(period.periodType.replaceAll('_', ' '),
-                        style: AppTypography.caption.copyWith(color: AppColors.gray500)),
-                  ],
-                ),
-              ),
-              Text('₹${_formatCurrency(period.netProfit)}M',
-                  style: AppTypography.body2.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // ============ RECENT ACTIVITY TIMELINE ============
 
@@ -1641,7 +1797,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                   hoverScale: 1.02,
                   hoverElevation: 4,
                   cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
+                  builder: (isHovered) => GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/financial-statements/${period.id}'),
                     child: IntrinsicHeight(
                       child: Row(
@@ -1649,98 +1805,97 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                       children: [
                         // Left: dot + dashed line
                         SizedBox(
-                          width: 36,
+                          width: 40,
                           child: Column(
                             children: [
-                              // Gradient dot
                               Container(
-                                width: 36,
-                                height: 36,
+                                width: 12,
+                                height: 12,
                                 decoration: BoxDecoration(
+                                  color: isFinalized ? AppColors.success : AppColors.warning,
                                   shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: isFinalized
-                                        ? [const Color(0xFF34D399), const Color(0xFF10B981)]
-                                        : [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
-                                  ),
                                   border: Border.all(
-                                      color: isDark ? AppColors.darkCard : AppColors.white, width: 3),
-                                  boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.1), blurRadius: 4)],
-                                ),
-                                child: Icon(
-                                  isFinalized ? Icons.check_circle_outline : Icons.add,
-                                  color: AppColors.white,
-                                  size: 16,
+                                    color: (isFinalized ? AppColors.success : AppColors.warning).withOpacity(0.2),
+                                    width: 3,
+                                  ),
                                 ),
                               ),
-                              // Dashed line stretches to fill remaining height
                               if (!isLast)
                                 Expanded(
                                   child: CustomPaint(
-                                    size: const Size(2, double.infinity),
+                                    size: const Size(1, double.infinity),
                                     painter: _DashedLinePainter(
-                                        color: isDark ? AppColors.gray700 : AppColors.gray200),
+                                      color: isDark ? AppColors.gray700 : AppColors.gray300,
+                                    ),
                                   ),
                                 ),
                             ],
                           ),
                         ),
-                        SizedBox(width: AppSpacing.md),
-                        // Right: content
+                        
+                        // Right: Card content
                         Expanded(
-                          child: Container(
-                            margin: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.lg),
-                            padding: EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.black.withOpacity(0.15) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(AppRadius.lg),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        isFinalized ? 'Period Finalized' : 'New Draft Created',
-                                        style: AppTypography.body3.copyWith(
-                                          color: isFinalized
-                                              ? const Color(0xFF10B981)
-                                              : const Color(0xFF3B82F6),
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: Container(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: isDark ? (isHovered ? AppColors.gray700 : AppColors.black.withOpacity(0.1)) : (isHovered ? AppColors.gray50 : AppColors.white),
+                                borderRadius: BorderRadius.circular(AppRadius.lg),
+                                border: Border.all(
+                                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(isHovered ? 0.1 : 0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        period.label,
+                                        style: AppTypography.body1.copyWith(
                                           fontWeight: FontWeight.bold,
+                                          color: isDark ? AppColors.white : AppColors.gray900,
                                         ),
                                       ),
-                                    ),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: AppSpacing.sm, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? AppColors.gray700 : AppColors.gray100,
-                                        borderRadius: BorderRadius.circular(AppRadius.circle),
+                                      Text(
+                                        timeAgo,
+                                        style: AppTypography.body2.copyWith(
+                                          color: isDark ? AppColors.gray500 : AppColors.gray400,
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                      child: Text(timeAgo,
-                                          style: AppTypography.body3
-                                              .copyWith(color: AppColors.gray400, fontSize: 10)),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: AppSpacing.xs),
-                                Text(period.label,
-                                    style: AppTypography.body2.copyWith(
-                                        color: isDark ? AppColors.white : AppColors.black,
-                                        fontWeight: FontWeight.w600)),
-                                SizedBox(height: AppSpacing.xs),
-                                Row(
-                                  children: [
-                                    Icon(Icons.description_outlined, size: 12, color: AppColors.gray400),
-                                    SizedBox(width: 4),
-                                    Text(period.periodType.replaceAll('_', ' ').toUpperCase(),
-                                        style: AppTypography.body3
-                                            .copyWith(color: AppColors.gray400, fontSize: 10)),
-                                  ],
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isFinalized ? Icons.check_circle_outline : Icons.edit_note,
+                                        size: 14,
+                                        color: isFinalized ? AppColors.success : AppColors.warning,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isFinalized ? 'Finalized' : 'Draft',
+                                        style: AppTypography.body3.copyWith(
+                                          color: isFinalized ? AppColors.success : AppColors.warning,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1749,7 +1904,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                     ),
                   ),
                 );
-              }).toList(),
+              }).toList().cast<Widget>(),
             ),
         ],
       ),
@@ -1774,14 +1929,14 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
 
 // Hover effect wrapper widget for interactive elements
 class _HoverEffect extends StatefulWidget {
-  final Widget child;
+  final Widget Function(bool isHovered) builder;
   final double hoverScale;
   final double hoverElevation;
   final BorderRadius? borderRadius;
   final MouseCursor? cursor;
 
   const _HoverEffect({
-    required this.child,
+    required this.builder,
     this.hoverScale = 1.02,
     this.hoverElevation = 8,
     this.borderRadius,
@@ -1798,28 +1953,16 @@ class _HoverEffectState extends State<_HoverEffect> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.cursor ?? SystemMouseCursors.basic,
+      cursor: widget.cursor ?? SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutBack,
         transform: Matrix4.identity()
           ..scale(_isHovered ? widget.hoverScale : 1.0),
         transformAlignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: widget.borderRadius,
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(0.12),
-                    blurRadius: widget.hoverElevation,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
-        ),
-        child: widget.child,
+        child: widget.builder(_isHovered),
       ),
     );
   }

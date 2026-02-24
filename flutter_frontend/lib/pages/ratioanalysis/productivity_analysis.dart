@@ -113,64 +113,78 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: ResponsiveHelper.getResponsivePadding(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with Back Button
-            _buildHeader(isDark),
-            const SizedBox(height: 24),
-
-            // Metrics Grid
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth > 800 ? 2 : 1;
-                return GridView.count(
-                  crossAxisCount: crossAxisCount,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 24,
-                  crossAxisSpacing: 24,
-                  childAspectRatio: constraints.maxWidth > 800 ? 2.2 : 1.8,
-                  children: [
-                    _buildMetricCard(
-                      'Per Employee Business',
-                      '(Average Deposit + Average Loan) / Staff Count',
-                      _perEmployeeBusiness,
-                      AppColors.info,
-                      isDark,
-                    ),
-                    _buildMetricCard(
-                      'Per Employee Contribution',
-                      '(Total Income - Interest Expenses) / Staff Count',
-                      _perEmployeeContribution,
-                      AppColors.success,
-                      isDark,
-                    ),
-                    _buildMetricCard(
-                      'Per Employee Operating Cost',
-                      'Establishment & Contingencies / Staff Count',
-                      _perEmployeeOperatingCost,
-                      AppColors.warning,
-                      isDark,
-                    ),
-                    _buildEfficiencyCard(isDark),
-                  ],
-                );
-              },
-            ),
-
-            const SizedBox(height: 32),
-
-            // Staff Count Footer
-            if (_period!.operationalMetrics != null)
-              _buildStaffCountFooter(isDark),
-            
-            const SizedBox(height: 24),
-          ],
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SingleChildScrollView(
+          padding: ResponsiveHelper.getResponsivePadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with Back Button
+              _buildHeader(isDark),
+              const SizedBox(height: 24),
+    
+              // Metrics Grid
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = constraints.maxWidth > 800 ? 2 : 1;
+                  return GridView.count(
+                    crossAxisCount: crossAxisCount,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 24,
+                    crossAxisSpacing: 24,
+                    childAspectRatio: constraints.maxWidth > 800 ? 2.2 : 1.8,
+                    children: [
+                      _buildMetricCard(
+                        'Per Employee Business',
+                        '(Average Deposit + Average Loan) / Staff Count',
+                        _perEmployeeBusiness,
+                        AppColors.info,
+                        isDark,
+                      ),
+                      _buildMetricCard(
+                        'Per Employee Contribution',
+                        '(Total Income - Interest Expenses) / Staff Count',
+                        _perEmployeeContribution,
+                        AppColors.success,
+                        isDark,
+                      ),
+                      _buildMetricCard(
+                        'Per Employee Operating Cost',
+                        'Establishment & Contingencies / Staff Count',
+                        _perEmployeeOperatingCost,
+                        AppColors.warning,
+                        isDark,
+                      ),
+                      _buildEfficiencyCard(isDark),
+                    ],
+                  );
+                },
+              ),
+    
+              const SizedBox(height: 32),
+    
+              // Staff Count Footer
+              if (_period!.operationalMetrics != null)
+                _buildStaffCountFooter(isDark),
+              
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -214,8 +228,8 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
                 Text(
                   'Productivity Analysis',
                   style: (isDark
-                          ? h3.copyWith(color: AppColors.white)
-                          : h3.copyWith(color: AppColors.gray900))
+                          ? AppTypography.h3.copyWith(color: AppColors.white)
+                          : AppTypography.h3.copyWith(color: AppTypography.h3.color))
                       .copyWith(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),

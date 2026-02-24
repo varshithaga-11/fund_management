@@ -55,34 +55,22 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Loading...')),
+        backgroundColor: Colors.transparent,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_period == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Error'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: const Center(child: Text('Financial Period not found', style: TextStyle(color: Colors.red))),
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: Text('Financial Period not found', style: TextStyle(color: Colors.red))),
       );
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Financial Period'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
