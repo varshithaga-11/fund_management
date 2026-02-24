@@ -3366,3 +3366,164 @@ class ActivateLicenseView(APIView):
                 "status": "failed",
                 "message": "Invalid product key."
             }, status=status.HTTP_404_NOT_FOUND)
+
+
+class DownloadOriginalFileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, period_id):
+        """Download the original uploaded file for a given period."""
+        try:
+            period = FinancialPeriod.objects.get(id=period_id)
+            if not period.uploaded_file:
+                return Response({
+                    "status": "failed",
+                    "message": "No file was uploaded for this period."
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            file_path = period.uploaded_file.path
+            if not os.path.exists(file_path):
+                return Response({
+                    "status": "failed",
+                    "message": "File not found on server."
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            response = FileResponse(open(file_path, 'rb'))
+            # Get original filename or use a sensible default
+            original_filename = os.path.basename(period.uploaded_file.name)
+            response['Content-Disposition'] = f'attachment; filename="{original_filename}"'
+            return response
+
+        except FinancialPeriod.DoesNotExist:
+            return Response({
+                "status": "failed",
+                "message": f"Period with ID {period_id} not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error downloading original file: {e}")
+            return Response({
+                "status": "failed",
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ExportCurrentDataView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, period_id):
+        """Export current database data for a period as an Excel file with 5 sheets."""
+        try:
+            period = FinancialPeriod.objects.get(id=period_id)
+            
+            wb = Workbook()
+            # Remove default sheet
+            wb.remove(wb.active)
+            
+            # 1. Balance Sheet
+            ws_bs = wb.create_sheet("Balance Sheet")
+            ws_bs.append(["Liabilities", "Amount", "Assets", "Amount"])
+            try:
+                bs = period.balance_sheet
+                ws_bs.append(["Share Capital", bs.share_capital, "Cash in Hand", bs.cash_in_hand])
+                ws_bs.append(["Deposits", bs.deposits, "Cash at Bank", bs.cash_at_bank])
+                ws_bs.append(["Borrowings", bs.borrowings, "Investments", bs.investments])
+                ws_bs.append(["Reserves (Statutory & Free)", bs.reserves_statutory_free, "Loans & Advances", bs.loans_advances])
+                ws_bs.append(["Provisions", bs.provisions, "Fixed Assets", bs.fixed_assets])
+                ws_bs.append(["Other Liabilities", bs.other_liabilities, "Other Assets", bs.other_assets])
+                ws_bs.append(["Undistributed Profit", bs.undistributed_profit, "Stock in Trade", bs.stock_in_trade])
+            except BalanceSheet.DoesNotExist:
+                pass
+
+            # 2. Profit & Loss
+            ws_pl = wb.create_sheet("Profit & Loss")
+            ws_pl.append(["Expenses", "Amount", "Income", "Amount"])
+            try:
+                pl = period.profit_loss
+                ws_pl.append(["Interest on Deposits", pl.interest_on_deposits, "Interest on Loans", pl.interest_on_loans])
+                ws_pl.append(["Interest on Borrowings", pl.interest_on_borrowings, "Interest on Bank A/c", pl.interest_on_bank_ac])
+                ws_pl.append(["Establishment & Contingencies", pl.establishment_contingencies, "Return on Investment", pl.return_on_investment])
+                ws_pl.append(["Provisions Made", pl.provisions, "Miscellaneous Income", pl.miscellaneous_income])
+                ws_pl.append(["Net Profit", pl.net_profit, "", ""])
+            except ProfitAndLoss.DoesNotExist:
+                pass
+
+            # 3. Trading Account
+            ws_ta = wb.create_sheet("Trading Account")
+            ws_ta.append(["Item", "Amount"])
+            try:
+                ta = period.trading_account
+                ws_ta.append(["Opening Stock", ta.opening_stock])
+                ws_ta.append(["Purchases", ta.purchases])
+                ws_ta.append(["Trade Charges", ta.trade_charges])
+                ws_ta.append(["Sales", ta.sales])
+                ws_ta.append(["Closing Stock", ta.closing_stock])
+            except TradingAccount.DoesNotExist:
+                pass
+
+            # 4. Operational Metrics
+            ws_om = wb.create_sheet("Operational Metrics")
+            ws_om.append(["Metric", "Value"])
+            try:
+                om = period.operational_metrics
+                ws_om.append(["Staff Count", om.staff_count])
+            except OperationalMetrics.DoesNotExist:
+                pass
+            # 5. Ratio Analysis Results
+            ws_r = wb.create_sheet("Ratio Analysis Results")
+            ws_r.append(["Ratio Name", "Value", "Unit"])
+            try:
+                r = period.ratios
+                ratios_data = [
+                    ("Working Fund", r.working_fund, "₹"),
+                    ("Stock Turnover", r.stock_turnover, "times"),
+                    ("Gross Profit Ratio", r.gross_profit_ratio, "%"),
+                    ("Net Profit Ratio", r.net_profit_ratio, "%"),
+                    ("Net Own Funds", r.net_own_funds, "₹"),
+                    ("Own Fund to Working Fund", r.own_fund_to_wf, "%"),
+                    ("Deposits to Working Fund", r.deposits_to_wf, "%"),
+                    ("Borrowings to Working Fund", r.borrowings_to_wf, "%"),
+                    ("Loans to Working Fund", r.loans_to_wf, "%"),
+                    ("Investments to Working Fund", r.investments_to_wf, "%"),
+                    ("Earning Assets to Working Fund", r.earning_assets_to_wf, "%"),
+                    ("Interest Tagged Funds to Working Fund", r.interest_tagged_funds_to_wf, "%"),
+                    ("Cost of Deposits", r.cost_of_deposits, "%"),
+                    ("Yield on Loans", r.yield_on_loans, "%"),
+                    ("Yield on Investments", r.yield_on_investments, "%"),
+                    ("Credit Deposit Ratio", r.credit_deposit_ratio, "%"),
+                    ("Avg Cost of Working Fund", r.avg_cost_of_wf, "%"),
+                    ("Avg Yield on Working Fund", r.avg_yield_on_wf, "%"),
+                    ("Misc Income to Working Fund", r.misc_income_to_wf, "%"),
+                    ("Interest Exp to Interest Income", r.interest_exp_to_interest_income, "%"),
+                    ("Gross Fin Margin", r.gross_fin_margin, "%"),
+                    ("Operating Cost to Working Fund", r.operating_cost_to_wf, "%"),
+                    ("Net Fin Margin", r.net_fin_margin, "%"),
+                    ("Risk Cost to Working Fund", r.risk_cost_to_wf, "%"),
+                    ("Net Margin", r.net_margin, "%"),
+                    ("Capital Turnover Ratio", r.capital_turnover_ratio, "times"),
+                    ("Per Employee Deposit", r.per_employee_deposit, "₹"),
+                    ("Per Employee Loan", r.per_employee_loan, "₹"),
+                    ("Per Employee Contribution", r.per_employee_contribution, "₹"),
+                    ("Per Employee Operating Cost", r.per_employee_operating_cost, "₹"),
+                ]
+                for name, val, unit in ratios_data:
+                    ws_r.append([name, val, unit])
+            except RatioResult.DoesNotExist:
+                pass
+
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            filename = f"Export_{period.label.replace(' ', '_')}.xlsx"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except FinancialPeriod.DoesNotExist:
+            return Response({"error": "Period not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error in ExportCurrentDataView: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

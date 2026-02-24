@@ -813,3 +813,31 @@ Future<Map<String, dynamic>> uploadExcelData(http.MultipartFile file) async {
     throw Exception('Failed to upload file: ${response.body}');
   }
 }
+
+Future<List<int>> downloadOriginalFile(int periodId) async {
+  final url = createApiUrl("api/ratio/download-original/$periodId/");
+  final response = await http.get(
+    Uri.parse(url),
+    headers: await getAuthHeaders(),
+  );
+
+  if (response.statusCode == 200) {
+    return response.bodyBytes;
+  } else {
+    throw Exception('Failed to download original file: ${response.body}');
+  }
+}
+
+Future<List<int>> exportCurrentData(int periodId) async {
+  final url = createApiUrl("api/ratio/export-current/$periodId/");
+  final response = await http.get(
+    Uri.parse(url),
+    headers: await getAuthHeaders(),
+  );
+
+  if (response.statusCode == 200) {
+    return response.bodyBytes;
+  } else {
+    throw Exception('Failed to export current data: ${response.body}');
+  }
+}

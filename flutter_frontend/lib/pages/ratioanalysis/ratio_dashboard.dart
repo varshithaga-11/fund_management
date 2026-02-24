@@ -96,27 +96,48 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
 
       // Fund Structure
       buffer.writeln('FUND STRUCTURE RATIOS');
-      buffer.writeln('Metric,Value,Status');
+      buffer.writeln('Metric,Value,Unit,Status');
+      buffer.writeln('Net Own Funds,${_ratios!.netOwnFunds},₹,${_ratios!.trafficLightStatus['net_own_funds'] ?? ''}');
       buffer.writeln('Own Fund to WF,${_ratios!.ownFundToWf},%,${_ratios!.trafficLightStatus['own_fund_to_wf'] ?? ''}');
       buffer.writeln('Deposits to WF,${_ratios!.depositsToWf},%,${_ratios!.trafficLightStatus['deposits_to_wf'] ?? ''}');
       buffer.writeln('Borrowings to WF,${_ratios!.borrowingsToWf},%,${_ratios!.trafficLightStatus['borrowings_to_wf'] ?? ''}');
       buffer.writeln('Loans to WF,${_ratios!.loansToWf},%,${_ratios!.trafficLightStatus['loans_to_wf'] ?? ''}');
+      buffer.writeln('Investments to WF,${_ratios!.investmentsToWf},%,${_ratios!.trafficLightStatus['investments_to_wf'] ?? ''}');
+      buffer.writeln('Earning Assets to WF,${_ratios!.earningAssetsToWf},%,${_ratios!.trafficLightStatus['earning_assets_to_wf'] ?? ''}');
+      buffer.writeln('Interest Tagged Funds to WF,${_ratios!.interestTaggedFundsToWf},%,${_ratios!.trafficLightStatus['interest_tagged_funds_to_wf'] ?? ''}');
       buffer.writeln('');
 
       // Yield & Cost Ratios
       buffer.writeln('YIELD & COST RATIOS');
-      buffer.writeln('Metric,Value,Status');
+      buffer.writeln('Metric,Value,Unit,Status');
       buffer.writeln('Cost of Deposits,${_ratios!.costOfDeposits},%,${_ratios!.trafficLightStatus['cost_of_deposits'] ?? ''}');
       buffer.writeln('Yield on Loans,${_ratios!.yieldOnLoans},%,${_ratios!.trafficLightStatus['yield_on_loans'] ?? ''}');
+      buffer.writeln('Yield on Investments,${_ratios!.yieldOnInvestments},%,${_ratios!.trafficLightStatus['yield_on_investments'] ?? ''}');
       buffer.writeln('Credit Deposit Ratio,${_ratios!.creditDepositRatio},%,${_ratios!.trafficLightStatus['credit_deposit_ratio'] ?? ''}');
+      buffer.writeln('Avg Cost of WF,${_ratios!.avgCostOfWf},%,${_ratios!.trafficLightStatus['avg_cost_of_wf'] ?? ''}');
+      buffer.writeln('Avg Yield on WF,${_ratios!.avgYieldOnWf},%,${_ratios!.trafficLightStatus['avg_yield_on_wf'] ?? ''}');
+      buffer.writeln('Misc Income to WF,${_ratios!.miscIncomeToWf},%,${_ratios!.trafficLightStatus['misc_income_to_wf'] ?? ''}');
+      buffer.writeln('Interest Exp to Interest Income,${_ratios!.interestExpToInterestIncome},%,${_ratios!.trafficLightStatus['interest_exp_to_interest_income'] ?? ''}');
       buffer.writeln('');
 
       // Margin Ratios
       buffer.writeln('MARGIN RATIOS');
-      buffer.writeln('Metric,Value,Status');
+      buffer.writeln('Metric,Value,Unit,Status');
       buffer.writeln('Gross Financial Margin,${_ratios!.grossFinMargin},%,${_ratios!.trafficLightStatus['gross_fin_margin'] ?? ''}');
       buffer.writeln('Operating Cost to WF,${_ratios!.operatingCostToWf},%,${_ratios!.trafficLightStatus['operating_cost_to_wf'] ?? ''}');
       buffer.writeln('Net Financial Margin,${_ratios!.netFinMargin},%,${_ratios!.trafficLightStatus['net_fin_margin'] ?? ''}');
+      buffer.writeln('Risk Cost to WF,${_ratios!.riskCostToWf},%,${_ratios!.trafficLightStatus['risk_cost_to_wf'] ?? ''}');
+      buffer.writeln('Net Margin,${_ratios!.netMargin},%,${_ratios!.trafficLightStatus['net_margin'] ?? ''}');
+      buffer.writeln('');
+
+      // Productivity Ratios
+      buffer.writeln('PRODUCTIVITY RATIOS');
+      buffer.writeln('Metric,Value,Unit,Status');
+      buffer.writeln('Capital Turnover Ratio,${_ratios!.capitalTurnoverRatio},times,${_ratios!.trafficLightStatus['capital_turnover_ratio'] ?? ''}');
+      buffer.writeln('Per Employee Deposit,${_ratios!.perEmployeeDeposit},₹,${_ratios!.trafficLightStatus['per_employee_deposit'] ?? ''}');
+      buffer.writeln('Per Employee Loan,${_ratios!.perEmployeeLoan},₹,${_ratios!.trafficLightStatus['per_employee_loan'] ?? ''}');
+      buffer.writeln('Per Employee Contribution,${_ratios!.perEmployeeContribution},₹,${_ratios!.trafficLightStatus['per_employee_contribution'] ?? ''}');
+      buffer.writeln('Per Employee Operating Cost,${_ratios!.perEmployeeOperatingCost},₹,${_ratios!.trafficLightStatus['per_employee_operating_cost'] ?? ''}');
       buffer.writeln('');
 
       // For web, show share dialog to save as CSV
@@ -155,132 +176,195 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
         return value.toString();
       }
 
+        // Sections definition
+      final sections = [
+        {
+          'title': 'Trading Ratios',
+          'items': [
+            ['Stock Turnover', _ratios!.stockTurnover, 'times', 'stock_turnover'],
+            ['Gross Profit Ratio', _ratios!.grossProfitRatio, '%', 'gross_profit_ratio'],
+            ['Net Profit Ratio', _ratios!.netProfitRatio, '%', 'net_profit_ratio'],
+          ]
+        },
+        {
+          'title': 'Fund Structure Ratios',
+          'items': [
+            ['Net Own Funds', _ratios!.netOwnFunds, '₹', 'net_own_funds'],
+            ['Own Fund to WF', _ratios!.ownFundToWf, '%', 'own_fund_to_wf'],
+            ['Deposits to WF', _ratios!.depositsToWf, '%', 'deposits_to_wf'],
+            ['Borrowings to WF', _ratios!.borrowingsToWf, '%', 'borrowings_to_wf'],
+            ['Loans to WF', _ratios!.loansToWf, '%', 'loans_to_wf'],
+            ['Investments to WF', _ratios!.investmentsToWf, '%', 'investments_to_wf'],
+            ['Earning Assets to WF', _ratios!.earningAssetsToWf, '%', 'earning_assets_to_wf'],
+            ['Interest Tagged Funds to WF', _ratios!.interestTaggedFundsToWf, '%', 'interest_tagged_funds_to_wf'],
+          ]
+        },
+        {
+          'title': 'Yield & Cost Ratios',
+          'items': [
+            ['Cost of Deposits', _ratios!.costOfDeposits, '%', 'cost_of_deposits'],
+            ['Yield on Loans', _ratios!.yieldOnLoans, '%', 'yield_on_loans'],
+            ['Yield on Investments', _ratios!.yieldOnInvestments, '%', 'yield_on_investments'],
+            ['Credit Deposit Ratio', _ratios!.creditDepositRatio, '%', 'credit_deposit_ratio'],
+            ['Avg Cost of WF', _ratios!.avgCostOfWf, '%', 'avg_cost_of_wf'],
+            ['Avg Yield on WF', _ratios!.avgYieldOnWf, '%', 'avg_yield_on_wf'],
+            ['Misc Income to WF', _ratios!.miscIncomeToWf, '%', 'misc_income_to_wf'],
+            ['Interest Exp to Interest Income', _ratios!.interestExpToInterestIncome, '%', 'interest_exp_to_interest_income'],
+          ]
+        },
+        {
+          'title': 'Margin Ratios',
+          'items': [
+            ['Gross Financial Margin', _ratios!.grossFinMargin, '%', 'gross_fin_margin'],
+            ['Operating Cost to WF', _ratios!.operatingCostToWf, '%', 'operating_cost_to_wf'],
+            ['Net Financial Margin', _ratios!.netFinMargin, '%', 'net_fin_margin'],
+            ['Risk Cost to WF', _ratios!.riskCostToWf, '%', 'risk_cost_to_wf'],
+            ['Net Margin', _ratios!.netMargin, '%', 'net_margin'],
+          ]
+        },
+        {
+          'title': 'Capital Efficiency & Productivity',
+          'items': [
+            ['Capital Turnover Ratio', _ratios!.capitalTurnoverRatio, 'times', 'capital_turnover_ratio'],
+            ['Per Employee Deposit', _ratios!.perEmployeeDeposit, '₹', 'per_employee_deposit'],
+            ['Per Employee Loan', _ratios!.perEmployeeLoan, '₹', 'per_employee_loan'],
+            ['Per Employee Contribution', _ratios!.perEmployeeContribution, '₹', 'per_employee_contribution'],
+            ['Per Employee Operating Cost', _ratios!.perEmployeeOperatingCost, '₹', 'per_employee_operating_cost'],
+          ]
+        }
+      ];
+
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
-          build: (context) => [
-            // Title
-            pw.Text(
-              'Ratio Analysis Report',
-              style: pw.TextStyle(
-                fontSize: 24,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.SizedBox(height: 16),
-
-            // Period Info
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: const PdfColor.fromInt(0xFFDEF5FF)),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+          header: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Period: ${_period!.label}',
-                      style: const pw.TextStyle(fontSize: 12)),
-                  pw.Text('Type: ${_period!.periodType}',
-                      style: const pw.TextStyle(fontSize: 12)),
-                  pw.Text(
-                      'From ${_period!.startDate} to ${_period!.endDate}',
-                      style: const pw.TextStyle(fontSize: 12)),
+                  pw.Text('Ratio Analysis Report', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                  pw.Text(_period!.label, style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
                 ],
               ),
-            ),
-            pw.SizedBox(height: 20),
+              pw.Divider(thickness: 1, color: PdfColors.grey300),
+              pw.SizedBox(height: 10),
+            ]
+          ),
+          footer: (context) => pw.Column(
+            children: [
+              pw.Divider(thickness: 1, color: PdfColors.grey300),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Generated by Fund Management System', style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+                  pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+                ],
+              ),
+            ]
+          ),
+          build: (pw.Context context) {
+            final List<pw.Widget> widgets = [];
 
-            // Working Fund
-            pw.Text('Working Fund',
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  fontWeight: pw.FontWeight.bold,
-                )),
-            pw.SizedBox(height: 8),
-            pw.Text('₹${formatValue(_ratios!.workingFund)}',
-                style: const pw.TextStyle(fontSize: 16)),
-            pw.SizedBox(height: 20),
-
-            // Trading Ratios Table
-            pw.Text('Trading Ratios',
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  fontWeight: pw.FontWeight.bold,
-                )),
-            pw.SizedBox(height: 8),
-            pw.Table(
-              border: pw.TableBorder.all(),
-              children: [
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFDEF5FF)),
+            // Period Info Card
+            widgets.add(
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.blue50,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: pw.Text('Metric',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Type: ${_period!.periodType}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                        pw.Text('Duration: ${_period!.startDate} to ${_period!.endDate}', style: pw.TextStyle(fontSize: 10)),
+                      ],
                     ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: pw.Text('Value',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: pw.Text('Status',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('Working Fund', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                        pw.Text('₹${formatValue(_ratios!.workingFund)}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                      ],
                     ),
                   ],
                 ),
-                pw.TableRow(children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('Stock Turnover'),
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 20));
+
+            // Sections
+            for (var section in sections) {
+              widgets.add(
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                  child: pw.Text(
+                    section['title'] as String,
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800),
                   ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(formatValue(_ratios!.stockTurnover)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(_ratios!.trafficLightStatus['stock_turnover'] ??
-                        '-'),
-                  ),
-                ]),
-                pw.TableRow(children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('Gross Profit Ratio'),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(formatValue(_ratios!.grossProfitRatio)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(_ratios!.trafficLightStatus['gross_profit_ratio'] ??
-                        '-'),
-                  ),
-                ]),
-                pw.TableRow(children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('Net Profit Ratio'),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(formatValue(_ratios!.netProfitRatio)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(
-                        _ratios!.trafficLightStatus['net_profit_ratio'] ?? '-'),
-                  ),
-                ]),
-              ],
-            ),
-          ],
+                ),
+              );
+
+              final items = section['items'] as List<List<dynamic>>;
+              widgets.add(
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(3),
+                    1: const pw.FlexColumnWidth(2),
+                    2: const pw.FlexColumnWidth(1.2),
+                  },
+                  children: [
+                    // Header
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Metric', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Value', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Status', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+                      ],
+                    ),
+                    // Data rows
+                    ...items.map((item) {
+                      final String name = item[0] as String;
+                      final dynamic rawVal = item[1];
+                      final String unit = item[2] as String;
+                      final String key = item[3] as String;
+                      final String status = _ratios!.trafficLightStatus[key] ?? '-';
+
+                      PdfColor statusColor = PdfColors.grey700;
+                      if (status.toLowerCase().contains('green') || status.toLowerCase().contains('safe')) {
+                        statusColor = PdfColors.green700;
+                      } else if (status.toLowerCase().contains('red') || status.toLowerCase().contains('critical')) {
+                        statusColor = PdfColors.red700;
+                      } else if (status.toLowerCase().contains('yellow') || status.toLowerCase().contains('warning')) {
+                        statusColor = PdfColors.orange700;
+                      }
+
+                      return pw.TableRow(
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(name, style: const pw.TextStyle(fontSize: 10))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('${formatValue(rawVal)} $unit', style: const pw.TextStyle(fontSize: 10))),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(6),
+                            child: pw.Text(status, style: pw.TextStyle(fontSize: 9, color: statusColor, fontWeight: pw.FontWeight.bold)),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              );
+              widgets.add(pw.SizedBox(height: 18));
+            }
+
+            return widgets;
+          },
         ),
       );
 

@@ -39,4 +39,6 @@ urlpatterns = [
     path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
     path('activate/', ActivateLicenseView.as_view(), name='activate-license'),
+    path('ratio/export-current/<int:period_id>/', ExportCurrentDataView.as_view(), name='export-current'),
+    path('ratio/download-original/<int:period_id>/', DownloadOriginalFileView.as_view(), name='download-original'),
 ]
