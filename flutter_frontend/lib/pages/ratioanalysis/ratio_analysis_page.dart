@@ -231,16 +231,16 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                   else
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth > 1000 ? 3 : (constraints.maxWidth > 700 ? 2 : 1);
+                        final crossAxisCount = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
                         
                         return GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 24,
-                            mainAxisSpacing: 24,
-                            childAspectRatio: 1.6, // Higher aspect ratio = Shorter height
+                            crossAxisSpacing: 20,
+                            mainAxisSpacing: 20,
+                            childAspectRatio: 2.2, // Flatten the cards significantly
                           ),
                           itemCount: _filteredPeriods.length,
                           itemBuilder: (context, index) {
@@ -276,35 +276,39 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
         child: Column(
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.gray800 : AppColors.gray100,
+                color: isDark ? AppColors.darkCard : AppColors.gray100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.description_outlined, 
-                size: 40, 
+                size: 32, 
                 color: isDark ? AppColors.gray600 : AppColors.gray400
               ),
             ),
             const SizedBox(height: 24),
             Text(
               isNoData ? "No Periods Found" : "No Results Found",
-              style: (isDark ? h4 : h4).copyWith(
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : AppColors.gray900
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              isNoData 
-                ? "Please upload financial statements to start analyzing ratios."
-                : "Try adjusting your search filters to find the period you're looking for.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? AppColors.gray500 : AppColors.gray600,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: Text(
+                isNoData 
+                  ? "Please upload financial statements to start analyzing ratios."
+                  : "Try adjusting your search filters to find the period you're looking for.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppColors.gray500 : AppColors.gray600,
+                ),
               ),
             ),
           ],
@@ -336,7 +340,13 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = widget.period.isFinalized ? AppColors.success : AppColors.warning;
+    const draftText = Color(0xFFD97706);
+    const draftBg = Color(0xFFFFFBEB);
+    const finalizedText = Color(0xFF16A34A);
+    const finalizedBg = Color(0xFFF0FDF4);
+    
+    final statusColor = widget.period.isFinalized ? finalizedText : draftText;
+    final statusBg = widget.period.isFinalized ? finalizedBg : draftBg;
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -345,53 +355,50 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           transform: Matrix4.identity()
-            ..translate(0.0, _isHovered ? -6.0 : 0.0),
+            ..translate(0.0, _isHovered ? -4.0 : 0.0),
           decoration: BoxDecoration(
-            color: widget.isDark ? AppColors.darkCard : Colors.white,
+            color: widget.isDark ? const Color(0xFF1E293B) : Colors.white,
             border: Border.all(
-              color: widget.isDark ? AppColors.darkBorder : AppColors.gray200,
+              color: widget.isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_isHovered ? 0.08 : 0.02),
+                color: Colors.black.withOpacity(_isHovered ? 0.06 : 0.02),
                 blurRadius: _isHovered ? 12 : 4,
-                offset: Offset(0, _isHovered ? 6 : 2),
+                offset: Offset(0, _isHovered ? 8 : 2),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(20), // Reduced from 24
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with Icon and Status Badge
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      width: 44, // Slightly smaller
+                      width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: widget.isDark 
-                            ? AppColors.info.withOpacity(0.1) 
-                            : AppColors.info.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(10),
+                        color: widget.isDark ? const Color(0xFF1D4ED8).withOpacity(0.15) : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        Icons.description_outlined, 
-                        color: widget.isDark ? AppColors.info : AppColors.primary, 
+                      child: const Icon(
+                        Icons.insert_drive_file_outlined, 
+                        color: Color(0xFF2563EB), 
                         size: 22
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(100),
                       ),
                       child: Text(
                         widget.period.isFinalized ? 'Finalized' : 'Draft',
@@ -404,30 +411,26 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16), // Reduced from 20
+                const SizedBox(height: 16),
 
-                // Period Label
                 Text(
                   widget.period.label,
-                  style: (widget.isDark ? h3 : h3).copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17, // Slightly smaller
-                    color: _isHovered
-                        ? AppColors.primary
-                        : (widget.isDark ? Colors.white : AppColors.gray900),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: _isHovered ? const Color(0xFF2563EB) : (widget.isDark ? Colors.white : const Color(0xFF111827)),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8), // Reduced from 12
+                const SizedBox(height: 6),
 
-                // Date Range
                 Row(
                   children: [
                     Icon(
                       Icons.calendar_today_outlined, 
                       size: 13, 
-                      color: widget.isDark ? AppColors.gray400 : AppColors.gray500
+                      color: widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -435,7 +438,7 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                         '${widget.period.startDate} - ${widget.period.endDate}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
+                          color: widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -445,28 +448,34 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                 ),
                 
                 const Spacer(),
-                const Divider(height: 24), // Reduced from 32
-
-                // Footer CTA
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'View Analysis',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
+                
+                Container(
+                  padding: const EdgeInsets.only(top: 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: widget.isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                        width: 1,
                       ),
                     ),
-                    Icon(
-                      Icons.arrow_forward_rounded, 
-                      size: 15, 
-                      color: _isHovered 
-                          ? AppColors.primary 
-                          : (widget.isDark ? AppColors.gray500 : AppColors.gray400)
-                    ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'View Analysis',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_rounded, 
+                        size: 14, 
+                        color: _isHovered ? const Color(0xFF2563EB) : const Color(0xFF94A3B8)
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
