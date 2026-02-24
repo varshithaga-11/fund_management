@@ -84,11 +84,11 @@ class _MasterSidebarState extends State<MasterSidebar> {
       name: "Ratio Benchmarks",
       path: AppRoutes.ratioBenchmarks,
     ),
-    NavItem(
-      icon: Icons.manage_accounts,
-      name: "User Management",
-      path: AppRoutes.userManagement,
-    ),
+    // NavItem(
+    //   icon: Icons.manage_accounts,
+    //   name: "User Management",
+    //   path: AppRoutes.userManagement,
+    // ),
   ];
 
   @override
