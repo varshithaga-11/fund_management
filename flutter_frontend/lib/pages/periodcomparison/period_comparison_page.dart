@@ -426,14 +426,14 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                 // Summary Stats
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final count = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
+                    final count = constraints.maxWidth > 1000 ? 3 : (constraints.maxWidth > 650 ? 2 : 1);
                     return GridView.count(
                       crossAxisCount: count,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12, // Reduced from 16
-                      crossAxisSpacing: 12, // Reduced from 16
-                      childAspectRatio: 2.6, // Increased from 2.2 to reduce height
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 3.5, // Much more compact summary
                       children: [
                         _buildSummaryCard(
                           'Improved Ratios',
@@ -746,32 +746,32 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
   Widget _buildSummaryCard(String title, String value, Color color, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced from 12
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: isDark ? color.withOpacity(0.1) : color.withOpacity(0.05),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             title.toUpperCase(),
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-              letterSpacing: 0.5,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+              letterSpacing: 0.8,
             ),
           ),
-          const SizedBox(height: 2), // Reduced from 4
+          const Spacer(),
           Text(
             value,
             style: TextStyle(
-              fontSize: 22, // Reduced from 24
-              fontWeight: FontWeight.bold,
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
               color: color,
+              height: 1.0,
             ),
           ),
         ],
@@ -998,56 +998,36 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
   Widget _buildCardView(bool isDark) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
+        // Force 3 columns earlier to match React desktop view
+        final count = constraints.maxWidth > 1000 ? 3 : (constraints.maxWidth > 650 ? 2 : 1);
 
         return GridView.count(
           crossAxisCount: count,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10, // Reduced from 12
-          crossAxisSpacing: 10, // Reduced from 12
-          childAspectRatio: 2.1, // Increased from 1.8 to reduce height
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 2.2, // Significantly flatten cards
           children: _comparisonData!.data.ratios.entries.map((entry) {
             final ratio = entry.value;
             final changePercentage = ratio.percentageChange ?? 0;
             final isPositive = changePercentage > 0;
             final isNeutral = changePercentage == 0;
 
-            Color bgGradientStart, bgGradientEnd, borderColor, dividerColor;
+            Color bgStart, bgEnd, borderColor;
 
             if (isPositive) {
-              bgGradientStart = Colors.green.shade50;
-              bgGradientEnd = Colors.green.shade100;
-              borderColor = Colors.green.shade200;
-              dividerColor = Colors.green.shade200;
-              if (isDark) {
-                bgGradientStart = Colors.green.shade900.withOpacity(0.15);
-                bgGradientEnd = Colors.green.shade800.withOpacity(0.15);
-                borderColor = Colors.green.shade800.withOpacity(0.5);
-                dividerColor = Colors.green.shade800.withOpacity(0.5);
-              }
+              bgStart = isDark ? const Color(0xFF064E3B).withOpacity(0.15) : const Color(0xFFF0FDF4);
+              bgEnd = isDark ? const Color(0xFF065F46).withOpacity(0.15) : const Color(0xFFECFDF5);
+              borderColor = isDark ? const Color(0xFF065F46).withOpacity(0.4) : const Color(0xFFBBF7D0);
             } else if (isNeutral) {
-              bgGradientStart = Colors.grey.shade50;
-              bgGradientEnd = Colors.grey.shade100;
-              borderColor = Colors.grey.shade200;
-              dividerColor = Colors.grey.shade200;
-              if (isDark) {
-                bgGradientStart = Colors.grey.shade900.withOpacity(0.15);
-                bgGradientEnd = Colors.grey.shade800.withOpacity(0.15);
-                borderColor = Colors.grey.shade700.withOpacity(0.5);
-                dividerColor = Colors.grey.shade700.withOpacity(0.5);
-              }
+              bgStart = isDark ? const Color(0xFF111827).withOpacity(0.3) : const Color(0xFFF9FAFB);
+              bgEnd = isDark ? const Color(0xFF1F2937).withOpacity(0.3) : const Color(0xFFF8FAFC);
+              borderColor = isDark ? const Color(0xFF374151).withOpacity(0.4) : const Color(0xFFE5E7EB);
             } else {
-              bgGradientStart = Colors.red.shade50;
-              bgGradientEnd = Colors.red.shade100;
-              borderColor = Colors.red.shade200;
-              dividerColor = Colors.red.shade200;
-              if (isDark) {
-                bgGradientStart = Colors.red.shade900.withOpacity(0.15);
-                bgGradientEnd = Colors.red.shade800.withOpacity(0.15);
-                borderColor = Colors.red.shade800.withOpacity(0.5);
-                dividerColor = Colors.red.shade800.withOpacity(0.5);
-              }
+              bgStart = isDark ? const Color(0xFF7F1D1D).withOpacity(0.15) : const Color(0xFFFEF2F2);
+              bgEnd = isDark ? const Color(0xFF881337).withOpacity(0.15) : const Color(0xFFFFF1F2);
+              borderColor = isDark ? const Color(0xFF991B1B).withOpacity(0.4) : const Color(0xFFFECACA);
             }
 
             return Container(
@@ -1055,30 +1035,29 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [bgGradientStart, bgGradientEnd],
+                  colors: [bgStart, bgEnd],
                 ),
                 border: Border.all(color: borderColor, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Reduced from 16
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Ratio Name
                   Text(
-                    _formatRatioName(entry.key),
+                    _formatRatioName(entry.key).toUpperCase(),
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 11,
-                      color: isDark ? Colors.white : Colors.black,
-                      letterSpacing: 0.3,
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      letterSpacing: 0.5,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8), // Reduced from 12
-
-                  // Period 1 Row
+                  const SizedBox(height: 10),
+                  
+                  // Period 1
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1086,22 +1065,22 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                         _comparisonData!.data.period1,
                         style: TextStyle(
                           fontSize: 10,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
                         ),
                       ),
                       Text(
                         ratio.period1?.toStringAsFixed(2) ?? '-',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: isDark ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-
-                  // Period 2 Row
+                  
+                  // Period 2
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1109,59 +1088,65 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                         _comparisonData!.data.period2,
                         style: TextStyle(
                           fontSize: 10,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
                         ),
                       ),
                       Text(
                         ratio.period2?.toStringAsFixed(2) ?? '-',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: isDark ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
                       ),
                     ],
                   ),
                   
                   const Spacer(),
-                  Divider(height: 8, thickness: 1, color: dividerColor.withOpacity(0.3)), // Reduced height from 16
-
-                  // Change Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Change: ',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                            ),
-                          ),
-                          if (ratio.difference != null)
+                  
+                  // Compact Footer
+                  Container(
+                    padding: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: borderColor, width: 1.5)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
                             Text(
+                              'CHANGE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+                              ),
+                            ),
+                            Text(
+                              '${isPositive ? "+" : ""}${ratio.percentageChange?.toStringAsFixed(2) ?? "0.00"}%',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: _getChangeColor(ratio.percentageChange),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (ratio.difference != null)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
                               '${ratio.difference! > 0 ? "+" : ""}${ratio.difference!.toStringAsFixed(2)}',
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 color: _getChangeColor(ratio.difference),
                               ),
                             ),
-                        ],
-                      ),
-                      Text(
-                        ratio.percentageChange != null
-                            ? '${isPositive ? "+" : ""}${ratio.percentageChange!.toStringAsFixed(2)}%'
-                            : '-',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: _getChangeColor(ratio.percentageChange),
-                        ),
-                      ),
-                    ],
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
