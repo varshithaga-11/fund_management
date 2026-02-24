@@ -212,138 +212,292 @@ class _BalanceSheetFormState extends State<BalanceSheetForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isBalanced = (_totalLiabilities - _totalAssets).abs() < 0.01;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Balance Sheet',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Balance Sheet',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : const Color(0xFF111827),
             ),
-            const SizedBox(height: 20),
-            
-            // Liabilities Section
-            Text('Liabilities (Sources of Funds)', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _buildNumberInput('Share Capital *', _shareCapitalController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Deposits *', _depositsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Borrowings *', _borrowingsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Statutory & Free Reserves *', _reservesController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Undistributed Profit (UDP) *', _undistributedProfitController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Provisions *', _provisionsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Other Liabilities *', _otherLiabilitiesController),
-            
-            const SizedBox(height: 20),
-            
-            // Assets Section
-            Text('Assets (Application of Funds)', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _buildNumberInput('Cash in Hand *', _cashInHandController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Cash at Bank *', _cashAtBankController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Investments *', _investmentsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Loans & Advances *', _loansAdvancesController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Fixed Assets *', _fixedAssetsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Other Assets *', _otherAssetsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Stock in Trade *', _stockInTradeController),
-            
-            const SizedBox(height: 20),
-            
-            // Calculated Values
-            Card(
-              color: isBalanced ? Colors.green.shade50 : Colors.red.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildTotalRow('Working Fund', _workingFund),
-                    const SizedBox(height: 8),
-                    _buildTotalRow('Own Funds', _ownFunds),
-                    const Divider(),
-                    _buildTotalRow('Total Liabilities', _totalLiabilities),
-                    const SizedBox(height: 8),
-                    _buildTotalRow('Total Assets', _totalAssets),
-                    if (!isBalanced)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          'Balance Sheet is not balanced!',
-                          style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                  ],
-                ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Liabilities Section
+          _buildSectionHeader('Liabilities (Sources of Funds)', isDark),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 650;
+              return Column(
+                children: [
+                  _buildFormRow([
+                    _buildNumberInput('Share Capital *', _shareCapitalController, isDark),
+                    _buildNumberInput('Deposits *', _depositsController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildFormRow([
+                    _buildNumberInput('Borrowings *', _borrowingsController, isDark),
+                    _buildNumberInput('Statutory & Free Reserves *', _reservesController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildFormRow([
+                    _buildNumberInput('Undistributed Profit (UDP) *', _undistributedProfitController, isDark),
+                    _buildNumberInput('Provisions *', _provisionsController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildNumberInput('Other Liabilities *', _otherLiabilitiesController, isDark),
+                ],
+              );
+            },
+          ),
+          
+          const SizedBox(height: 40),
+          
+          // Assets Section
+          _buildSectionHeader('Assets (Application of Funds)', isDark),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 650;
+              return Column(
+                children: [
+                  _buildFormRow([
+                    _buildNumberInput('Cash in Hand *', _cashInHandController, isDark),
+                    _buildNumberInput('Cash at Bank *', _cashAtBankController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildFormRow([
+                    _buildNumberInput('Investments *', _investmentsController, isDark),
+                    _buildNumberInput('Loans & Advances *', _loansAdvancesController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildFormRow([
+                    _buildNumberInput('Fixed Assets *', _fixedAssetsController, isDark),
+                    _buildNumberInput('Other Assets *', _otherAssetsController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildNumberInput('Stock in Trade *', _stockInTradeController, isDark),
+                ],
+              );
+            },
+          ),
+          
+          const SizedBox(height: 40),
+          
+          // Calculated Values
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: isBalanced 
+                  ? (isDark ? Colors.green.withOpacity(0.05) : const Color(0xFFF0FDF4).withOpacity(0.5)) 
+                  : (isDark ? Colors.red.withOpacity(0.05) : const Color(0xFFFEF2F2).withOpacity(0.5)),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isBalanced 
+                    ? (isDark ? Colors.green.withOpacity(0.2) : const Color(0xFFBBF7D0)) 
+                    : (isDark ? Colors.red.withOpacity(0.2) : const Color(0xFFFECACA)),
               ),
             ),
-            
-            const SizedBox(height: 24),
-            
-            if (!_isReadOnly)
-              ElevatedButton(
+            child: Column(
+              children: [
+                _buildTotalRow('Working Fund', _workingFund, isDark),
+                const SizedBox(height: 16),
+                _buildTotalRow('Own Funds', _ownFunds, isDark),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Container(height: 1.5, color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                ),
+                _buildTotalRow('Total Liabilities', _totalLiabilities, isDark, isMajor: true),
+                const SizedBox(height: 16),
+                _buildTotalRow('Total Assets', _totalAssets, isDark, isMajor: true),
+                if (!isBalanced)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.red.withOpacity(0.2) : const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 18),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Balance Sheet is not balanced!',
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          if (!_isReadOnly) ...[
+            const SizedBox(height: 48),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
                 onPressed: (_loading || !isBalanced) ? null : _handleSubmit,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
                 ),
                 child: _loading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                  : Text(_existingId != null ? 'Update' : 'Save'),
+                  : const Text(
+                      'Save Balance Sheet',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
               ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildNumberInput(String label, TextEditingController controller) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        prefixText: '₹ ',
-      ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+  Widget _buildSectionHeader(String title, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 1.5,
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFF1F5F9),
+        ),
       ],
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter a value';
-        }
-        return null;
-      },
-      enabled: !_loading && !_isReadOnly,
+    );
+  }
+
+  Widget _buildFormRow(List<Widget> children, bool isDesktop, bool isDark) {
+    if (!isDesktop) {
+      return Column(
+        children: [
+          children[0],
+          const SizedBox(height: 20),
+          children[1],
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: children[0]),
+        const SizedBox(width: 32),
+        Expanded(child: children[1]),
+      ],
+    );
+  }
+
+  Widget _buildNumberInput(String label, TextEditingController controller, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: '0.00',
+            filled: true,
+            fillColor: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+          ],
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Required';
+            }
+            return null;
+          },
+          enabled: !_loading && !_isReadOnly,
+        ),
+      ],
     );
   }
   
-  Widget _buildTotalRow(String label, double value) {
+  Widget _buildTotalRow(String label, double value, bool isDark, {bool isMajor = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
         Text(
-          '₹${value.toStringAsFixed(2)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          label, 
+          style: TextStyle(
+            fontWeight: isMajor ? FontWeight.w900 : FontWeight.w700,
+            fontSize: isMajor ? 16 : 14,
+            color: isMajor 
+                ? (isDark ? Colors.white : const Color(0xFF1F2937))
+                : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B)),
+          )
+        ),
+        Text(
+          '₹ ${value.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: isMajor ? 20 : 15,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
       ],
     );
   }
 }
+
+
+

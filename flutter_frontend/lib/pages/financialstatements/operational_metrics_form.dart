@@ -100,56 +100,103 @@ class _OperationalMetricsFormState extends State<OperationalMetricsForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Operational Metrics',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Operational Metrics',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : const Color(0xFF111827),
             ),
-            const SizedBox(height: 20),
-            
-            TextFormField(
-              controller: _staffCountController,
-              decoration: const InputDecoration(
-                labelText: 'Number of Staff *',
-                border: OutlineInputBorder(),
-                hintText: 'Enter number of staff members',
+          ),
+          const SizedBox(height: 32),
+          
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Number of Staff *',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF64748B),
+                ),
               ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a value';
-                }
-                return null;
-              },
-              enabled: !_loading && !_isReadOnly,
-            ),
-            
-            const SizedBox(height: 24),
-            
-            if (!_isReadOnly)
-              ElevatedButton(
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _staffCountController,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: 'Enter number of staff',
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Required';
+                  }
+                  return null;
+                },
+                enabled: !_loading && !_isReadOnly,
+              ),
+            ],
+          ),
+          
+          if (!_isReadOnly) ...[
+            const SizedBox(height: 48),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
                 onPressed: _loading ? null : _handleSubmit,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
                 ),
                 child: _loading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                  : Text(_existingId != null ? 'Update' : 'Save'),
+                  : const Text(
+                      'Save Operational Metrics',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
               ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
+
+
+

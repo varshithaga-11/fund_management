@@ -162,112 +162,235 @@ class _ProfitLossFormState extends State<ProfitLossForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Profit & Loss Statement',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            
-            // Income Section
-            Text('Income', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _buildNumberInput('Interest on Loans *', _interestOnLoansController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Interest on Bank A/c *', _interestOnBankAcController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Return on Investment *', _returnOnInvestmentController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Miscellaneous Income *', _miscellaneousIncomeController),
-            const SizedBox(height: 10),
-            _buildTotalDisplay('Total Income (Calculated)', _totalIncome),
-            
-            const SizedBox(height: 20),
-            
-            // Expenses Section
-            Text('Expenses', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _buildNumberInput('Interest on Deposits *', _interestOnDepositsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Interest on Borrowings *', _interestOnBorrowingsController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Establishment & Contingencies *', _establishmentContingenciesController),
-            const SizedBox(height: 10),
-            _buildNumberInput('Provisions *', _provisionsController),
-            const SizedBox(height: 10),
-            _buildTotalDisplay('Total Expenses (Calculated)', _totalExpenses),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-            const SizedBox(height: 20),
-            
-            // Net Profit
-            _buildNumberInput('Net Profit *', _netProfitController),
-            
-            const SizedBox(height: 24),
-            
-            if (!_isReadOnly)
-              ElevatedButton(
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Profit & Loss Statement',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : const Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Income Section
+          _buildSectionHeader('Income', isDark),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 650;
+              return Column(
+                children: [
+                  _buildFormRow([
+                    _buildNumberInput('Interest on Loans *', _interestOnLoansController, isDark),
+                    _buildNumberInput('Interest on Bank A/c *', _interestOnBankAcController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildFormRow([
+                    _buildNumberInput('Return on Investment *', _returnOnInvestmentController, isDark),
+                    _buildNumberInput('Miscellaneous Income *', _miscellaneousIncomeController, isDark),
+                  ], isDesktop, isDark),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildTotalDisplay('Total Income (Calculated)', _totalIncome, isDark),
+          
+          const SizedBox(height: 40),
+          
+          // Expenses Section
+          _buildSectionHeader('Expenses', isDark),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 650;
+              return Column(
+                children: [
+                  _buildFormRow([
+                    _buildNumberInput('Interest on Deposits *', _interestOnDepositsController, isDark),
+                    _buildNumberInput('Interest on Borrowings *', _interestOnBorrowingsController, isDark),
+                  ], isDesktop, isDark),
+                  const SizedBox(height: 20),
+                  _buildFormRow([
+                    _buildNumberInput('Establishment & Contingencies *', _establishmentContingenciesController, isDark),
+                    _buildNumberInput('Provisions *', _provisionsController, isDark),
+                  ], isDesktop, isDark),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildTotalDisplay('Total Expenses (Calculated)', _totalExpenses, isDark),
+
+          const SizedBox(height: 40),
+          
+          // Net Profit
+          _buildSectionHeader('Net Profit', isDark),
+          const SizedBox(height: 20),
+          _buildNumberInput('Net Profit *', _netProfitController, isDark),
+          
+          if (!_isReadOnly) ...[
+            const SizedBox(height: 48),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
                 onPressed: _loading ? null : _handleSubmit,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
                 ),
                 child: _loading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                  : Text(_existingId != null ? 'Update' : 'Save'),
+                  : const Text(
+                      'Save Profit & Loss Statement',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
               ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildNumberInput(String label, TextEditingController controller) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        prefixText: '₹ ',
-      ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+  Widget _buildSectionHeader(String title, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 1.5,
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFF1F5F9),
+        ),
       ],
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter a value';
-        }
-        return null;
-      },
-      enabled: !_loading && !_isReadOnly,
+    );
+  }
+
+  Widget _buildFormRow(List<Widget> children, bool isDesktop, bool isDark) {
+    if (!isDesktop) {
+      return Column(
+        children: [
+          children[0],
+          const SizedBox(height: 20),
+          children[1],
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: children[0]),
+        const SizedBox(width: 32),
+        Expanded(child: children[1]),
+      ],
+    );
+  }
+
+  Widget _buildNumberInput(String label, TextEditingController controller, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: '0.00',
+            filled: true,
+            fillColor: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+          ],
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Required';
+            }
+            return null;
+          },
+          enabled: !_loading && !_isReadOnly,
+        ),
+      ],
     );
   }
   
-  Widget _buildTotalDisplay(String label, double value) {
+  Widget _buildTotalDisplay(String label, double value, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.1) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? const Color(0xFF1E40AF).withOpacity(0.3) : const Color(0xFFE2E8F0)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
           Text(
-            '₹${value.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            label, 
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF64748B),
+            )
+          ),
+          Text(
+            '₹ ${value.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+

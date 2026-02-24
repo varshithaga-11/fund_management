@@ -70,160 +70,93 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: isDark ? const Color(0xFF111827) : const Color(0xFFF8FAFC),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Enhanced Header Section
-              _buildHeader(isDark),
-              const SizedBox(height: 24),
-
-              // Info Box
-              _buildInfoBox(),
-              const SizedBox(height: 24),
-
-              // Tab Navigation
-              _buildTabNavigation(),
-              const SizedBox(height: 16),
-
-              // Tab Content
-              _buildTabContent(),
-              const SizedBox(height: 32),
-
-              // Completion Status Section
-              _buildCompletionStatus(isDark),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade900 : Colors.white,
-        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1400),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _period!.label,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _period!.periodType.replaceAll('_', ' ').toUpperCase(),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
-                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                  ),
-                ),
+                // Tab Navigation at the top
+                _buildTabNavigation(isDark),
+                const SizedBox(height: 24),
+
+                // Info Box below tabs
+                _buildInfoBox(isDark),
+                const SizedBox(height: 24),
+
+                // Tab Content Card
+                _buildTabContent(isDark),
+                const SizedBox(height: 24),
+
+                // Completion Status Section Card
+                _buildCompletionStatus(isDark),
+                const SizedBox(height: 32),
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/ratio-analysis/dashboard/${widget.periodId}');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              elevation: 2,
-            ),
-            child: const Text(
-              'View Dashboard',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoBox() {
+  Widget _buildInfoBox(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        border: Border.all(color: Colors.blue.shade200),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.1) : const Color(0xFFEFF6FF),
+        border: Border.all(color: isDark ? const Color(0xFF1E40AF).withOpacity(0.3) : const Color(0xFFDBEAFE)), // border-blue-200
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        'Info: Financial statements are read-only and cannot be updated.',
+        style: TextStyle(
+          color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+          fontWeight: FontWeight.w600, // font-semibold
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabNavigation(bool isDark) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border(
+           bottom: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB), width: 1.5),
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Info: Financial statements are read-only and cannot be updated.',
-              style: TextStyle(
-                color: Colors.blue.shade900,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ),
+          _buildTabButton('Trading Account', 0, isDark),
+          const SizedBox(width: 32),
+          _buildTabButton('Profit & Loss', 1, isDark),
+          const SizedBox(width: 32),
+          _buildTabButton('Balance Sheet', 2, isDark),
+          const SizedBox(width: 32),
+          _buildTabButton('Operational Metrics', 3, isDark),
         ],
       ),
     );
   }
 
-  Widget _buildTabNavigation() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildTabButton('Trading Account', 0),
-            _buildTabButton('Profit & Loss', 1),
-            _buildTabButton('Balance Sheet', 2),
-            _buildTabButton('Operational Metrics', 3),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabButton(String text, int index) {
+  Widget _buildTabButton(String text, int index, bool isDark) {
     final isActive = _tabController.index == index;
     return GestureDetector(
-      onTap: () => _tabController.animateTo(index),
+      onTap: () {
+        _tabController.animateTo(index);
+        setState(() {});
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: isActive ? Colors.blue.shade600 : Colors.transparent,
+              color: isActive ? const Color(0xFF2563EB) : Colors.transparent, // bg-blue-600
               width: 3,
             ),
           ),
@@ -231,22 +164,32 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
         child: Text(
           text,
           style: TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 14,
-            color: isActive ? Colors.blue.shade600 : Colors.grey.shade600,
+            color: isActive 
+                ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB)) 
+                : (isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563)),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTabContent() {
+  Widget _buildTabContent(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade200),
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: _getTabContent(),
     );
@@ -285,34 +228,48 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
 
   Widget _buildCompletionStatus(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade900 : Colors.white,
-        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Completion Status',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+              letterSpacing: -0.2,
             ),
           ),
-          const Divider(height: 16),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+          Container(
+            height: 1.2, 
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFF1F5F9),
+          ),
+          const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 600;
+              final isMobile = constraints.maxWidth < 900;
               return GridView.count(
-                crossAxisCount: isMobile ? 2 : 4,
+                crossAxisCount: isMobile ? (constraints.maxWidth < 500 ? 1 : 2) : 4,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 2.5,
+                childAspectRatio: 4.8,
                 children: [
                   _buildStatusIndicator('Trading Account', _period!.tradingAccount != null, isDark),
                   _buildStatusIndicator('Profit & Loss', _period!.profitLoss != null, isDark),
@@ -329,37 +286,30 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
 
   Widget _buildStatusIndicator(String label, bool isCompleted, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
-        border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
+        color: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 10,
             height: 10,
             decoration: BoxDecoration(
-              color: isCompleted ? Colors.green.shade600 : Colors.grey.shade400,
+              color: isCompleted ? const Color(0xFF22C55E) : (isDark ? const Color(0xFF374151) : const Color(0xFFCBD5E1)),
               shape: BoxShape.circle,
-              boxShadow: [
-                if (isCompleted)
-                  BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
-                    blurRadius: 4,
-                  ),
-              ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
               style: TextStyle(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w800,
                 fontSize: 13,
-                color: isDark ? Colors.grey.shade200 : Colors.grey.shade800,
+                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
               ),
             ),
           ),
@@ -368,3 +318,6 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
     );
   }
 }
+
+
+
