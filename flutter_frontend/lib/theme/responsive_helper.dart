@@ -61,9 +61,9 @@ class ResponsiveHelper {
   static EdgeInsets getResponsivePadding(BuildContext context) {
     return ResponsiveHelper.getResponsiveValue(
       context,
-      mobile: const EdgeInsets.all(AppSpacing.md),
-      tablet: const EdgeInsets.all(AppSpacing.lg),
-      desktop: const EdgeInsets.all(AppSpacing.xl),
+      mobile: const EdgeInsets.all(AppSpacing.lg), // 16px
+      tablet: const EdgeInsets.all(AppSpacing.xxl), // 24px
+      desktop: const EdgeInsets.all(AppSpacing.xxl), // 24px
     );
   }
   

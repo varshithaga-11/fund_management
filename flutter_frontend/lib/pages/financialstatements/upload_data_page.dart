@@ -317,65 +317,6 @@ class _UploadDataPageState extends State<UploadDataPage> {
               ),
             ),
 
-            const SizedBox(height: 32),
-
-            // Expected Sheet Structures (Use LayoutBuilder for responsiveness)
-            const Text(
-              'Expected Sheet Structures (5-sheet format):',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // If wide enough, 2 columns. Else 1 column.
-                // React screenshot shows 2 columns.
-                if (constraints.maxWidth > 800) {
-                   return Row(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                       Expanded(
-                         child: Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
-                           children: [
-                             _buildSimpleStructureItem('Financial_Statement:', 'Entity Name, Fiscal Year End, Currency, Staff Count'),
-                             const SizedBox(height: 16),
-                             _buildSimpleStructureItem('Balance_Sheet_Assets:', 'Asset Type, Amount (one row per asset)'),
-                             const SizedBox(height: 16),
-                             _buildSimpleStructureItem('Trading_Account:', 'Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)'),
-                           ],
-                         ),
-                       ),
-                       const SizedBox(width: 40),
-                       Expanded(
-                         child: Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
-                           children: [
-                              _buildSimpleStructureItem('Balance_Sheet_Liabilities:', 'Liability Type, Amount (one row per liability)'),
-                              const SizedBox(height: 16),
-                              _buildSimpleStructureItem('Profit_Loss:', 'Category, Item, Amount (Income / Expense / Net Profit)'),
-                           ],
-                         ),
-                       ),
-                     ],
-                   );
-                } else {
-                   return Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                       _buildSimpleStructureItem('Financial_Statement:', 'Entity Name, Fiscal Year End, Currency, Staff Count'),
-                       const SizedBox(height: 16),
-                       _buildSimpleStructureItem('Balance_Sheet_Liabilities:', 'Liability Type, Amount (one row per liability)'),
-                       const SizedBox(height: 16),
-                       _buildSimpleStructureItem('Balance_Sheet_Assets:', 'Asset Type, Amount (one row per asset)'),
-                       const SizedBox(height: 16),
-                       _buildSimpleStructureItem('Profit_Loss:', 'Category, Item, Amount (Income / Expense / Net Profit)'),
-                       const SizedBox(height: 16),
-                       _buildSimpleStructureItem('Trading_Account:', 'Item, Amount (Opening Stock, Purchases, Trade Charges, Sales, Closing Stock)'),
-                     ],
-                   );
-                }
-              }
-            ),
           ],
         ),
       ),
@@ -433,17 +374,6 @@ class _UploadDataPageState extends State<UploadDataPage> {
           Expanded(child: Text(text, style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4))),
         ],
       ),
-    );
-  }
-  
-  Widget _buildSimpleStructureItem(String title, String desc) {
-    return Column(
-       crossAxisAlignment: CrossAxisAlignment.start,
-       children: [
-         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87)),
-         const SizedBox(height: 2),
-         Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-       ],
     );
   }
 
