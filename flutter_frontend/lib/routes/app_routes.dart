@@ -30,6 +30,34 @@ import '../pages/periodcomparison/period_comparison_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/usermanagement/user_management_page.dart';
 
+// Custom optimized page route for faster transitions
+class _OptimizedPageRoute<T> extends MaterialPageRoute<T> {
+  _OptimizedPageRoute({
+    required WidgetBuilder builder,
+    required RouteSettings settings,
+  }) : super(
+    builder: builder,
+    settings: settings,
+  );
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 150);
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // Use a faster, simpler fade transition instead of slide
+    return FadeTransition(
+      opacity: animation,
+      child: child,
+    );
+  }
+}
+
 // Placeholder Pages (To be implemented)
 class PlaceholderPage extends StatelessWidget {
   final String title;
@@ -66,100 +94,100 @@ class AppRouter {
 
     switch (path) {
       case AppRoutes.masterDashboard:
-        return MaterialPageRoute(
+        return _OptimizedPageRoute(
           settings: settings,
           builder: (_) => const MasterDashboardPage(),
         );
       
       case AppRoutes.companyRatioAnalysis:
-        return MaterialPageRoute(
+        return _OptimizedPageRoute(
           settings: settings,
           builder: (_) => const CompanyRatioAnalysisPage(),
         );
 
       // Auth Routes
       case AppRoutes.signIn:
-        return MaterialPageRoute(settings: settings, builder: (_) => const SignInPage());
+        return _OptimizedPageRoute(settings: settings, builder: (_) => const SignInPage());
       case AppRoutes.signUp:
-        return MaterialPageRoute(settings: settings, builder: (_) => const SignUpPage());
+        return _OptimizedPageRoute(settings: settings, builder: (_) => const SignUpPage());
 
       case AppRoutes.activate:
-        return MaterialPageRoute(settings: settings, builder: (_) => const ActivationPage());
+        return _OptimizedPageRoute(settings: settings, builder: (_) => const ActivationPage());
       case AppRoutes.resetPassword:
-        return MaterialPageRoute(settings: settings, builder: (_) => const Scaffold(body: ForgotPasswordForm()));
+        return _OptimizedPageRoute(settings: settings, builder: (_) => const Scaffold(body: ForgotPasswordForm()));
 
       // Master Routes
       case AppRoutes.uploadData:
-        return MaterialPageRoute(
+        return _OptimizedPageRoute(
           settings: settings,
           builder: (_) => const UploadDataPage(),
         );
       
       case AppRoutes.statementColumns:
-        return MaterialPageRoute(
+        return _OptimizedPageRoute(
           settings: settings,
           builder: (_) => const StatementColumnsConfigPage(),
         );
 
       case AppRoutes.trendAnalysis:
-        return MaterialPageRoute(
+        return _OptimizedPageRoute(
           settings: settings,
           builder: (_) => const TrendAnalysisPage(),
         );
 
       case AppRoutes.ratioAnalysis:
-         return MaterialPageRoute(
+         return _OptimizedPageRoute(
            settings: settings,
            builder: (_) => const RatioAnalysisPage(),
          );
 
       case AppRoutes.ratioBenchmarks:
-         return MaterialPageRoute(
+         return _OptimizedPageRoute(
            settings: settings,
            builder: (_) => const RatioBenchmarksPage(),
          );
 
       case AppRoutes.periodComparison:
-         return MaterialPageRoute(
+         return _OptimizedPageRoute(
            settings: settings,
            builder: (_) => const PeriodComparisonPage(),
          );
       
       case AppRoutes.userManagement:
-         return MaterialPageRoute(
+         return _OptimizedPageRoute(
            settings: settings,
            builder: (_) => const UserManagementPage(),
          );
 
       case AppRoutes.profile:
-         return MaterialPageRoute(
+         return _OptimizedPageRoute(
            settings: settings,
            builder: (_) => const ProfilePage(),
          );
       
       case AppRoutes.calendar:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Calendar'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Calendar'), settings: settings);
       
       case AppRoutes.blank:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Blank'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Blank'), settings: settings);
 
       // UI Elements
       case AppRoutes.alerts:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Alerts'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Alerts'), settings: settings);
       case AppRoutes.avatars:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Avatars'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Avatars'), settings: settings);
       case AppRoutes.badges:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Badges'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Badges'), settings: settings);
       case AppRoutes.buttons:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Buttons'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Buttons'), settings: settings);
       case AppRoutes.images:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Images'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Images'), settings: settings);
       case AppRoutes.videos:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Videos'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Videos'), settings: settings);
       case AppRoutes.lineChart:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Line Chart'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Line Chart'), settings: settings);
       case AppRoutes.barChart:
-         return MaterialPageRoute(builder: (_) => const PlaceholderPage('Bar Chart'));
+         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Bar Chart'), settings: settings);
 
 
       // Handle dynamic routes
@@ -171,7 +199,7 @@ class AppRouter {
            if (parts.length > 2) {
                final periodId = int.tryParse(parts.last);
                if (periodId != null) {
-                   return MaterialPageRoute(
+                   return _OptimizedPageRoute(
                        settings: settings,
                        builder: (_) => FinancialPeriodPage(periodId: periodId),
                    );
@@ -190,7 +218,7 @@ class AppRouter {
             if (parts.length > 3) {
                 final periodId = int.tryParse(parts.last);
                 if (periodId != null) {
-                    return MaterialPageRoute(
+                    return _OptimizedPageRoute(
                         settings: settings,
                         builder: (_) => RatioDashboardPage(periodId: periodId),
                     );
@@ -203,7 +231,7 @@ class AppRouter {
              if (parts.length > 2) {
                  final periodId = int.tryParse(parts.last);
                  if (periodId != null) {
-                     return MaterialPageRoute(
+                     return _OptimizedPageRoute(
                          settings: settings,
                          builder: (_) => ProductivityAnalysisPage(periodId: periodId),
                      );
@@ -216,7 +244,7 @@ class AppRouter {
              if (parts.length > 2) {
                  final periodId = int.tryParse(parts.last);
                  if (periodId != null) {
-                     return MaterialPageRoute(
+                     return _OptimizedPageRoute(
                          settings: settings,
                          builder: (_) => InterpretationPanelPage(periodId: periodId),
                      );
@@ -224,7 +252,7 @@ class AppRouter {
              }
         }
 
-        return MaterialPageRoute(settings: settings, builder: (_) => const NotFoundPage());
+        return _OptimizedPageRoute(settings: settings, builder: (_) => const NotFoundPage());
     }
   }
 }

@@ -50,7 +50,6 @@ class MasterSidebar extends StatefulWidget {
 
 class _MasterSidebarState extends State<MasterSidebar> {
   int? _openSubmenuIndex;
-  late final VoidCallback _routeListener;
   
   // Define navigation items
   final List<NavItem> _navItems = [
@@ -94,26 +93,11 @@ class _MasterSidebarState extends State<MasterSidebar> {
   @override
   void initState() {
     super.initState();
-    _routeListener = () {
-      if (mounted) setState(() {});
-    };
-    AppRoutes.currentRoute.addListener(_routeListener);
   }
 
   @override
   void dispose() {
-    AppRoutes.currentRoute.removeListener(_routeListener);
     super.dispose();
-  }
-
-  void _toggleSubmenu(int index) {
-    setState(() {
-      if (_openSubmenuIndex == index) {
-        _openSubmenuIndex = null;
-      } else {
-        _openSubmenuIndex = index;
-      }
-    });
   }
 
   bool _isActive(String? path) {
@@ -132,7 +116,9 @@ class _MasterSidebarState extends State<MasterSidebar> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: sidebarWidth,
-      child: _buildSidebarContent(isDark, sidebarWidth),
+      child: RepaintBoundary(
+        child: _buildSidebarContent(isDark, sidebarWidth),
+      ),
     );
   }
 
@@ -191,73 +177,86 @@ class _MasterSidebarState extends State<MasterSidebar> {
               valueListenable: AppRoutes.currentRoute,
               builder: (context, currentRoute, _) {
                 final isMobile = ResponsiveHelper.isMobile(context);
-                return ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  children: [
-                    // Menu Header
-                    if (widget.isExpanded)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 16, // Matches React mb-4
-                        ),
-                        child: Text(
-                          "MENU",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                return RepaintBoundary(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    children: [
+                      // Menu Header
+                      if (widget.isExpanded)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: 16, // Matches React mb-4
+                          ),
+                          child: Text(
+                            "MENU",
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                            ),
                           ),
                         ),
-                      ),
-    
-                    // Nav Items
-                    ..._navItems.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      final isActive = _isActive(item.path);
-                      final isSubmenuOpen = _openSubmenuIndex == index;
-    
-                      return Column(
-                        children: [
-                          _SidebarItem(
-                            icon: item.icon,
-                            title: item.name,
-                            isActive: isActive,
-                            isExpanded: widget.isExpanded,
-                            isDark: isDark,
-                            hasSubmenu: item.subItems != null && item.subItems!.isNotEmpty,
-                            isSubmenuOpen: isSubmenuOpen,
-                            onTap: () {
-                              if (item.subItems != null && item.subItems!.isNotEmpty) {
-                                _toggleSubmenu(index);
-                              } else if (item.path != null) {
-                                AppRoutes.navigatorKey.currentState?.pushNamed(item.path!);
-                                if (isMobile) widget.onClose();
-                              }
-                            },
-                          ),
-                          
-                          // Submenu
-                          if (widget.isExpanded && item.subItems != null && isSubmenuOpen)
-                            ...item.subItems!.map((subItem) {
-                              final isSubActive = _isActive(subItem.path);
-                              return _SidebarSubItem(
-                                title: subItem.name,
-                                isActive: isSubActive,
-                                isDark: isDark,
-                                onTap: () {
-                                  AppRoutes.navigatorKey.currentState?.pushNamed(subItem.path);
+      
+                      // Nav Items
+                      ..._navItems.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        final isActive = _isActive(item.path);
+                        final isSubmenuOpen = _openSubmenuIndex == index;
+      
+                        return Column(
+                          key: ValueKey('nav_item_$index'),
+                          children: [
+                            _SidebarItem(
+                              key: ValueKey('sidebar_item_${item.path}'),
+                              icon: item.icon,
+                              title: item.name,
+                              isActive: isActive,
+                              isExpanded: widget.isExpanded,
+                              isDark: isDark,
+                              hasSubmenu: item.subItems != null && item.subItems!.isNotEmpty,
+                              isSubmenuOpen: isSubmenuOpen,
+                              onTap: () {
+                                if (item.subItems != null && item.subItems!.isNotEmpty) {
+                                  setState(() {
+                                    if (_openSubmenuIndex == index) {
+                                      _openSubmenuIndex = null;
+                                    } else {
+                                      _openSubmenuIndex = index;
+                                    }
+                                  });
+                                } else if (item.path != null) {
+                                  AppRoutes.navigatorKey.currentState?.pushNamed(item.path!);
                                   if (isMobile) widget.onClose();
-                                },
-                                isPro: subItem.pro,
-                                isNew: subItem.isNew,
-                              );
-                            }),
-                        ],
-                      );
-                    }),
-                  ],
+                                }
+                              },
+                            ),
+                            
+                            // Submenu
+                            if (widget.isExpanded && item.subItems != null && isSubmenuOpen)
+                              ...item.subItems!.asMap().entries.map((subEntry) {
+                                final subIndex = subEntry.key;
+                                final subItem = subEntry.value;
+                                final isSubActive = _isActive(subItem.path);
+                                return _SidebarSubItem(
+                                  key: ValueKey('sidebar_sub_item_${subItem.path}'),
+                                  title: subItem.name,
+                                  isActive: isSubActive,
+                                  isDark: isDark,
+                                  onTap: () {
+                                    AppRoutes.navigatorKey.currentState?.pushNamed(subItem.path);
+                                    if (isMobile) widget.onClose();
+                                  },
+                                  isPro: subItem.pro,
+                                  isNew: subItem.isNew,
+                                );
+                              }),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
                 );
               }
             ),
@@ -279,6 +278,7 @@ class _SidebarItem extends StatefulWidget {
   final VoidCallback onTap;
 
   const _SidebarItem({
+    super.key,
     required this.icon,
     required this.title,
     required this.isActive,
@@ -392,6 +392,7 @@ class _SidebarSubItem extends StatelessWidget {
   final bool isNew;
 
   const _SidebarSubItem({
+    super.key,
     required this.title,
     required this.isActive,
     required this.isDark,

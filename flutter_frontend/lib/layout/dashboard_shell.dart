@@ -11,27 +11,16 @@ class DashboardShell extends StatefulWidget {
 }
 
 class _DashboardShellState extends State<DashboardShell> {
-  final _innerNavigatorKey = GlobalKey<NavigatorState>();
-  String? _currentRoute;
+  String? _previousRoute;
 
   @override
-  void initState() {
-    super.initState();
-    // Use a small delay to get the initial route
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (AppRoutes.currentRoute.value == null) {
-        final route = ModalRoute.of(context)?.settings.name;
-        AppRoutes.currentRoute.value = route;
-      }
-    });
-  }
-
-  void _updateRoute() {
-    final route = ModalRoute.of(AppRoutes.navigatorKey.currentContext!)?.settings.name;
-    if (_currentRoute != route) {
-      setState(() {
-        _currentRoute = route;
-      });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update current route from ModalRoute
+    final route = ModalRoute.of(context)?.settings.name;
+    if (_previousRoute != route && route != null) {
+      AppRoutes.currentRoute.value = route;
+      _previousRoute = route;
     }
   }
 
@@ -49,21 +38,16 @@ class _DashboardShellState extends State<DashboardShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Navigator(
-      onGenerateRoute: (settings) => MaterialPageRoute(
-        settings: settings,
-        builder: (context) => ValueListenableBuilder<String?>(
-          valueListenable: AppRoutes.currentRoute,
-          builder: (context, currentRoute, _) {
-            bool showLayout = _shouldShowLayout(currentRoute);
-            
-            return MasterLayout(
-              showLayout: showLayout,
-              child: widget.child,
-            );
-          },
-        ),
-      ),
+    return ValueListenableBuilder<String?>(
+      valueListenable: AppRoutes.currentRoute,
+      builder: (context, currentRoute, _) {
+        bool showLayout = _shouldShowLayout(currentRoute);
+        
+        return MasterLayout(
+          showLayout: showLayout,
+          child: widget.child,
+        );
+      },
     );
   }
 }

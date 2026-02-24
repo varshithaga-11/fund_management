@@ -38,10 +38,12 @@ class MasterLayout extends StatelessWidget {
               left: 0,
               top: 0,
               bottom: 0,
-              child: MasterSidebar(
-                isExpanded: layoutProvider.isSidebarExpanded,
-                isMobileOpen: false,
-                onClose: layoutProvider.closeMobileSidebar,
+              child: RepaintBoundary(
+                child: MasterSidebar(
+                  isExpanded: layoutProvider.isSidebarExpanded,
+                  isMobileOpen: false,
+                  onClose: layoutProvider.closeMobileSidebar,
+                ),
               ),
             ),
 
@@ -57,37 +59,39 @@ class MasterLayout extends StatelessWidget {
                   ? (layoutProvider.isSidebarExpanded ? 290 : 90)
                   : 0,
               ),
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxWidth: 1536, // Fixed max-width (like Tailwind 2xl breakpoint)
-                ),
-                alignment: Alignment.topCenter,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header at the top
-                    if (showLayout)
-                      MasterHeader(
-                        onMenuPressed: () {
-                          if (isDesktop) {
-                            layoutProvider.toggleSidebar();
-                          } else {
-                            layoutProvider.toggleMobileSidebar();
-                          }
-                        },
-                        isSidebarExpanded: layoutProvider.isSidebarExpanded,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              child: RepaintBoundary(
+                child: Container(
+                  constraints: const BoxConstraints(
+                    maxWidth: 1536, // Fixed max-width (like Tailwind 2xl breakpoint)
+                  ),
+                  alignment: Alignment.topCenter,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header at the top
+                      if (showLayout)
+                        MasterHeader(
+                          onMenuPressed: () {
+                            if (isDesktop) {
+                              layoutProvider.toggleSidebar();
+                            } else {
+                              layoutProvider.toggleMobileSidebar();
+                            }
+                          },
+                          isSidebarExpanded: layoutProvider.isSidebarExpanded,
+                        ),
+                      
+                      // Main Content
+                      Expanded(
+                        child: Padding(
+                          padding: ResponsiveHelper.getResponsivePadding(context),
+                          child: child,
+                        ),
                       ),
-                    
-                    // Main Content
-                    Expanded(
-                      child: Padding(
-                        padding: ResponsiveHelper.getResponsivePadding(context),
-                        child: child,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
