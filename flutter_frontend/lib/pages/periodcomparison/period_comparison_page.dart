@@ -424,9 +424,10 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                 const SizedBox(height: 32),
 
                 // Summary Stats
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final count = constraints.maxWidth > 1000 ? 3 : (constraints.maxWidth > 650 ? 2 : 1);
+                Builder(
+                  builder: (context) {
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final count = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
                     return GridView.count(
                       crossAxisCount: count,
                       shrinkWrap: true,
@@ -810,11 +811,11 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
   Widget _buildTableView(bool isDark) {
     final ratioEntries = _comparisonData!.data.ratios.entries.toList();
     
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
         // Calculate column widths to match 3-column card layout
-        final totalWidth = constraints.maxWidth;
-        final cardCount = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
+        final totalWidth = screenWidth - 100; // Account for padding
         
         // Adjust column widths based on available space
         double ratioColWidth = totalWidth * 0.35;
@@ -996,10 +997,11 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
   }
 
   Widget _buildCardView(bool isDark) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
         // Force 3 columns earlier to match React desktop view
-        final count = constraints.maxWidth > 1000 ? 3 : (constraints.maxWidth > 650 ? 2 : 1);
+        final count = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
 
         return GridView.count(
           crossAxisCount: count,

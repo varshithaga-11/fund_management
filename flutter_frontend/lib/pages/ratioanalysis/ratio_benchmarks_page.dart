@@ -156,10 +156,11 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
                 color: Color(0xFF1E293B)
               )),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 700;
-              final itemWidth = isWide ? (constraints.maxWidth - 32) / 2 : constraints.maxWidth;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isWide = screenWidth > 900;
+              final itemWidth = isWide ? (screenWidth - 350) / 2 : screenWidth - 100;
               
               return Wrap(
                 spacing: 32,
@@ -171,7 +172,7 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
                   if (controller == null) return const SizedBox.shrink();
 
                   return SizedBox(
-                    width: itemWidth,
+                    width: itemWidth.clamp(200, 1000),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

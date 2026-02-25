@@ -162,15 +162,18 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
             ),
           ),
           const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 700;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isWide = screenWidth > 900;
+              final subItemWidth = isWide ? (screenWidth - 400) / 2 : screenWidth - 100;
+              
               return Wrap(
                 spacing: 16,
                 runSpacing: 16,
                 children: [
                   SizedBox(
-                    width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
+                    width: subItemWidth.clamp(300, 1000),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -188,7 +191,7 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
                     ),
                   ),
                   SizedBox(
-                    width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
+                    width: subItemWidth.clamp(300, 1000),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -327,9 +330,10 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
     final ratios = _categories[_selectedCategory] ?? [];
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 600 ? 2 : 1);
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final crossAxisCount = screenWidth > 1100 ? 4 : (screenWidth > 700 ? 2 : 1);
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -460,9 +464,10 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
             ),
           ),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = constraints.maxWidth > 1000 ? 6 : (constraints.maxWidth > 600 ? 3 : 2);
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final crossAxisCount = screenWidth > 1100 ? 6 : (screenWidth > 700 ? 3 : 2);
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1581,9 +1586,10 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredData = _getFilteredSortedData();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final crossAxisCount = screenWidth > 1200 ? 4 : (screenWidth > 800 ? 2 : 1);
         
         return GridView.builder(
           shrinkWrap: true,
@@ -1596,7 +1602,7 @@ class _TrendAnalysisChartState extends State<TrendAnalysisChart> {
           ),
           itemCount: widget.selectedRatios.length,
           itemBuilder: (context, index) {
-            final ratioKey = widget.selectedRatios[index];
+            final ratioKey = widget.selectedRatios.elementAt(index);
             final values = filteredData
                 .map((d) => _getRatioValue(d, ratioKey))
                 .where((v) => v != null && v.isFinite)

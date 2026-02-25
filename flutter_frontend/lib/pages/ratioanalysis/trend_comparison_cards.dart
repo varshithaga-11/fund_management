@@ -83,10 +83,11 @@ class TrendComparisonCards extends StatelessWidget {
       };
     }).toList();
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final crossAxisCount = constraints.maxWidth > 1000 
+    return Builder(builder: (context) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final crossAxisCount = screenWidth > 1100 
           ? 3 
-          : (constraints.maxWidth > 700 ? 2 : 1);
+          : (screenWidth > 750 ? 2 : 1);
       
       return GridView.builder(
         shrinkWrap: true,

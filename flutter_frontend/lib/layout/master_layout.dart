@@ -32,18 +32,16 @@ class MasterLayout extends StatelessWidget {
       backgroundColor: isDark ? AppColors.darkBg : AppColors.gray50,
       body: Stack(
         children: [
-          // Desktop Sidebar (absolutely positioned - doesn't affect layout)
+          // Desktop Sidebar
           if (showLayout && isDesktop)
             Positioned(
               left: 0,
               top: 0,
               bottom: 0,
-              child: RepaintBoundary(
-                child: MasterSidebar(
-                  isExpanded: layoutProvider.isSidebarExpanded,
-                  isMobileOpen: false,
-                  onClose: layoutProvider.closeMobileSidebar,
-                ),
+              child: MasterSidebar(
+                isExpanded: layoutProvider.isSidebarExpanded,
+                isMobileOpen: false,
+                onClose: layoutProvider.closeMobileSidebar,
               ),
             ),
 
@@ -61,37 +59,35 @@ class MasterLayout extends StatelessWidget {
               ),
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              child: RepaintBoundary(
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 1536, // Fixed max-width (like Tailwind 2xl breakpoint)
-                  ),
-                  alignment: Alignment.topCenter,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header at the top
-                      if (showLayout)
-                        MasterHeader(
-                          onMenuPressed: () {
-                            if (isDesktop) {
-                              layoutProvider.toggleSidebar();
-                            } else {
-                              layoutProvider.toggleMobileSidebar();
-                            }
-                          },
-                          isSidebarExpanded: layoutProvider.isSidebarExpanded,
-                        ),
-                      
-                      // Main Content
-                      Expanded(
-                        child: Padding(
-                          padding: ResponsiveHelper.getResponsivePadding(context),
-                          child: child,
-                        ),
+              child: Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 1536,
+                ),
+                alignment: Alignment.topCenter,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header at the top
+                    if (showLayout)
+                      MasterHeader(
+                        onMenuPressed: () {
+                          if (isDesktop) {
+                            layoutProvider.toggleSidebar();
+                          } else {
+                            layoutProvider.toggleMobileSidebar();
+                          }
+                        },
+                        isSidebarExpanded: layoutProvider.isSidebarExpanded,
                       ),
-                    ],
-                  ),
+                    
+                    // Main Content
+                    Expanded(
+                      child: Padding(
+                        padding: ResponsiveHelper.getResponsivePadding(context),
+                        child: child,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -100,12 +96,12 @@ class MasterLayout extends StatelessWidget {
       ),
 
       // Mobile Sidebar Drawer
-      endDrawer: isMobile && layoutProvider.isMobileSidebarOpen
+      drawer: isMobile && showLayout
           ? Drawer(
               child: MasterSidebar(
                 isExpanded: true,
-                isMobileOpen: layoutProvider.isMobileSidebarOpen,
-                onClose: layoutProvider.closeMobileSidebar,
+                isMobileOpen: true,
+                onClose: () => Navigator.of(context).pop(),
               ),
             )
           : null,

@@ -909,8 +909,9 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
             ),
           ),
         ),
-        LayoutBuilder(builder: (ctx, bc) {
-          final cols = bc.maxWidth > 900 ? 3 : (bc.maxWidth > 600 ? 2 : 1);
+        Builder(builder: (context) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final cols = screenWidth > 1000 ? 3 : (screenWidth > 700 ? 2 : 1);
           return GridView.count(
             crossAxisCount: cols,
             shrinkWrap: true,

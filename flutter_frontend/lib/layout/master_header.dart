@@ -73,20 +73,24 @@ class _MasterHeaderState extends State<MasterHeader> {
                 ),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Menu Button
-                  IconButton(
-                    onPressed: widget.onMenuPressed,
-                    icon: Icon(
-                      Icons.menu,
-                      color: isDark ? AppColors.gray400 : AppColors.gray500,
-                    ),
+                  // Menu Button & Title/Logo area
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: widget.onMenuPressed,
+                        icon: Icon(
+                          Icons.menu,
+                          color: isDark ? AppColors.gray400 : AppColors.gray500,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.md),
                   
-                  const Spacer(),
-                  
-                  // Right Actions - Desktop View
+                  // Right Actions
                   if (!isMobile)
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -105,17 +109,15 @@ class _MasterHeaderState extends State<MasterHeader> {
                             );
                           },
                         ),
-
                         
                         const SizedBox(width: AppSpacing.md),
                         
                         // User Profile Menu
                         _buildUserMenu(context, isDark),
                       ],
-                    ),
-                  
-                  // Three-dot Menu - Mobile View
-                  if (isMobile)
+                    )
+                  else
+                    // Three-dot Menu - Mobile View
                     IconButton(
                       onPressed: _toggleApplicationMenu,
                       icon: Icon(
@@ -130,8 +132,9 @@ class _MasterHeaderState extends State<MasterHeader> {
             // Mobile Application Menu (collapsible)
             if (isMobile && _isApplicationMenuOpen)
               Container(
-                width: double.infinity,
+                width: MediaQuery.of(context).size.width,
                 decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : AppColors.white,
                   border: Border(
                     top: BorderSide(
                       color: isDark ? AppColors.darkBorder : AppColors.gray200,
@@ -145,39 +148,44 @@ class _MasterHeaderState extends State<MasterHeader> {
                     ),
                   ],
                 ),
-                child: Container(
-                  color: isDark ? AppColors.darkCard : AppColors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          // Dark Mode Toggle
-                          Consumer<ThemeProvider>(
-                            builder: (context, themeProvider, child) {
-                              return IconButton(
-                                icon: Icon(
-                                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                                  color: isDark ? AppColors.gray400 : AppColors.gray500,
-                                ),
-                                onPressed: () {
-                                  themeProvider.toggleTheme();
-                                },
-                              );
-                            },
-                          ),
-
-                        ],
-                      ),
-                      
-                      // User Profile Menu
-                      _buildUserMenu(context, isDark),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Dark Mode Toggle
+                    Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                                color: isDark ? AppColors.gray400 : AppColors.gray500,
+                              ),
+                              onPressed: () {
+                                themeProvider.toggleTheme();
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              themeProvider.isDarkMode ? 'Light Mode' : 'Dark Mode',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? AppColors.gray400 : AppColors.gray600,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    
+                    // User Profile Menu
+                    _buildUserMenu(context, isDark),
+                  ],
                 ),
               ),
           ],

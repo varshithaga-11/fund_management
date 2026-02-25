@@ -146,9 +146,10 @@ class _TradingAccountFormState extends State<TradingAccountForm> {
           ),
           const SizedBox(height: 32),
           
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 650;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isDesktop = screenWidth > 750;
               return Column(
                 children: [
                   _buildDesktopRow([

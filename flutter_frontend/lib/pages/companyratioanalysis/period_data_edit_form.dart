@@ -446,9 +446,13 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
   }
 
   Widget _buildFieldGrid(BuildContext context, List<Widget> children) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 500 ? 2 : 1;
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        // Adjust width calculation: we assume the form is roughly the screen width minus some padding
+        // If it's in a narrower container, we might need to be more careful, 
+        // but MediaQuery is safe from intrinsic dimension probing.
+        final crossAxisCount = screenWidth > 600 ? 2 : 1;
         final spacing = 16.0;
         
         return Wrap(
@@ -457,8 +461,8 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
           children: children.map((w) {
             return SizedBox(
               width: crossAxisCount == 2 
-                  ? (constraints.maxWidth - spacing) / 2 
-                  : constraints.maxWidth,
+                  ? (screenWidth > 1200 ? (1200 - 120) / 2 : (screenWidth - 80 - spacing) / 2)
+                  : (screenWidth > 1200 ? 1200 - 80 : screenWidth - 80),
               child: w,
             );
           }).toList(),

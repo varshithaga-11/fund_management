@@ -182,9 +182,10 @@ class _ProfitLossFormState extends State<ProfitLossForm> {
           // Income Section
           _buildSectionHeader('Income', isDark),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 650;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isDesktop = screenWidth > 750;
               return Column(
                 children: [
                   _buildFormRow([
@@ -208,9 +209,10 @@ class _ProfitLossFormState extends State<ProfitLossForm> {
           // Expenses Section
           _buildSectionHeader('Expenses', isDark),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 650;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isDesktop = screenWidth > 750;
               return Column(
                 children: [
                   _buildFormRow([

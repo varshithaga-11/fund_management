@@ -25,8 +25,12 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
+    restart: always
     environment:
-      - DATABASE_URL=postgres://postgres:1234@db:5432/fund_management
+      - POSTGRES_DB=fund_management
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_HOST=db
       - DEBUG=True
     depends_on:
       db:

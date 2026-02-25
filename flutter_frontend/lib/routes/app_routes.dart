@@ -89,110 +89,126 @@ class AppRouter {
     final uri = Uri.parse(settings.name ?? '/');
     final path = uri.path;
 
-    // Helper to extract params if needed, though simple params can be parsed from path splitting
-    // For specific period ID routes, we assume a convention or arguments passed via settings.arguments
+    // Helper to determine if a route should show the layout
+    bool shouldShowLayout(String route) {
+      final authRoutes = [
+        AppRoutes.signIn,
+        AppRoutes.signUp,
+        AppRoutes.activate,
+        AppRoutes.resetPassword,
+      ];
+      return !authRoutes.contains(route);
+    }
+
+    Widget wrap(Widget page) {
+      if (shouldShowLayout(path)) {
+        return MasterLayout(
+          showLayout: true,
+          child: page,
+        );
+      }
+      return page;
+    }
 
     switch (path) {
       case AppRoutes.masterDashboard:
         return _OptimizedPageRoute(
           settings: settings,
-          builder: (_) => const MasterDashboardPage(),
+          builder: (_) => wrap(const MasterDashboardPage()),
         );
       
       case AppRoutes.companyRatioAnalysis:
         return _OptimizedPageRoute(
           settings: settings,
-          builder: (_) => const CompanyRatioAnalysisPage(),
+          builder: (_) => wrap(const CompanyRatioAnalysisPage()),
         );
 
-      // Auth Routes
+      // Auth Routes - No Layout
       case AppRoutes.signIn:
         return _OptimizedPageRoute(settings: settings, builder: (_) => const SignInPage());
       case AppRoutes.signUp:
         return _OptimizedPageRoute(settings: settings, builder: (_) => const SignUpPage());
-
       case AppRoutes.activate:
         return _OptimizedPageRoute(settings: settings, builder: (_) => const ActivationPage());
       case AppRoutes.resetPassword:
         return _OptimizedPageRoute(settings: settings, builder: (_) => const Scaffold(body: ForgotPasswordForm()));
 
-      // Master Routes
+      // Master Routes - With Layout
       case AppRoutes.uploadData:
         return _OptimizedPageRoute(
           settings: settings,
-          builder: (_) => const UploadDataPage(),
+          builder: (_) => wrap(const UploadDataPage()),
         );
       
       case AppRoutes.statementColumns:
         return _OptimizedPageRoute(
           settings: settings,
-          builder: (_) => const StatementColumnsConfigPage(),
+          builder: (_) => wrap(const StatementColumnsConfigPage()),
         );
 
       case AppRoutes.trendAnalysis:
         return _OptimizedPageRoute(
           settings: settings,
-          builder: (_) => const TrendAnalysisPage(),
+          builder: (_) => wrap(const TrendAnalysisPage()),
         );
 
       case AppRoutes.ratioAnalysis:
          return _OptimizedPageRoute(
            settings: settings,
-           builder: (_) => const RatioAnalysisPage(),
+           builder: (_) => wrap(const RatioAnalysisPage()),
          );
 
       case AppRoutes.ratioBenchmarks:
          return _OptimizedPageRoute(
            settings: settings,
-           builder: (_) => const RatioBenchmarksPage(),
+           builder: (_) => wrap(const RatioBenchmarksPage()),
          );
 
       case AppRoutes.periodComparison:
          return _OptimizedPageRoute(
            settings: settings,
-           builder: (_) => const PeriodComparisonPage(),
+           builder: (_) => wrap(const PeriodComparisonPage()),
          );
       
       case AppRoutes.userManagement:
          return _OptimizedPageRoute(
            settings: settings,
-           builder: (_) => const UserManagementPage(),
+           builder: (_) => wrap(const UserManagementPage()),
          );
 
       case AppRoutes.profile:
          return _OptimizedPageRoute(
            settings: settings,
-           builder: (_) => const ProfilePage(),
+           builder: (_) => wrap(const ProfilePage()),
          );
       
       case AppRoutes.calendar:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Calendar'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Calendar')), settings: settings);
       
       case AppRoutes.blank:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Blank'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Blank')), settings: settings);
 
       // UI Elements
       case AppRoutes.alerts:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Alerts'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Alerts')), settings: settings);
       case AppRoutes.avatars:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Avatars'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Avatars')), settings: settings);
       case AppRoutes.badges:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Badges'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Badges')), settings: settings);
       case AppRoutes.buttons:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Buttons'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Buttons')), settings: settings);
       case AppRoutes.images:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Images'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Images')), settings: settings);
       case AppRoutes.videos:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Videos'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Videos')), settings: settings);
       case AppRoutes.lineChart:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Line Chart'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Line Chart')), settings: settings);
       case AppRoutes.barChart:
-         return _OptimizedPageRoute(builder: (_) => const PlaceholderPage('Bar Chart'), settings: settings);
+         return _OptimizedPageRoute(builder: (_) => wrap(const PlaceholderPage('Bar Chart')), settings: settings);
 
 
       // Handle dynamic routes
       default:
-        // /financial-statements/:id
         // /financial-statements/:id
         if (path.startsWith('/financial-statements/')) {
            final parts = path.split('/');
@@ -201,26 +217,20 @@ class AppRouter {
                if (periodId != null) {
                    return _OptimizedPageRoute(
                        settings: settings,
-                       builder: (_) => FinancialPeriodPage(periodId: periodId),
+                       builder: (_) => wrap(FinancialPeriodPage(periodId: periodId)),
                    );
                }
            }
         }
         
-        // /ratio-analysis/dashboard/:periodId
-        // This regex/check handles checking if the path starts with the base.
-        // Since we have specific paths defined like '/ratio-analysis/trends', we need to be careful.
-        // But the case statement handles exact matches first.
-        
         if (path.startsWith('/ratio-analysis/dashboard/')) {
-            // Extract ID
             final parts = path.split('/');
             if (parts.length > 3) {
                 final periodId = int.tryParse(parts.last);
                 if (periodId != null) {
                     return _OptimizedPageRoute(
                         settings: settings,
-                        builder: (_) => RatioDashboardPage(periodId: periodId),
+                        builder: (_) => wrap(RatioDashboardPage(periodId: periodId)),
                     );
                 }
             }
@@ -233,7 +243,7 @@ class AppRouter {
                  if (periodId != null) {
                      return _OptimizedPageRoute(
                          settings: settings,
-                         builder: (_) => ProductivityAnalysisPage(periodId: periodId),
+                         builder: (_) => wrap(ProductivityAnalysisPage(periodId: periodId)),
                      );
                  }
              }
@@ -246,7 +256,7 @@ class AppRouter {
                  if (periodId != null) {
                      return _OptimizedPageRoute(
                          settings: settings,
-                         builder: (_) => InterpretationPanelPage(periodId: periodId),
+                         builder: (_) => wrap(InterpretationPanelPage(periodId: periodId)),
                      );
                  }
              }

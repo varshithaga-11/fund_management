@@ -298,9 +298,10 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                   else if (_filteredPeriods.isEmpty)
                     _buildEmptyState(context, isDark, false)
                   else
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
+                    Builder(
+                      builder: (context) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        final crossAxisCount = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
                         
                         return GridView.builder(
                           shrinkWrap: true,

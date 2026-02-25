@@ -233,9 +233,10 @@ class _BalanceSheetFormState extends State<BalanceSheetForm> {
           // Liabilities Section
           _buildSectionHeader('Liabilities (Sources of Funds)', isDark),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 650;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isDesktop = screenWidth > 750;
               return Column(
                 children: [
                   _buildFormRow([
@@ -264,9 +265,10 @@ class _BalanceSheetFormState extends State<BalanceSheetForm> {
           // Assets Section
           _buildSectionHeader('Assets (Application of Funds)', isDark),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 650;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isDesktop = screenWidth > 750;
               return Column(
                 children: [
                   _buildFormRow([

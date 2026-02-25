@@ -260,11 +260,12 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
             color: isDark ? const Color(0xFF374151) : const Color(0xFFF1F5F9),
           ),
           const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 900;
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isMobile = screenWidth < 900;
               return GridView.count(
-                crossAxisCount: isMobile ? (constraints.maxWidth < 500 ? 1 : 2) : 4,
+                crossAxisCount: isMobile ? (screenWidth < 500 ? 1 : 2) : 4,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 12,

@@ -13,13 +13,20 @@ class DashboardShell extends StatefulWidget {
 class _DashboardShellState extends State<DashboardShell> {
   String? _previousRoute;
 
+  final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Update current route from ModalRoute
     final route = ModalRoute.of(context)?.settings.name;
     if (_previousRoute != route && route != null) {
-      AppRoutes.currentRoute.value = route;
+      // Use addPostFrameCallback to avoid setState/notifier update during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          AppRoutes.currentRoute.value = route;
+        }
+      });
       _previousRoute = route;
     }
   }
@@ -38,16 +45,6 @@ class _DashboardShellState extends State<DashboardShell> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String?>(
-      valueListenable: AppRoutes.currentRoute,
-      builder: (context, currentRoute, _) {
-        bool showLayout = _shouldShowLayout(currentRoute);
-        
-        return MasterLayout(
-          showLayout: showLayout,
-          child: widget.child,
-        );
-      },
-    );
+    return widget.child;
   }
 }

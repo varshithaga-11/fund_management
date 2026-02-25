@@ -142,16 +142,17 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
                     const SizedBox(height: 32),
         
                     // Metrics Grid
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth > 800 ? 2 : 1;
+                    Builder(
+                      builder: (context) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        final crossAxisCount = screenWidth > 900 ? 2 : 1;
                         return GridView.count(
                           crossAxisCount: crossAxisCount,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           mainAxisSpacing: 24,
                           crossAxisSpacing: 24,
-                          childAspectRatio: constraints.maxWidth > 800 ? 3.0 : 1.8,
+                          childAspectRatio: screenWidth > 900 ? 3.0 : 1.8,
                           children: [
                             _buildMetricCard(
                               'Per Employee Business',

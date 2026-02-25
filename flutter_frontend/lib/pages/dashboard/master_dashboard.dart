@@ -1240,7 +1240,8 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       );
     }
 
-    return IntrinsicHeight(
+    return SizedBox(
+      height: 480, // Fixed height to avoid intrinsic dimension issues with fl_chart
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1604,15 +1605,13 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       );
     }
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: topCard),
-          SizedBox(width: AppSpacing.lg),
-          Expanded(child: activityCard),
-        ],
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: topCard),
+        SizedBox(width: AppSpacing.lg),
+        Expanded(child: activityCard),
+      ],
     );
   }
 
