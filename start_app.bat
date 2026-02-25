@@ -45,41 +45,61 @@ echo [+] Starting Database and Backend (Docker)...
 docker-compose up -d
 
 if %errorlevel% neq 0 (
-    echo [!] Error occurred while starting services.
-    pause
-    exit /b %errorlevel%
+    echo [!] Warning: Docker-compose reported an error or warning.
+    echo [?] Continuing anyway to check if containers are running...
 )
 
 :: 2. Wait for backend to be ready
-echo [+] Waiting for backend to initialize (checking localhost:8000)...
+echo [+] Waiting for backend to initialize (checking http://localhost:8000/api/)...
+echo [i] This might take 10-20 seconds if containers are starting for the first time.
+
+set "RETRY_COUNT=0"
 :WaitLoop
-timeout /t 2 /nobreak > nul
-curl -s http://localhost:8000/api/ > nul
+set /a RETRY_COUNT+=1
+if %RETRY_COUNT% gtr 30 (
+    echo.
+    echo [!] Error: Backend failed to start after 1 minute.
+    echo [i] Please check Docker Desktop logs for 'fund_management_backend'.
+    pause
+    exit /b 1
+)
+
+:: Use PowerShell to check the endpoint - more reliable on Windows than curl
+powershell -Command "try { $resp = Invoke-WebRequest -Uri 'http://localhost:8000/api/' -UseBasicParsing -TimeoutSec 2; if ($resp.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
+
 if %errorlevel% neq 0 (
-    echo [.] Still waiting for backend...
+    <nul set /p =.
+    timeout /t 2 /nobreak > nul
     goto WaitLoop
 )
+echo.
 echo [√] Backend is ready!
 
 :: 3. Start the Frontend
 echo [+] Launching Flutter Application...
+echo [i] Note: Keeping this terminal open ensures the backend stops when you close the app.
 
 set EXE_PATH=flutter_frontend\build\windows\x64\runner\Release\flutter_frontend.exe
 
 if exist "%EXE_PATH%" (
     echo [√] Found compiled executable. Launching...
-    start "" "%EXE_PATH%"
+    :: Use 'call' so script waits for the app to close
+    call "%EXE_PATH%"
 ) else (
     echo [!] Compiled executable not found. 
     echo [!] Running in debug mode via 'flutter run' instead...
-    cd flutter_frontend
-    flutter run -d windows
+    pushd flutter_frontend
+    call flutter run -d windows
+    popd
 )
 
 echo.
 echo ==========================================
-echo    Application Started
+echo    Shutting Down Services
 echo ==========================================
-echo [i] You can close this window now, or leave it open to monitor backend logs.
-echo [i] Note: Closing this window will NOT automatically stop Docker containers.
-pause
+echo [+] Stopping Docker containers...
+docker-compose down
+
+echo [√] All services stopped successfully.
+timeout /t 3
+exit
