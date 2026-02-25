@@ -21,9 +21,6 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
   bool _loading = true;
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
-  int? _selectedPeriodId;
-  bool _isDownloading = false;
-
   @override
   void initState() {
     super.initState();
@@ -72,66 +69,6 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
         }).toList();
       }
     });
-  }
-
-  Future<void> _handleDownloadOriginal() async {
-    if (_selectedPeriodId == null) return;
-    setState(() => _isDownloading = true);
-    try {
-      final period = _periods.firstWhere((p) => p.id == _selectedPeriodId);
-      final bytes = await downloadOriginalFile(_selectedPeriodId!);
-      final filename = "Original_${period.label.replaceAll(' ', '_')}.xlsx";
-      
-      if (kIsWeb) {
-        downloadFileWeb(filename, bytes);
-      } else {
-        await saveAndOpenNative(filename, bytes);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File downloaded successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e'), backgroundColor: AppColors.danger),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isDownloading = false);
-    }
-  }
-
-  Future<void> _handleExportCurrent() async {
-    if (_selectedPeriodId == null) return;
-    setState(() => _isDownloading = true);
-    try {
-      final period = _periods.firstWhere((p) => p.id == _selectedPeriodId);
-      final bytes = await exportCurrentData(_selectedPeriodId!);
-      final filename = "Export_${period.label.replaceAll(' ', '_')}.xlsx";
-      
-      if (kIsWeb) {
-        downloadFileWeb(filename, bytes);
-      } else {
-        await saveAndOpenNative(filename, bytes);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data exported successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.danger),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isDownloading = false);
-    }
   }
 
   @override
@@ -288,10 +225,6 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                   ],
                   const SizedBox(height: 32),
 
-                  // Period Selection & Download Links
-                  _buildSelectionSection(isDark),
-                  const SizedBox(height: 32),
-
                   // Period Grid
                   if (_periods.isEmpty)
                     _buildEmptyState(context, isDark, true)
@@ -387,178 +320,6 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
     );
   }
 
-  Widget _buildSelectionSection(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.gray200
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : AppColors.gray900,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Period Selection',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkBg : AppColors.gray50,
-                        border: Border.all(
-                          color: isDark ? AppColors.darkBorder : AppColors.gray300
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(
-                          hoverColor: Colors.transparent,
-                          splashColor: Colors.transparent,
-                        ),
-                        child: PopupMenuButton<int>(
-                          position: PopupMenuPosition.under,
-                          offset: const Offset(0, 8),
-                          constraints: BoxConstraints(
-                            minWidth: MediaQuery.of(context).size.width * 0.2, // At least 20% of width
-                          ),
-                          tooltip: 'Select Period',
-                          onSelected: (int value) {
-                            setState(() => _selectedPeriodId = value);
-                          },
-                          itemBuilder: (BuildContext context) {
-                            return _periods.map((period) {
-                              return PopupMenuItem<int>(
-                                value: period.id,
-                                child: Text(
-                                  period.label,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isDark ? Colors.white : AppColors.gray900,
-                                  ),
-                                ),
-                              );
-                            }).toList();
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _selectedPeriodId == null
-                                      ? 'Select a period...'
-                                      : _periods.firstWhere((p) => p.id == _selectedPeriodId).label,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: _selectedPeriodId == null
-                                        ? (isDark ? AppColors.gray500 : AppColors.gray400)
-                                        : (isDark ? Colors.white : AppColors.gray900),
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.keyboard_arrow_down,
-                                  size: 20,
-                                  color: isDark ? AppColors.gray400 : AppColors.gray500,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_isDownloading)
-                      const SizedBox(
-                        height: 48,
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      )
-                    else ...[
-                      InkWell(
-                        onTap: _selectedPeriodId != null ? _handleDownloadOriginal : null,
-                        child: Text(
-                          '1. Download Originally Uploaded Excel/DOCX',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: _selectedPeriodId != null
-                                ? AppColors.primary
-                                : (isDark ? AppColors.gray600 : AppColors.gray400),
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: _selectedPeriodId != null ? _handleExportCurrent : null,
-                        child: Text(
-                          '2. Download Current Updated Data as Excel/DOCX',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: _selectedPeriodId != null
-                                ? AppColors.primary
-                                : (isDark ? AppColors.gray600 : AppColors.gray400),
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // Hoverable Period Card Widget
