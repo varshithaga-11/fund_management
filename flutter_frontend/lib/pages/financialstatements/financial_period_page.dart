@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../routes/route_constants.dart';
 import 'financial_statements_api.dart';
 import 'trading_account_form.dart';
 import 'profit_loss_form.dart';
@@ -79,7 +80,11 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tab Navigation at the top
+                // Header Card with Period Name and View Dashboard button
+                _buildHeader(isDark),
+                const SizedBox(height: 24),
+
+                // Tab Navigation
                 _buildTabNavigation(isDark),
                 const SizedBox(height: 24),
 
@@ -98,6 +103,74 @@ class _FinancialPeriodPageState extends State<FinancialPeriodPage> with SingleTi
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isDark) {
+    if (_period == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        border: Border.all(
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _period!.label,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _period!.periodType.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                '${AppRoutes.ratioDashboard}/${widget.periodId}',
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4F46E5), // Indigo-600
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: const Text(
+              'View Dashboard',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+          ),
+        ],
       ),
     );
   }
