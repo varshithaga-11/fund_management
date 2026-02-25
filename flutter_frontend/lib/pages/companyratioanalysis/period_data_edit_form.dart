@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../components/form/input/inputfield.dart';
 import 'financial_statements_api.dart';
 
 class PeriodDataEditForm extends StatefulWidget {
@@ -19,9 +18,8 @@ class PeriodDataEditForm extends StatefulWidget {
 class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
   bool loading = false;
   bool loadingData = true;
-  String openSection = "trading";
+  String openSection = 'trading';
 
-  // State maps
   final Map<String, TextEditingController> ta = {};
   int? taId;
 
@@ -37,45 +35,58 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
   @override
   void initState() {
     super.initState();
-    // Initialize controllers
-    for (var key in ["opening_stock", "purchases", "trade_charges", "sales", "closing_stock"]) {
-      ta[key] = TextEditingController();
+    for (var k in ['opening_stock', 'purchases', 'trade_charges', 'sales', 'closing_stock']) {
+      ta[k] = TextEditingController();
     }
-    for (var key in [
-      "interest_on_loans", "interest_on_bank_ac", "return_on_investment",
-      "miscellaneous_income", "interest_on_deposits", "interest_on_borrowings",
-      "establishment_contingencies", "provisions", "net_profit"
+    for (var k in [
+      'interest_on_loans', 'interest_on_bank_ac', 'return_on_investment',
+      'miscellaneous_income', 'interest_on_deposits', 'interest_on_borrowings',
+      'establishment_contingencies', 'provisions', 'net_profit',
     ]) {
-      pl[key] = TextEditingController();
+      pl[k] = TextEditingController();
     }
-    for (var key in [
-      "share_capital", "deposits", "borrowings", "reserves_statutory_free",
-      "undistributed_profit", "provisions", "other_liabilities",
-      "cash_in_hand", "cash_at_bank", "investments", "loans_advances",
-      "fixed_assets", "other_assets", "stock_in_trade"
+    for (var k in [
+      'share_capital', 'deposits', 'borrowings', 'reserves_statutory_free',
+      'undistributed_profit', 'provisions', 'other_liabilities',
+      'cash_in_hand', 'cash_at_bank', 'investments', 'loans_advances',
+      'fixed_assets', 'other_assets', 'stock_in_trade',
     ]) {
-      bs[key] = TextEditingController();
+      bs[k] = TextEditingController();
     }
-
     loadAll();
   }
 
   @override
   void didUpdateWidget(covariant PeriodDataEditForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.periodId != oldWidget.periodId) {
-      loadAll();
-    }
+    if (widget.periodId != oldWidget.periodId) loadAll();
   }
 
   @override
   void dispose() {
-    for (var c in ta.values) { c.dispose(); }
-    for (var c in pl.values) { c.dispose(); }
-    for (var c in bs.values) { c.dispose(); }
+    for (var c in [...ta.values, ...pl.values, ...bs.values]) {
+      c.dispose();
+    }
     staffCount.dispose();
     super.dispose();
   }
+
+  void _clear(Map<String, TextEditingController> map) {
+    for (var c in map.values) c.clear();
+  }
+
+  double _val(Map<String, TextEditingController> map, String key) =>
+      double.tryParse(map[key]?.text ?? '') ?? 0.0;
+
+  double totalLiabilities() =>
+      _val(bs, 'share_capital') + _val(bs, 'deposits') + _val(bs, 'borrowings') +
+      _val(bs, 'reserves_statutory_free') + _val(bs, 'undistributed_profit') +
+      _val(bs, 'provisions') + _val(bs, 'other_liabilities');
+
+  double totalAssets() =>
+      _val(bs, 'cash_in_hand') + _val(bs, 'cash_at_bank') + _val(bs, 'investments') +
+      _val(bs, 'loans_advances') + _val(bs, 'fixed_assets') + _val(bs, 'other_assets') +
+      _val(bs, 'stock_in_trade');
 
   Future<void> loadAll() async {
     setState(() => loadingData = true);
@@ -87,143 +98,141 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
 
       if (taData != null) {
         taId = taData.id;
-        ta["opening_stock"]?.text = taData.openingStock.toString();
-        ta["purchases"]?.text = taData.purchases.toString();
-        ta["trade_charges"]?.text = taData.tradeCharges.toString();
-        ta["sales"]?.text = taData.sales.toString();
-        ta["closing_stock"]?.text = taData.closingStock.toString();
-      } else { taId = null; _clear(ta); }
+        ta['opening_stock']!.text = taData.openingStock.toString();
+        ta['purchases']!.text = taData.purchases.toString();
+        ta['trade_charges']!.text = taData.tradeCharges.toString();
+        ta['sales']!.text = taData.sales.toString();
+        ta['closing_stock']!.text = taData.closingStock.toString();
+      } else {
+        taId = null;
+        _clear(ta);
+      }
 
       if (plData != null) {
         plId = plData.id;
-        pl["interest_on_loans"]?.text = plData.interestOnLoans.toString();
-        pl["interest_on_bank_ac"]?.text = plData.interestOnBankAc.toString();
-        pl["return_on_investment"]?.text = plData.returnOnInvestment.toString();
-        pl["miscellaneous_income"]?.text = plData.miscellaneousIncome.toString();
-        pl["interest_on_deposits"]?.text = plData.interestOnDeposits.toString();
-        pl["interest_on_borrowings"]?.text = plData.interestOnBorrowings.toString();
-        pl["establishment_contingencies"]?.text = plData.establishmentContingencies.toString();
-        pl["provisions"]?.text = plData.provisions.toString();
-        pl["net_profit"]?.text = plData.netProfit.toString();
-      } else { plId = null; _clear(pl); }
+        pl['interest_on_loans']!.text = plData.interestOnLoans.toString();
+        pl['interest_on_bank_ac']!.text = plData.interestOnBankAc.toString();
+        pl['return_on_investment']!.text = plData.returnOnInvestment.toString();
+        pl['miscellaneous_income']!.text = plData.miscellaneousIncome.toString();
+        pl['interest_on_deposits']!.text = plData.interestOnDeposits.toString();
+        pl['interest_on_borrowings']!.text = plData.interestOnBorrowings.toString();
+        pl['establishment_contingencies']!.text = plData.establishmentContingencies.toString();
+        pl['provisions']!.text = plData.provisions.toString();
+        pl['net_profit']!.text = plData.netProfit.toString();
+      } else {
+        plId = null;
+        _clear(pl);
+      }
 
       if (bsData != null) {
         bsId = bsData.id;
-        bs["share_capital"]?.text = bsData.shareCapital.toString();
-        bs["deposits"]?.text = bsData.deposits.toString();
-        bs["borrowings"]?.text = bsData.borrowings.toString();
-        bs["reserves_statutory_free"]?.text = bsData.reservesStatutoryFree.toString();
-        bs["undistributed_profit"]?.text = bsData.undistributedProfit.toString();
-        bs["provisions"]?.text = bsData.provisions.toString();
-        bs["other_liabilities"]?.text = bsData.otherLiabilities.toString();
-        bs["cash_in_hand"]?.text = bsData.cashInHand.toString();
-        bs["cash_at_bank"]?.text = bsData.cashAtBank.toString();
-        bs["investments"]?.text = bsData.investments.toString();
-        bs["loans_advances"]?.text = bsData.loansAdvances.toString();
-        bs["fixed_assets"]?.text = bsData.fixedAssets.toString();
-        bs["other_assets"]?.text = bsData.otherAssets.toString();
-        bs["stock_in_trade"]?.text = bsData.stockInTrade.toString();
-      } else { bsId = null; _clear(bs); }
+        bs['share_capital']!.text = bsData.shareCapital.toString();
+        bs['deposits']!.text = bsData.deposits.toString();
+        bs['borrowings']!.text = bsData.borrowings.toString();
+        bs['reserves_statutory_free']!.text = bsData.reservesStatutoryFree.toString();
+        bs['undistributed_profit']!.text = bsData.undistributedProfit.toString();
+        bs['provisions']!.text = bsData.provisions.toString();
+        bs['other_liabilities']!.text = bsData.otherLiabilities.toString();
+        bs['cash_in_hand']!.text = bsData.cashInHand.toString();
+        bs['cash_at_bank']!.text = bsData.cashAtBank.toString();
+        bs['investments']!.text = bsData.investments.toString();
+        bs['loans_advances']!.text = bsData.loansAdvances.toString();
+        bs['fixed_assets']!.text = bsData.fixedAssets.toString();
+        bs['other_assets']!.text = bsData.otherAssets.toString();
+        bs['stock_in_trade']!.text = bsData.stockInTrade.toString();
+      } else {
+        bsId = null;
+        _clear(bs);
+      }
 
       if (omData != null) {
         omId = omData.id;
         staffCount.text = omData.staffCount.toString();
       } else {
         omId = null;
-        staffCount.text = "1";
+        staffCount.text = '1';
       }
-
     } catch (e) {
-      debugPrint("Error loading period data: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => loadingData = false);
     }
   }
 
-  void _clear(Map<String, TextEditingController> map) {
-    for (var c in map.values) { c.clear(); }
-  }
-
-  // Calculated Fields
-  double _val(Map<String, TextEditingController> map, String key) {
-    return double.tryParse(map[key]?.text ?? "") ?? 0.0;
-  }
-
-  double totalLiabilities() {
-    return _val(bs, "share_capital") + _val(bs, "deposits") + _val(bs, "borrowings") +
-           _val(bs, "reserves_statutory_free") + _val(bs, "undistributed_profit") +
-           _val(bs, "provisions") + _val(bs, "other_liabilities");
-  }
-
-  double totalAssets() {
-    return _val(bs, "cash_in_hand") + _val(bs, "cash_at_bank") + _val(bs, "investments") +
-           _val(bs, "loans_advances") + _val(bs, "fixed_assets") + _val(bs, "other_assets") +
-           _val(bs, "stock_in_trade");
-  }
-
   Future<void> _handleSubmit() async {
     setState(() => loading = true);
     try {
-      // 1. Trading Account
       final taPayload = {
-        "opening_stock": _val(ta, "opening_stock"),
-        "purchases": _val(ta, "purchases"),
-        "trade_charges": _val(ta, "trade_charges"),
-        "sales": _val(ta, "sales"),
-        "closing_stock": _val(ta, "closing_stock"),
+        'opening_stock': _val(ta, 'opening_stock'),
+        'purchases': _val(ta, 'purchases'),
+        'trade_charges': _val(ta, 'trade_charges'),
+        'sales': _val(ta, 'sales'),
+        'closing_stock': _val(ta, 'closing_stock'),
       };
       if (taId != null) await updateTradingAccount(taId!, taPayload);
       else await createTradingAccount(widget.periodId, taPayload);
 
-      // 2. Profit & Loss
       final plPayload = {
-        "interest_on_loans": _val(pl, "interest_on_loans"),
-        "interest_on_bank_ac": _val(pl, "interest_on_bank_ac"),
-        "return_on_investment": _val(pl, "return_on_investment"),
-        "miscellaneous_income": _val(pl, "miscellaneous_income"),
-        "interest_on_deposits": _val(pl, "interest_on_deposits"),
-        "interest_on_borrowings": _val(pl, "interest_on_borrowings"),
-        "establishment_contingencies": _val(pl, "establishment_contingencies"),
-        "provisions": _val(pl, "provisions"),
-        "net_profit": _val(pl, "net_profit"),
+        'interest_on_loans': _val(pl, 'interest_on_loans'),
+        'interest_on_bank_ac': _val(pl, 'interest_on_bank_ac'),
+        'return_on_investment': _val(pl, 'return_on_investment'),
+        'miscellaneous_income': _val(pl, 'miscellaneous_income'),
+        'interest_on_deposits': _val(pl, 'interest_on_deposits'),
+        'interest_on_borrowings': _val(pl, 'interest_on_borrowings'),
+        'establishment_contingencies': _val(pl, 'establishment_contingencies'),
+        'provisions': _val(pl, 'provisions'),
+        'net_profit': _val(pl, 'net_profit'),
       };
       if (plId != null) await updateProfitLoss(plId!, plPayload);
       else await createProfitLoss(widget.periodId, plPayload);
 
-      // 3. Balance Sheet
       final bsPayload = {
-        "share_capital": _val(bs, "share_capital"),
-        "deposits": _val(bs, "deposits"),
-        "borrowings": _val(bs, "borrowings"),
-        "reserves_statutory_free": _val(bs, "reserves_statutory_free"),
-        "undistributed_profit": _val(bs, "undistributed_profit"),
-        "provisions": _val(bs, "provisions"),
-        "other_liabilities": _val(bs, "other_liabilities"),
-        "cash_in_hand": _val(bs, "cash_in_hand"),
-        "cash_at_bank": _val(bs, "cash_at_bank"),
-        "investments": _val(bs, "investments"),
-        "loans_advances": _val(bs, "loans_advances"),
-        "fixed_assets": _val(bs, "fixed_assets"),
-        "other_assets": _val(bs, "other_assets"),
-        "stock_in_trade": _val(bs, "stock_in_trade"),
+        'share_capital': _val(bs, 'share_capital'),
+        'deposits': _val(bs, 'deposits'),
+        'borrowings': _val(bs, 'borrowings'),
+        'reserves_statutory_free': _val(bs, 'reserves_statutory_free'),
+        'undistributed_profit': _val(bs, 'undistributed_profit'),
+        'provisions': _val(bs, 'provisions'),
+        'other_liabilities': _val(bs, 'other_liabilities'),
+        'cash_in_hand': _val(bs, 'cash_in_hand'),
+        'cash_at_bank': _val(bs, 'cash_at_bank'),
+        'investments': _val(bs, 'investments'),
+        'loans_advances': _val(bs, 'loans_advances'),
+        'fixed_assets': _val(bs, 'fixed_assets'),
+        'other_assets': _val(bs, 'other_assets'),
+        'stock_in_trade': _val(bs, 'stock_in_trade'),
       };
       if (bsId != null) await updateBalanceSheet(bsId!, bsPayload);
       else await createBalanceSheet(widget.periodId, bsPayload);
 
-      // 4. Operational Metrics
-      final omPayload = {"staff_count": int.tryParse(staffCount.text) ?? 1};
+      final omPayload = {'staff_count': int.tryParse(staffCount.text) ?? 1};
       if (omId != null) await updateOperationalMetrics(omId!, omPayload);
       else await createOperationalMetrics(widget.periodId, omPayload);
 
-      // 5. Calculate
       await calculateRatios(widget.periodId);
-
       widget.onSuccess?.call();
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Updated successfully')));
 
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Updated successfully'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
     } catch (e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Update failed: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -234,263 +243,402 @@ class _PeriodDataEditFormState extends State<PeriodDataEditForm> {
     if (loadingData) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(40.0),
+          padding: EdgeInsets.all(48),
           child: CircularProgressIndicator(),
         ),
       );
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    double tl = totalLiabilities();
-    double taVal = totalAssets();
-    double diff = (tl - taVal).abs();
-    bool isBalanced = diff < 0.01;
+    final tl = totalLiabilities();
+    final ta_ = totalAssets();
+    final diff = (tl - ta_).abs();
+    final isBalanced = diff < 0.01;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: [
-          _buildSection(
-            "trading",
-            "Trading Account",
-            _buildFieldGrid(
-              context,
-              ta.keys.map((k) => _buildInput(ta[k]!, k.replaceAll("_", " "))).toList(),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Trading Account ──────────────────────────────────────────────
+        _Section(
+          id: 'trading',
+          title: 'Trading Account',
+          openSection: openSection,
+          isDark: isDark,
+          onToggle: (id) => setState(() => openSection = id == openSection ? '' : id),
+          content: _Grid(
+            isDark: isDark,
+            fields: ta.entries
+                .map((e) => _Field(ctrl: e.value, label: _label(e.key), isDark: isDark))
+                .toList(),
           ),
-          
-          _buildSection(
-            "profitloss",
-            "Profit & Loss",
-            _buildFieldGrid(
-              context,
-              pl.keys.map((k) => _buildInput(pl[k]!, k.replaceAll("_", " "))).toList(),
-            ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // ── Profit & Loss ────────────────────────────────────────────────
+        _Section(
+          id: 'profitloss',
+          title: 'Profit & Loss',
+          openSection: openSection,
+          isDark: isDark,
+          onToggle: (id) => setState(() => openSection = id == openSection ? '' : id),
+          content: _Grid(
+            isDark: isDark,
+            fields: pl.entries
+                .map((e) => _Field(ctrl: e.value, label: _label(e.key), isDark: isDark))
+                .toList(),
           ),
-            
-          _buildSection(
-            "balancesheet",
-            "Balance Sheet",
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "LIABILITIES",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.blue.shade400 : Colors.blue.shade700,
-                    letterSpacing: 1.2,
+        ),
+
+        const SizedBox(height: 8),
+
+        // ── Balance Sheet ────────────────────────────────────────────────
+        _Section(
+          id: 'balancesheet',
+          title: 'Balance Sheet',
+          openSection: openSection,
+          isDark: isDark,
+          onToggle: (id) => setState(() => openSection = id == openSection ? '' : id),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _subHeading('Liabilities', Colors.blue, isDark),
+              const SizedBox(height: 12),
+              _Grid(
+                isDark: isDark,
+                fields: [
+                  'share_capital', 'deposits', 'borrowings',
+                  'reserves_statutory_free', 'undistributed_profit',
+                  'provisions', 'other_liabilities',
+                ].map((k) => _Field(ctrl: bs[k]!, label: _label(k), isDark: isDark)).toList(),
+              ),
+              Divider(
+                height: 40,
+                color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+              ),
+              _subHeading('Assets', Colors.green, isDark),
+              const SizedBox(height: 12),
+              _Grid(
+                isDark: isDark,
+                fields: [
+                  'cash_in_hand', 'cash_at_bank', 'investments',
+                  'loans_advances', 'fixed_assets', 'other_assets', 'stock_in_trade',
+                ].map((k) => _Field(ctrl: bs[k]!, label: _label(k), isDark: isDark)).toList(),
+              ),
+              const SizedBox(height: 16),
+              // Balance indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isBalanced
+                      ? Colors.green.withOpacity(0.08)
+                      : Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isBalanced
+                        ? Colors.green.withOpacity(0.3)
+                        : Colors.red.withOpacity(0.3),
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildFieldGrid(
-                  context,
-                  [
-                    "share_capital", "deposits", "borrowings", "reserves_statutory_free",
-                    "undistributed_profit", "provisions", "other_liabilities"
-                  ].map((k) => _buildInput(bs[k]!, k.replaceAll("_", " "))).toList(),
-                ),
-                
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Divider(),
-                ),
-
-                Text(
-                  "ASSETS",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.green.shade400 : Colors.green.shade700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildFieldGrid(
-                  context,
-                  [
-                    "cash_in_hand", "cash_at_bank", "investments", "loans_advances",
-                    "fixed_assets", "other_assets", "stock_in_trade"
-                  ].map((k) => _buildInput(bs[k]!, k.replaceAll("_", " "))).toList(),
-                ),
-
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isBalanced 
-                        ? Colors.green.withOpacity(0.1) 
-                        : Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isBalanced 
-                          ? Colors.green.withOpacity(0.3) 
-                          : Colors.red.withOpacity(0.3),
+                child: Row(
+                  children: [
+                    Icon(
+                      isBalanced ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                      color: isBalanced ? Colors.green.shade600 : Colors.red.shade600,
+                      size: 18,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isBalanced ? Icons.check_circle : Icons.warning_amber_rounded,
-                        color: isBalanced ? Colors.green : Colors.red,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          isBalanced 
-                              ? "Liabilities = Assets" 
-                              : "Assets not equal to Liabilities. Liabilities ${tl.toStringAsFixed(2)} vs Assets ${taVal.toStringAsFixed(2)} (Δ ${diff.toStringAsFixed(2)})",
-                          style: TextStyle(
-                            color: isBalanced ? Colors.green.shade700 : Colors.red.shade700,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
-                          ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        isBalanced
+                            ? 'Balance sheet is balanced (Liabilities = Assets)'
+                            : 'Balance sheet is unbalanced — '
+                              'Liabilities: ${tl.toStringAsFixed(2)}, '
+                              'Assets: ${ta_.toStringAsFixed(2)} '
+                              '(Δ ${diff.toStringAsFixed(2)})',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: isBalanced
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          _buildSection(
-            "operational",
-            "Operational Metrics",
-            _buildFieldGrid(
-              context,
-              [_buildInput(staffCount, "Staff Count")],
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: loading ? null : _handleSubmit,
-                icon: loading 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                    : const Icon(Icons.refresh_rounded),
-                label: Text(
-                  loading ? "Updating..." : "Update data & recalculate ratios",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1), // Indigo
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  elevation: 0,
+                    ),
+                  ],
                 ),
               ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // ── Operational Metrics ──────────────────────────────────────────
+        _Section(
+          id: 'operational',
+          title: 'Operational Metrics',
+          openSection: openSection,
+          isDark: isDark,
+          onToggle: (id) => setState(() => openSection = id == openSection ? '' : id),
+          content: _Grid(
+            isDark: isDark,
+            fields: [_Field(ctrl: staffCount, label: 'Staff count', isDark: isDark)],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── Submit button (right-aligned, matching React) ─────────────────
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton.icon(
+            onPressed: loading ? null : _handleSubmit,
+            icon: loading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(
+              loading ? 'Updating...' : 'Update data & recalculate ratios',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
-          )
-        ],
-      ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4F46E5),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSection(String id, String title, Widget content) {
-    bool isOpen = openSection == id;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  /// "opening_stock" → "opening stock"
+  String _label(String key) => key.replaceAll('_', ' ');
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+  Widget _subHeading(String text, MaterialColor color, bool isDark) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+        color: isDark ? color.shade300 : color.shade700,
+      ),
+    );
+  }
+}
+
+// ─── Section accordion ───────────────────────────────────────────────────────
+
+class _Section extends StatelessWidget {
+  final String id;
+  final String title;
+  final String openSection;
+  final bool isDark;
+  final void Function(String) onToggle;
+  final Widget content;
+
+  const _Section({
+    required this.id,
+    required this.title,
+    required this.openSection,
+    required this.isDark,
+    required this.onToggle,
+    required this.content,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isOpen = openSection == id;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
         ),
+        borderRadius: BorderRadius.circular(8),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header row
           InkWell(
-            onTap: () => setState(() => openSection = isOpen ? "" : id),
+            onTap: () => onToggle(id),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              color: isOpen 
-                  ? (isDark ? Colors.grey.shade800 : Colors.grey.shade50)
-                  : Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: isOpen
+                  ? BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE5E7EB),
+                        ),
+                      ),
+                    )
+                  : null,
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                      style: TextStyle(
                         fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF111827),
                       ),
                     ),
                   ),
                   Icon(
                     isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.grey,
+                    size: 22,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
                   ),
                 ],
               ),
             ),
           ),
+          // Content
           if (isOpen)
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(20),
               child: content,
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFieldGrid(BuildContext context, List<Widget> children) {
-    return Builder(
-      builder: (context) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        // Adjust width calculation: we assume the form is roughly the screen width minus some padding
-        // If it's in a narrower container, we might need to be more careful, 
-        // but MediaQuery is safe from intrinsic dimension probing.
-        final crossAxisCount = screenWidth > 600 ? 2 : 1;
-        final spacing = 16.0;
-        
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: children.map((w) {
-            return SizedBox(
-              width: crossAxisCount == 2 
-                  ? (screenWidth > 1200 ? (1200 - 120) / 2 : (screenWidth - 80 - spacing) / 2)
-                  : (screenWidth > 1200 ? 1200 - 80 : screenWidth - 80),
-              child: w,
-            );
-          }).toList(),
-        );
+// ─── Responsive 2-column grid ────────────────────────────────────────────────
+
+class _Grid extends StatelessWidget {
+  final List<Widget> fields;
+  final bool isDark;
+
+  const _Grid({required this.fields, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useTwo = constraints.maxWidth > 560;
+        if (!useTwo) {
+          return Column(
+            children: fields
+                .map((f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: f,
+                    ))
+                .toList(),
+          );
+        }
+        final rows = <Widget>[];
+        for (int i = 0; i < fields.length; i += 2) {
+          rows.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: fields[i]),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: i + 1 < fields.length
+                        ? fields[i + 1]
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return Column(children: rows);
       },
     );
   }
+}
 
-  Widget _buildInput(TextEditingController controller, String label) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+// ─── Single labeled input field ──────────────────────────────────────────────
+
+class _Field extends StatelessWidget {
+  final TextEditingController ctrl;
+  final String label;
+  final bool isDark;
+
+  const _Field({
+    required this.ctrl,
+    required this.label,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Capitalize first letter only
+    final displayLabel =
+        label.isEmpty ? '' : label[0].toUpperCase() + label.substring(1);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label.replaceAll("_", " ").toUpperCase(),
+          displayLabel,
           style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-            letterSpacing: 0.5,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
-        InputField(
-          controller: controller,
-          hintText: "0.00",
+        const SizedBox(height: 6),
+        TextField(
+          controller: ctrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? Colors.white : const Color(0xFF111827),
+          ),
+          decoration: InputDecoration(
+            hintText: '0.00',
+            hintStyle: TextStyle(
+              color: isDark ? const Color(0xFF475569) : const Color(0xFF9CA3AF),
+            ),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFD1D5DB),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFD1D5DB),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: const BorderSide(
+                color: Color(0xFF4F46E5),
+                width: 1.5,
+              ),
+            ),
+          ),
         ),
       ],
     );

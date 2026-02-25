@@ -786,7 +786,7 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
                   if (_userRole == 'master')
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
                       margin: const EdgeInsets.only(top: 24),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkCard : AppColors.white,
@@ -796,12 +796,23 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Edit period data & recalculate ratios',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF111827))),
+                          Text(
+                            'Edit period data & recalculate ratios',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF111827),
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Text('Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click "Update data & recalculate ratios" to save and store updated ratio results.',
-                              style: TextStyle(fontSize: 13, color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563))),
-                          const SizedBox(height: 16),
+                          Text(
+                            'Update Trading Account, Profit & Loss, Balance Sheet, and Operational Metrics. Then click "Update data & recalculate ratios" to save and store updated ratio results.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                           PeriodDataEditForm(periodId: widget.periodId, onSuccess: _loadData),
                         ],
                       ),
