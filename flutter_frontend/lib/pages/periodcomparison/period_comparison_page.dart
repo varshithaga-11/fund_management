@@ -423,45 +423,52 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
                 const SizedBox(height: 32),
 
-                // Summary Stats
-                Builder(
-                  builder: (context) {
-                    final screenWidth = MediaQuery.of(context).size.width;
-                    final count = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
-                    return GridView.count(
-                      crossAxisCount: count,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 3.5, // Much more compact summary
-                      children: [
-                        _buildSummaryCard(
-                          'Improved Ratios',
-                          _comparisonData!.data.ratios.values
-                              .where((r) => r.percentageChange != null && r.percentageChange! > 0)
-                              .length
-                              .toString(),
-                          Colors.green,
-                          isDark,
+                // Summary Stats — 4 per row
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final cols = w > 900 ? 4 : (w > 600 ? 2 : 1);
+                    final spacing = 12.0;
+                    final itemW = (w - spacing * (cols - 1)) / cols;
+
+                    final improvedCount = _comparisonData!.data.ratios.values
+                        .where((r) => r.percentageChange != null && r.percentageChange! > 0)
+                        .length;
+                    final declinedCount = _comparisonData!.data.ratios.values
+                        .where((r) => r.percentageChange != null && r.percentageChange! < 0)
+                        .length;
+                    final unchangedCount = _comparisonData!.data.ratios.values
+                        .where((r) => r.percentageChange == null || r.percentageChange == 0)
+                        .length;
+                    final totalCount = _comparisonData!.data.ratios.length;
+
+                    final cards = [
+                      _buildSummaryCard('Improved Ratios',  improvedCount.toString(),  Colors.green,  isDark),
+                      _buildSummaryCard('Declined Ratios',  declinedCount.toString(),  Colors.red,    isDark),
+                      _buildSummaryCard('Unchanged',        unchangedCount.toString(), Colors.grey,   isDark),
+                      _buildSummaryCard('Total Ratios',     totalCount.toString(),     Colors.blue,   isDark),
+                    ];
+
+                    final rows = <Widget>[];
+                    for (int i = 0; i < cards.length; i += cols) {
+                      rows.add(
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: List.generate(cols, (j) {
+                              final idx = i + j;
+                              return idx < cards.length
+                                  ? Padding(
+                                      padding: EdgeInsets.only(right: j < cols - 1 ? spacing : 0),
+                                      child: SizedBox(width: itemW, child: cards[idx]),
+                                    )
+                                  : SizedBox(width: itemW + (j < cols - 1 ? spacing : 0));
+                            }),
+                          ),
                         ),
-                        _buildSummaryCard(
-                          'Declined Ratios',
-                          _comparisonData!.data.ratios.values
-                              .where((r) => r.percentageChange != null && r.percentageChange! < 0)
-                              .length
-                              .toString(),
-                          Colors.red,
-                          isDark,
-                        ),
-                        _buildSummaryCard(
-                          'Total Ratios',
-                          _comparisonData!.data.ratios.length.toString(),
-                          Colors.blue,
-                          isDark,
-                        ),
-                      ],
-                    );
+                      );
+                    }
+                    return Column(children: rows);
                   },
                 ),
 
@@ -810,189 +817,136 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
 
   Widget _buildTableView(bool isDark) {
     final ratioEntries = _comparisonData!.data.ratios.entries.toList();
-    
-    return Builder(
-      builder: (context) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        // Calculate column widths to match 3-column card layout
-        final totalWidth = screenWidth - 100; // Account for padding
-        
-        // Adjust column widths based on available space
-        double ratioColWidth = totalWidth * 0.35;
-        double dataColWidth = (totalWidth - ratioColWidth) / 4;
-        
-        return Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: isDark ? Colors.grey.shade600 : Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: SingleChildScrollView(
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isDark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // LayoutBuilder gives finite width here (from the parent column).
+          // Enforce a minimum of 700 so narrow screens get horizontal scroll.
+          final totalW = constraints.maxWidth < 700 ? 700.0 : constraints.maxWidth;
+          final ratioW = totalW * 0.35;
+          final dataW  = (totalW - ratioW) / 4;
+
+          return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header Row
-                Container(
-                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: ratioColWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Text(
-                          'Ratio',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: dataColWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Text(
-                          _comparisonData!.data.period1,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: dataColWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Text(
-                          _comparisonData!.data.period2,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: dataColWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Text(
-                          'Difference',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: dataColWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Text(
-                          '% Change',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
+            child: SizedBox(
+              width: totalW,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Header ──────────────────────────────────────────────
+                  Container(
+                    color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
+                    child: Row(children: [
+                      _tableHeaderCell('Ratio',                         ratioW, TextAlign.left,  isDark),
+                      _tableHeaderCell(_comparisonData!.data.period1,   dataW,  TextAlign.right, isDark),
+                      _tableHeaderCell(_comparisonData!.data.period2,   dataW,  TextAlign.right, isDark),
+                      _tableHeaderCell('Difference',                    dataW,  TextAlign.right, isDark),
+                      _tableHeaderCell('% Change',                      dataW,  TextAlign.right, isDark),
+                    ]),
                   ),
-                ),
-                // Data Rows
-                ...ratioEntries.map((entry) {
-                  final ratio = entry.value;
-                  return Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
-                        ),
-                      ),
-                      color: Colors.transparent,
-                    ),
-                    child: Row(
+
+                  // ── Data rows ────────────────────────────────────────────
+                  ...ratioEntries.map((entry) {
+                    final ratio = entry.value;
+                    final diff  = ratio.difference;
+                    final pct   = ratio.percentageChange;
+
+                    final diffText = diff == null ? '-'
+                        : '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(2)}';
+                    final pctText  = pct == null ? '-'
+                        : '${pct > 0 ? "+" : ""}${pct.toStringAsFixed(2)}%';
+
+                    return _ComparisonTableRow(
+                      isDark: isDark,
                       children: [
-                        Container(
-                          width: ratioColWidth,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Text(
-                            _formatRatioName(entry.key),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12,
-                              color: isDark ? Colors.white : Colors.black,
-                            ),
-                          ),
+                        _tableDataCell(
+                          _formatRatioName(entry.key),
+                          ratioW, TextAlign.left,
+                          isDark ? Colors.white : const Color(0xFF111827),
+                          isDark, fontWeight: FontWeight.w500,
                         ),
-                        Container(
-                          width: dataColWidth,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          child: Text(
-                            ratio.period1?.toStringAsFixed(2) ?? '-',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                            ),
-                          ),
+                        _tableDataCell(
+                          ratio.period1?.toStringAsFixed(2) ?? '-',
+                          dataW, TextAlign.right,
+                          isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151),
+                          isDark,
                         ),
-                        Container(
-                          width: dataColWidth,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          child: Text(
-                            ratio.period2?.toStringAsFixed(2) ?? '-',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                            ),
-                          ),
+                        _tableDataCell(
+                          ratio.period2?.toStringAsFixed(2) ?? '-',
+                          dataW, TextAlign.right,
+                          isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151),
+                          isDark,
                         ),
-                        Container(
-                          width: dataColWidth,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          child: Text(
-                            ratio.difference != null
-                                ? '${ratio.difference! > 0 ? "+" : ""}${ratio.difference!.toStringAsFixed(2)}'
-                                : '-',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: _getChangeColor(ratio.difference),
-                            ),
-                          ),
+                        _tableDataCell(
+                          diffText, dataW, TextAlign.right,
+                          _getChangeColor(diff), isDark,
+                          fontWeight: FontWeight.w600,
                         ),
-                        Container(
-                          width: dataColWidth,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          child: Text(
-                            ratio.percentageChange != null
-                                ? '${ratio.percentageChange! > 0 ? "+" : ""}${ratio.percentageChange!.toStringAsFixed(2)}%'
-                                : '-',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: _getChangeColor(ratio.percentageChange),
-                            ),
-                          ),
+                        _tableDataCell(
+                          pctText, dataW, TextAlign.right,
+                          _getChangeColor(pct), isDark,
+                          fontWeight: FontWeight.w600,
                         ),
                       ],
-                    ),
-                  );
-                }).toList(),
-              ],
+                    );
+                  }),
+                ],
+              ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _tableHeaderCell(String text, double width, TextAlign align, bool isDark) {
+    return SizedBox(
+      width: width,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          text,
+          textAlign: align,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: isDark ? Colors.white : const Color(0xFF111827),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _tableDataCell(
+    String text,
+    double width,
+    TextAlign align,
+    Color color,
+    bool isDark, {
+    FontWeight fontWeight = FontWeight.normal,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          text,
+          textAlign: align,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: fontWeight,
+            color: color,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1156,6 +1110,51 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
           }).toList(),
         );
       },
+    );
+  }
+}
+
+// ─── Hoverable table row ──────────────────────────────────────────────────────
+
+class _ComparisonTableRow extends StatefulWidget {
+  final List<Widget> children;
+  final bool isDark;
+
+  const _ComparisonTableRow({
+    required this.children,
+    required this.isDark,
+  });
+
+  @override
+  State<_ComparisonTableRow> createState() => _ComparisonTableRowState();
+}
+
+class _ComparisonTableRowState extends State<_ComparisonTableRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit:  (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        decoration: BoxDecoration(
+          color: _hovered
+              ? (widget.isDark
+                  ? const Color(0xFF1F2937).withOpacity(0.5)
+                  : const Color(0xFFF9FAFB))
+              : Colors.transparent,
+          border: Border(
+            top: BorderSide(
+              color: widget.isDark
+                  ? const Color(0xFF374151)
+                  : const Color(0xFFE5E7EB),
+            ),
+          ),
+        ),
+        child: Row(children: widget.children),
+      ),
     );
   }
 }
