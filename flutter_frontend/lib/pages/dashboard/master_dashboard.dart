@@ -1234,7 +1234,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       return Column(
         children: [
           barChart,
-          SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.xxl),
           donutChart,
         ],
       );
@@ -1246,7 +1246,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(flex: 8, child: barChart),
-          SizedBox(width: AppSpacing.lg),
+          SizedBox(width: AppSpacing.xxl),
           Expanded(flex: 4, child: donutChart),
         ],
       ),
@@ -1255,28 +1255,33 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
 
   Widget _buildChartCard({required bool isDark, required String title, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.only(left: 30, right: 30, top: 30, bottom: 20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.white,
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+          color: isDark ? AppColors.gray700 : AppColors.gray100,
           width: 1,
         ),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: AppTypography.h5.copyWith(
-                  color: isDark ? AppColors.white : AppColors.black, fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(
+            title,
+            style: AppTypography.h5.copyWith(
+              color: isDark ? AppColors.white : AppColors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
           const SizedBox(height: 24),
           Expanded(child: child),
         ],
@@ -1285,9 +1290,15 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
   }
 
   Widget _buildBarChart(List<DashboardPeriodData> periods, bool isDark) {
-    // Sort by createdAt and take last 10
-    final sorted = List<DashboardPeriodData>.from(periods)
-      ..sort((a, b) => DateTime.parse(a.createdAt).compareTo(DateTime.parse(b.createdAt)));
+    // Separate and sort by type and then date
+    final monthly = periods.where((p) => p.periodType.toUpperCase() == 'MONTHLY').toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+    final yearly = periods.where((p) => p.periodType.toUpperCase() == 'YEARLY').toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+    
+    final sorted = [...monthly, ...yearly];
+    
+    // Take last 10 to show most recent performance but with type grouping
     final last10 = sorted.length > 10 ? sorted.sublist(sorted.length - 10) : sorted;
 
     if (last10.isEmpty) {
@@ -1299,155 +1310,190 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
       );
     }
 
-    final currencyFmt = NumberFormat.compactSimpleCurrency(locale: 'en_IN', name: '₹');
     final fullCurrencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹ ', decimalDigits: 0);
 
-    double maxDataValue = 0;
-    for (final p in last10) {
-      if (p.revenue > maxDataValue) maxDataValue = p.revenue;
-      if (p.netProfit > maxDataValue) maxDataValue = p.netProfit;
-    }
-    
-    // Match React Image scale: 0 to 8000K in steps of 2000K
-    double interval = 2000000; 
-    double maxY = 8000000;
-    
-    // Check if data actually exceeds 8M, adjust if necessary to prevent overflow
-    if (maxDataValue > maxY) {
-      maxY = ((maxDataValue / interval).ceil() * interval).toDouble();
-    }
+    // Exact scale from React screenshot
+    const double interval = 2000000; 
+    const double maxY = 8000000;
 
     return Column(
       children: [
         Expanded(
-          child: ClipRect(
-            child: BarChart(
-              BarChartData(
-                minY: 0,
-                maxY: maxY,
-                barGroups: last10.asMap().entries.map((entry) {
-                return BarChartGroupData(
-                  x: entry.key,
-                  barsSpace: 6,
-                  barRods: [
-                    BarChartRodData(
-                      toY: entry.value.netProfit,
-                      color: const Color(0xFF3B82F6), // Vibrant Blue from image
-                      width: 45,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(4),
-                        topRight: Radius.circular(4),
-                      ),
-                    ),
-                    BarChartRodData(
-                      toY: entry.value.revenue,
-                      color: const Color(0xFF7DD3FC), // Soft Sky Blue from image
-                      width: 45,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(4),
-                        topRight: Radius.circular(4),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-              titlesData: FlTitlesData(
-                show: true,
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40,
-                    getTitlesWidget: (val, meta) {
-                      final i = val.toInt();
-                      if (i < last10.length) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(
-                            last10[i].label,
-                            style: AppTypography.caption.copyWith(
-                                color: AppColors.gray500, fontSize: 11),
+          child: Row(
+            children: [
+              // Vertical Y-Axis Title
+              RotatedBox(
+                quarterTurns: 3,
+                child: Text(
+                  'Amount (₹)',
+                  style: TextStyle(
+                    color: isDark ? AppColors.gray400 : AppColors.gray500,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: BarChart(
+                  BarChartData(
+                    minY: 0,
+                    maxY: maxY,
+                    barGroups: last10.asMap().entries.map((entry) {
+                      return BarChartGroupData(
+                        x: entry.key,
+                        barsSpace: 2,
+                        barRods: [
+                          BarChartRodData(
+                            toY: entry.value.netProfit,
+                            color: AppColors.primary,
+                            width: 32,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(4),
+                              topRight: Radius.circular(4),
+                            ),
                           ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  axisNameWidget: Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0, right: 8),
-                    child: Text('Amount (₹)',
-                        style: TextStyle(
-                            color: isDark ? AppColors.gray400 : AppColors.gray500, 
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12)),
-                  ),
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 64, 
-                    interval: interval, 
-                    getTitlesWidget: (val, meta) {
-                      final kValue = (val / 1000).toInt();
-                      return Text(
-                        '₹${kValue}K',
-                        style: AppTypography.caption.copyWith(
-                            color: AppColors.gray500, fontSize: 10, fontWeight: FontWeight.normal),
+                          BarChartRodData(
+                            toY: entry.value.revenue,
+                            color: AppColors.primaryLight,
+                            width: 16,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(4),
+                              topRight: Radius.circular(4),
+                            ),
+                          ),
+                        ],
                       );
-                    },
-                  ),
-                ),
-              ),
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: interval,
-                getDrawingHorizontalLine: (v) => FlLine(
-                  color: isDark ? AppColors.gray700.withOpacity(0.5) : AppColors.gray200,
-                  strokeWidth: 0.5,
-                  dashArray: [4, 4],
-                ),
-              ),
-              borderData: FlBorderData(
-                show: true,
-                border: Border(
-                  bottom: BorderSide(
-                    color: isDark ? AppColors.gray700 : AppColors.gray200,
-                    width: 1,
-                  ),
-                ),
-              ),
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: isDark ? AppColors.darkCard : AppColors.gray800,
-                  tooltipRoundedRadius: 8,
-                  getTooltipItem: (group, gi, rod, ri) {
-                    final label = ri == 0 ? 'Net Profit' : 'Revenue';
-                    return BarTooltipItem(
-                      '$label\n',
-                      AppTypography.body3.copyWith(color: AppColors.white, fontWeight: FontWeight.bold),
-                      children: [
-                        TextSpan(
-                          text: '₹ ${fullCurrencyFmt.format(rod.toY).replaceAll('₹', '').trim()}',
-                          style: AppTypography.body3.copyWith(color: rod.color, fontWeight: FontWeight.w900, fontSize: 13),
+                    }).toList(),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          getTitlesWidget: (val, meta) {
+                            final i = val.toInt();
+                            if (i >= 0 && i < last10.length) {
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                space: 8,
+                                child: Text(
+                                  last10[i].label,
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.gray400,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 56,
+                          interval: interval,
+                          getTitlesWidget: (val, meta) {
+                            final kValue = (val / 1000).toInt();
+                            return Text(
+                              '₹${kValue}K',
+                              textAlign: TextAlign.right,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.gray400,
+                                fontSize: 11,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: interval,
+                      getDrawingHorizontalLine: (v) => FlLine(
+                        color: isDark ? AppColors.gray700.withOpacity(0.3) : AppColors.gray100,
+                        strokeWidth: 1,
+                        dashArray: [4, 4],
+                      ),
+                    ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark ? AppColors.gray700 : AppColors.gray100,
+                          width: 1,
+                        ),
+                        left: BorderSide(
+                          color: isDark ? AppColors.gray700 : AppColors.gray100,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        tooltipBgColor: isDark ? AppColors.darkCard : AppColors.white,
+                        tooltipRoundedRadius: 8,
+                        tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        tooltipBorder: BorderSide(
+                          color: isDark ? AppColors.gray700 : AppColors.gray200,
+                          width: 1,
+                        ),
+                        getTooltipItem: (group, gi, rod, ri) {
+                          final periodLabel = last10[group.x].label;
+                          final seriesLabel = ri == 0 ? 'Net Profit' : 'Revenue';
+                          final amount = fullCurrencyFmt.format(rod.toY);
+                          
+                          return BarTooltipItem(
+                            '$periodLabel\n',
+                            AppTypography.caption.copyWith(
+                              color: isDark ? AppColors.gray400 : AppColors.gray500,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: '● ',
+                                style: TextStyle(color: rod.color, fontSize: 12),
+                              ),
+                              TextSpan(
+                                text: '$seriesLabel: ',
+                                style: AppTypography.body3.copyWith(
+                                  color: isDark ? AppColors.white : AppColors.gray700,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              TextSpan(
+                                text: amount,
+                                style: AppTypography.body3.copyWith(
+                                  color: isDark ? AppColors.white : AppColors.gray900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
-      ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildLegendItem('Net Profit', const Color(0xFF3C50E0), isDark),
+            _buildLegendItem('Net Profit', AppColors.primary, isDark),
             const SizedBox(width: 24),
-            _buildLegendItem('Revenue', const Color(0xFF80CAEE), isDark),
+            _buildLegendItem('Revenue', AppColors.primaryLight, isDark),
           ],
         ),
       ],
@@ -1507,7 +1553,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
     return Column(
       children: [
         SizedBox(
-          height: 240,
+          height: 260,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -1531,39 +1577,52 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
                     final e = entry.value;
                     final isTouched = i == _donutTouchedIndex;
                     final pct = (e.value / total) * 100;
-                    final double radius = isTouched ? 60 : 50;
-                    final double fontSize = isTouched ? 12 : 9;
+                    final double radius = isTouched ? 35 : 30;
 
                     return PieChartSectionData(
                       color: colors[i % colors.length],
                       value: pct,
-                      title: pct > 5 ? '${pct.toStringAsFixed(0)}%' : '',
-                      titleStyle: AppTypography.caption.copyWith(
-                          color: AppColors.white, fontWeight: FontWeight.bold, fontSize: fontSize),
+                      title: '', // No labels on the chart itself like React
                       radius: radius,
                       badgeWidget: isTouched ? Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.gray800 : AppColors.white,
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: isDark ? AppColors.gray700 : AppColors.gray200),
+                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
                         ),
-                        child: Text(e.key, style: AppTypography.body3.copyWith(fontWeight: FontWeight.bold, fontSize: 10)),
+                        child: Text(
+                          '${e.key}: ${e.value}',
+                          style: AppTypography.body3.copyWith(fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
                       ) : null,
-                      badgePositionPercentageOffset: 1.2,
+                      badgePositionPercentageOffset: 1.3,
                     );
                   }).toList(),
                   sectionsSpace: 2,
-                  centerSpaceRadius: 65,
+                  centerSpaceRadius: 80, // Matches ApexCharts size: "70%"
                 ),
               ),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('$total',
-                      style: AppTypography.h2.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                  Text('Periods',
-                      style: AppTypography.caption.copyWith(color: isDark ? AppColors.gray400 : AppColors.gray600)),
+                  Text(
+                    'Periods',
+                    style: AppTypography.caption.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray500,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    '$total',
+                    style: AppTypography.h3.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
                 ],
               ),
             ],
