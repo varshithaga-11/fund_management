@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../theme/app_theme.dart';
 import 'benchmarks_api.dart';
 
 class RatioBenchmarksPage extends StatefulWidget {
@@ -20,7 +21,7 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     'Trading': [
       'stock_turnover',
       'gross_profit_ratio_min',
-      'gross_profit_ratio_max'
+      'gross_profit_ratio_max',
     ],
     'Fund Structure': [
       'own_fund_to_wf',
@@ -59,9 +60,9 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
   Future<void> _checkUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     final userRole = prefs.getString('userRole') ?? '';
-    setState(() {
-      _canUpdate = userRole == 'master';
-    });
+    if (mounted) {
+      setState(() => _canUpdate = userRole == 'master');
+    }
   }
 
   Future<void> _loadData() async {
@@ -69,28 +70,25 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
     try {
       final data = await getRatioBenchmarks();
       final controllers = <String, TextEditingController>{};
-
       final allKeys = data.keysOrder.isNotEmpty
           ? data.keysOrder
           : data.benchmarks.keys.toList();
-
       for (var key in allKeys) {
         final val = data.benchmarks[key];
         controllers[key] = TextEditingController(
           text: val != null ? val.toString() : '',
         );
       }
-
-      setState(() {
-        _data = data;
-        _controllers = controllers;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _data = data;
+          _controllers = controllers;
+          _loading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load benchmarks: $e')),
-        );
+        _showSnack('Failed to load benchmarks: $e', isError: true);
         setState(() => _loading = false);
       }
     }
@@ -103,250 +101,336 @@ class _RatioBenchmarksPageState extends State<RatioBenchmarksPage> {
       final benchmarks = <String, double?>{};
       _controllers.forEach((key, controller) {
         final text = controller.text.trim();
-        if (text.isEmpty) {
-          benchmarks[key] = null;
-        } else {
-          final val = double.tryParse(text);
-          benchmarks[key] = val; // Note: sending null if parse fails is acceptable behavior per frontend logic
-        }
+        benchmarks[key] = text.isEmpty ? null : double.tryParse(text);
       });
-
       await updateRatioBenchmarks(benchmarks);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Benchmarks updated successfully')),
-        );
-        _loadData(); // Reload to refresh
+        _showSnack('Benchmarks updated successfully.');
+        await _loadData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update benchmarks: $e')),
-        );
+        _showSnack('Failed to update benchmarks: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  @override
-  void dispose() {
-    _controllers.forEach((_, controller) => controller.dispose());
-    super.dispose();
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? AppColors.danger : AppColors.success,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.all(16),
+    ));
   }
 
-  Widget _buildCategorySection(String title, List<String> keys, List<String> allKeys) {
-    final visibleKeys = keys.where((k) => allKeys.contains(k)).toList();
-    if (visibleKeys.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: const TextStyle(
-                fontSize: 18, 
-                fontWeight: FontWeight.bold, 
-                color: Color(0xFF1E293B)
-              )),
-          const SizedBox(height: 20),
-          Builder(
-            builder: (context) {
-              final screenWidth = MediaQuery.of(context).size.width;
-              final isWide = screenWidth > 900;
-              final itemWidth = isWide ? (screenWidth - 350) / 2 : screenWidth - 100;
-              
-              return Wrap(
-                spacing: 32,
-                runSpacing: 20,
-                children: visibleKeys.map((key) {
-                  final label = _data?.labels[key] ?? key.replaceAll('_', ' ');
-                  final controller = _controllers[key];
-                  
-                  if (controller == null) return const SizedBox.shrink();
-
-                  return SizedBox(
-                    width: itemWidth.clamp(200, 1000),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(label,
-                            style: const TextStyle(
-                                fontSize: 13, 
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF475569)
-                            )),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: controller,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(fontSize: 14),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            hintText: '—',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5)),
-                            isDense: true,
-                          ),
-                          enabled: _canUpdate,
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              );
-            }
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 16),
+              Text(
+                'Loading benchmarks...',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     if (_data == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(child: Text('Failed to load data')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline,
+                  size: 48,
+                  color: isDark ? AppColors.gray600 : AppColors.gray400),
+              const SizedBox(height: 16),
+              Text('Failed to load data',
+                  style: TextStyle(
+                      color: isDark ? AppColors.gray300 : AppColors.gray700)),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _loadData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     final allKeys = _data!.keysOrder.isNotEmpty
         ? _data!.keysOrder
         : _data!.benchmarks.keys.toList();
-        
-    final handledKeys = _categories.values.expand((element) => element).toList();
+    final handledKeys = _categories.values.expand((e) => e).toList();
     final otherKeys = allKeys.where((k) => !handledKeys.contains(k)).toList();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 896),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header ──────────────────────────────────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Ratio Benchmarks',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1E293B),
-                          fontSize: 26,
+                      Expanded(
+                        child: Text(
+                          'Ratio Benchmarks',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppColors.white : AppColors.gray900,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'These values are used for traffic light status (green/yellow/red) in the Ratio Dashboard. Leave blank where no fixed benchmark applies.',
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.2),
-                      ),
+                      const SizedBox(width: 16),
+                      if (_canUpdate)
+                        ElevatedButton(
+                          onPressed: _saving ? null : _handleSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Text('Save changes',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w600)),
+                        )
+                      else
+                        Text(
+                          'Only Master role can update benchmarks.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.amber.shade400
+                                : Colors.amber.shade700,
+                          ),
+                        ),
                     ],
                   ),
-                ),
-                if (_canUpdate)
-                  ElevatedButton(
-                    onPressed: _saving ? null : _handleSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Save changes', style: TextStyle(fontWeight: FontWeight.w600)),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.amber.shade100),
-                    ),
-                    child: Text(
-                      'Read Only',
-                      style: TextStyle(color: Colors.amber.shade700, fontWeight: FontWeight.bold, fontSize: 12),
+
+                  const SizedBox(height: 8),
+
+                  // ── Subtitle ─────────────────────────────────────────────
+                  Text(
+                    'These values are used for traffic light status (green/yellow/red) in the Ratio Dashboard. Leave blank where no fixed benchmark applies.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
                     ),
                   ),
-              ],
-            ),
-            
-            const SizedBox(height: 32),
 
-            if (!_canUpdate)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 32),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFEF3C7)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.amber.shade700, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Only Master role can update benchmarks.',
-                        style: TextStyle(color: Colors.amber.shade900, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ),
+                  const SizedBox(height: 28),
+
+                  // ── Category sections ────────────────────────────────────
+                  ..._categories.entries
+                      .map((entry) => _buildSection(
+                          entry.key, entry.value, allKeys, isDark))
+                      .where((w) => w != null)
+                      .map((w) => Column(children: [w!, const SizedBox(height: 20)])),
+
+                  // ── Other keys ───────────────────────────────────────────
+                  if (otherKeys.isNotEmpty) ...[
+                    _buildSection('Other', otherKeys, allKeys, isDark) ??
+                        const SizedBox.shrink(),
+                    const SizedBox(height: 20),
                   ],
-                ),
-              ),
 
-            // Categories
-            ...() {
-              final widgets = <Widget>[];
-              final entries = _categories.entries.toList();
-              for (int i = 0; i < entries.length; i++) {
-                final section = _buildCategorySection(entries[i].key, entries[i].value, allKeys);
-                if (section is! SizedBox) {
-                  if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 24));
-                  widgets.add(section);
-                }
-              }
-              return widgets;
-            }(),
-            
-            if (otherKeys.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              _buildCategorySection('Other', otherKeys, allKeys),
-            ],
-            const SizedBox(height: 60),
-          ],
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget? _buildSection(
+      String title, List<String> keys, List<String> allKeys, bool isDark) {
+    final visible = keys.where((k) => allKeys.contains(k)).toList();
+    if (visible.isEmpty) return null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.white,
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.white : AppColors.gray900,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 2-column grid using LayoutBuilder
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final useGrid = constraints.maxWidth > 600;
+              if (!useGrid) {
+                // Single column
+                return Column(
+                  children: visible
+                      .map((key) => Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildField(key, isDark),
+                          ))
+                      .toList(),
+                );
+              }
+              // Two-column grid
+              final rows = <Widget>[];
+              for (int i = 0; i < visible.length; i += 2) {
+                final left = visible[i];
+                final right = i + 1 < visible.length ? visible[i + 1] : null;
+                rows.add(
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildField(left, isDark)),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: right != null
+                              ? _buildField(right, isDark)
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return Column(children: rows);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildField(String key, bool isDark) {
+    final label =
+        _data?.labels[key] ?? key.replaceAll('_', ' ');
+    final controller = _controllers[key];
+    if (controller == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isDark ? AppColors.gray300 : AppColors.gray700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          enabled: _canUpdate,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? AppColors.white : AppColors.gray900,
+          ),
+          decoration: InputDecoration(
+            hintText: '—',
+            hintStyle: TextStyle(
+              color: isDark ? AppColors.gray600 : AppColors.gray400,
+            ),
+            filled: true,
+            fillColor: _canUpdate
+                ? (isDark ? AppColors.darkBg : AppColors.white)
+                : (isDark
+                    ? AppColors.darkBg.withOpacity(0.5)
+                    : AppColors.gray50),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 12),
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkBorder : AppColors.gray200,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkBorder : AppColors.gray200,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: const BorderSide(
+                  color: AppColors.primary, width: 1.5),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkBorder : AppColors.gray100,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
