@@ -1,4 +1,4 @@
-package com.example.flutter_frontend
+package com.fundmanagement.system
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -696,7 +696,7 @@ class _MasterDashboardPageState extends State<MasterDashboardPage> {
         ),
         SizedBox(height: AppSpacing.xs),
         Text(
-          'Overview of your fund management system',
+          'Overview of your Fund Management system',
           style: AppTypography.body2.copyWith(color: isDark ? AppColors.gray400 : AppColors.gray600),
         ),
       ],
