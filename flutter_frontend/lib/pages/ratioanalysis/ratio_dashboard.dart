@@ -1052,17 +1052,19 @@ class _RatioDashboardPageState extends State<RatioDashboardPage> {
             ),
           ),
         ),
-        Builder(builder: (context) {
+        LayoutBuilder(builder: (context, constraints) {
           final screenWidth = MediaQuery.of(context).size.width;
           final cols = screenWidth > 1000 ? 3 : (screenWidth > 700 ? 2 : 1);
-          return GridView.count(
-            crossAxisCount: cols,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: cols == 1 ? 3.2 : 2.8,
-            children: cards,
+          final spacing = 16.0;
+          final itemWidth = (constraints.maxWidth - (spacing * (cols - 1))) / cols;
+          
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: cards.map((card) => SizedBox(
+              width: itemWidth,
+              child: card,
+            )).toList(),
           );
         }),
         const SizedBox(height: 24),

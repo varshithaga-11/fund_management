@@ -224,7 +224,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Expanded(
+                        Flexible(
                           child: _buildCustomDropdownSimple(
                             isDark: isDark,
                             selectedValue: _selectedPeriod1,
@@ -283,7 +283,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                         else
                           const SizedBox(width: 12),
 
-                        Expanded(
+                        Flexible(
                           child: _buildCustomDropdownSimple(
                             isDark: isDark,
                             selectedValue: _selectedPeriod2,
@@ -616,6 +616,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
     }
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         border: Border.all(
@@ -772,7 +773,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
               letterSpacing: 0.8,
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 16),
           Text(
             value,
             style: TextStyle(
@@ -951,19 +952,17 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
   }
 
   Widget _buildCardView(bool isDark) {
-    return Builder(
-      builder: (context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
         final screenWidth = MediaQuery.of(context).size.width;
         // Force 3 columns earlier to match React desktop view
         final count = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
+        final spacing = 12.0;
+        final itemWidth = (constraints.maxWidth - (spacing * (count - 1))) / count;
 
-        return GridView.count(
-          crossAxisCount: count,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 2.2, // Significantly flatten cards
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
           children: _comparisonData!.data.ratios.entries.map((entry) {
             final ratio = entry.value;
             final changePercentage = ratio.percentageChange ?? 0;
@@ -986,10 +985,12 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
               borderColor = isDark ? const Color(0xFF991B1B).withOpacity(0.4) : const Color(0xFFFECACA);
             }
 
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
+            return SizedBox(
+              width: itemWidth,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [bgStart, bgEnd],
                 ),
@@ -1058,7 +1059,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                     ],
                   ),
                   
-                  const Spacer(),
+                  const SizedBox(height: 12),
                   
                   // Compact Footer
                   Container(
@@ -1106,6 +1107,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                   ),
                 ],
               ),
+            ),
             );
           }).toList(),
         );

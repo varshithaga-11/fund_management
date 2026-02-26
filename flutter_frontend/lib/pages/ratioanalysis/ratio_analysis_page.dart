@@ -233,30 +233,31 @@ class _RatioAnalysisPageState extends State<RatioAnalysisPage> {
                   else
                     Builder(
                       builder: (context) {
-                        final screenWidth = MediaQuery.of(context).size.width;
-                        final crossAxisCount = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
-                        
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 20,
-                            mainAxisSpacing: 20,
-                            childAspectRatio: 2.2, // Flatten the cards significantly
-                          ),
-                          itemCount: _filteredPeriods.length,
-                          itemBuilder: (context, index) {
-                            final period = _filteredPeriods[index];
-                            return PeriodCardWidget(
-                              period: period,
-                              isDark: isDark,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '${AppRoutes.ratioDashboard}/${period.id}',
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final crossAxisCount = screenWidth > 1100 ? 3 : (screenWidth > 750 ? 2 : 1);
+                            final spacing = 20.0;
+                            final itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+
+                            return Wrap(
+                              spacing: spacing,
+                              runSpacing: spacing,
+                              children: _filteredPeriods.map((period) {
+                                return SizedBox(
+                                  width: itemWidth,
+                                  child: PeriodCardWidget(
+                                    period: period,
+                                    isDark: isDark,
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '${AppRoutes.ratioDashboard}/${period.id}',
+                                      );
+                                    },
+                                  ),
                                 );
-                              },
+                              }).toList(),
                             );
                           },
                         );
@@ -451,7 +452,7 @@ class _PeriodCardWidgetState extends State<PeriodCardWidget> {
                   ],
                 ),
                 
-                const Spacer(),
+                const SizedBox(height: 16),
                 
                 Container(
                   padding: const EdgeInsets.only(top: 12),

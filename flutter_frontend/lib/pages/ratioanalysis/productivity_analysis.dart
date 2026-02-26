@@ -141,41 +141,51 @@ class _ProductivityAnalysisPageState extends State<ProductivityAnalysisPage> {
                     _buildHeader(isDark),
                     const SizedBox(height: 32),
         
-                    // Metrics Grid
-                    Builder(
-                      builder: (context) {
+                    LayoutBuilder(
+                      builder: (context, constraints) {
                         final screenWidth = MediaQuery.of(context).size.width;
                         final crossAxisCount = screenWidth > 900 ? 2 : 1;
-                        return GridView.count(
-                          crossAxisCount: crossAxisCount,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 24,
-                          crossAxisSpacing: 24,
-                          childAspectRatio: screenWidth > 900 ? 3.0 : 1.8,
+                        final spacing = 24.0;
+                        final itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+                        
+                        return Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
                           children: [
-                            _buildMetricCard(
-                              'Per Employee Business',
-                              '(Average Deposit + Average Loan) / Staff Count',
-                              _perEmployeeBusiness,
-                              isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
-                              isDark,
+                            SizedBox(
+                              width: itemWidth,
+                              child: _buildMetricCard(
+                                'Per Employee Business',
+                                '(Average Deposit + Average Loan) / Staff Count',
+                                _perEmployeeBusiness,
+                                isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                                isDark,
+                              ),
                             ),
-                            _buildMetricCard(
-                              'Per Employee Contribution',
-                              '(Total Income - Interest Expenses) / Staff Count',
-                              _perEmployeeContribution,
-                              isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
-                              isDark,
+                            SizedBox(
+                              width: itemWidth,
+                              child: _buildMetricCard(
+                                'Per Employee Contribution',
+                                '(Total Income - Interest Expenses) / Staff Count',
+                                _perEmployeeContribution,
+                                isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
+                                isDark,
+                              ),
                             ),
-                            _buildMetricCard(
-                              'Per Employee Operating Cost',
-                              'Establishment & Contingencies / Staff Count',
-                              _perEmployeeOperatingCost,
-                              isDark ? const Color(0xFFFB923C) : const Color(0xFFEA580C),
-                              isDark,
+                            SizedBox(
+                              width: itemWidth,
+                              child: _buildMetricCard(
+                                'Per Employee Operating Cost',
+                                'Establishment & Contingencies / Staff Count',
+                                _perEmployeeOperatingCost,
+                                isDark ? const Color(0xFFFB923C) : const Color(0xFFEA580C),
+                                isDark,
+                              ),
                             ),
-                            _buildEfficiencyCard(isDark),
+                            SizedBox(
+                                width: itemWidth,
+                                child: _buildEfficiencyCard(isDark),
+                            ),
                           ],
                         );
                       },
