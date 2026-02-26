@@ -305,6 +305,27 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                       ],
                     ),
 
+                    // Dropdown Menus (Rendered inside the card with constrained widths)
+                    if (_openDropdown1 || _openDropdown2)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Flexible(
+                              child: _openDropdown1 ? _buildDropdownMenu(isDark) : const SizedBox(width: double.infinity),
+                            ),
+                            if (_selectedPeriod1 != null && _selectedPeriod2 != null)
+                              const SizedBox(width: 56)
+                            else
+                              const SizedBox(width: 12),
+                            Flexible(
+                              child: _openDropdown2 ? _buildDropdownMenu(isDark) : const SizedBox(width: double.infinity),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -333,19 +354,6 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                   ],
                 ),
               ),
-
-              // Dropdown Menus (Outside the card)
-              if (_openDropdown1)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _buildDropdownMenu(isDark),
-                ),
-              if (_openDropdown2)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _buildDropdownMenu(isDark),
-                ),
-
               // Comparison Results
               if (_comparisonData != null) ...[
                 const SizedBox(height: 32),
@@ -866,6 +874,7 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
                         : '${pct > 0 ? "+" : ""}${pct.toStringAsFixed(2)}%';
 
                     return _ComparisonTableRow(
+                      key: ValueKey(entry.key),
                       isDark: isDark,
                       children: [
                         _tableDataCell(
@@ -1116,47 +1125,32 @@ class _PeriodComparisonPageState extends State<PeriodComparisonPage> with Single
   }
 }
 
-// ─── Hoverable table row ──────────────────────────────────────────────────────
+// ─── Table row ──────────────────────────────────────────────────────
 
-class _ComparisonTableRow extends StatefulWidget {
+class _ComparisonTableRow extends StatelessWidget {
   final List<Widget> children;
   final bool isDark;
 
   const _ComparisonTableRow({
+    super.key,
     required this.children,
     required this.isDark,
   });
 
   @override
-  State<_ComparisonTableRow> createState() => _ComparisonTableRowState();
-}
-
-class _ComparisonTableRowState extends State<_ComparisonTableRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit:  (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        decoration: BoxDecoration(
-          color: _hovered
-              ? (widget.isDark
-                  ? const Color(0xFF1F2937).withOpacity(0.5)
-                  : const Color(0xFFF9FAFB))
-              : Colors.transparent,
-          border: Border(
-            top: BorderSide(
-              color: widget.isDark
-                  ? const Color(0xFF374151)
-                  : const Color(0xFFE5E7EB),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? const Color(0xFF374151)
+                : const Color(0xFFE5E7EB),
           ),
         ),
-        child: Row(children: widget.children),
       ),
+      child: Row(children: children),
     );
   }
 }
