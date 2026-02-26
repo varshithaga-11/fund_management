@@ -79,7 +79,7 @@ echo [√] Backend is ready!
 echo [+] Launching Flutter Application...
 echo [i] Note: Keeping this terminal open ensures the backend stops when you close the app.
 
-set EXE_PATH=flutter_frontend\build\windows\x64\runner\Release\fund_management.exe
+set EXE_PATH=app\fund_management.exe
 
 if exist "%EXE_PATH%" (
     echo [√] Found compiled executable. Launching...
