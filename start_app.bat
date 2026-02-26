@@ -1,9 +1,9 @@
 @echo off
 setlocal
 
-echo ==========================================
-echo    Fund Management - One-Click Start
-echo ==========================================
+echo =====================
+echo    Fund Management 
+echo =====================
 
 :: 0. Check if Docker is running
 echo [+] Checking if Docker status...
@@ -79,7 +79,7 @@ echo [√] Backend is ready!
 echo [+] Launching Flutter Application...
 echo [i] Note: Keeping this terminal open ensures the backend stops when you close the app.
 
-set EXE_PATH=flutter_frontend\build\windows\x64\runner\Release\flutter_frontend.exe
+set EXE_PATH=flutter_frontend\build\windows\x64\runner\Release\fund_management.exe
 
 if exist "%EXE_PATH%" (
     echo [√] Found compiled executable. Launching...
